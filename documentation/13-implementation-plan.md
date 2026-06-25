@@ -67,9 +67,28 @@ Definition of done:
 
 ## F3 - Intake
 
-Status: Planned.
+Status: Complete.
 
 Build quarantine, file signature validation, SHA-256 duplicate detection, and intake records.
+
+Deliver:
+
+- Quarantine workspace.
+- Source file hash.
+- Signature detection.
+- Duplicate detection.
+- PDF, DOCX, and image intake records.
+- Rejected records for unsupported, corrupt, and empty files.
+
+Definition of done:
+
+- `python tests\validate_docs.py`
+- `python tests\validate_skeleton.py`
+- `python tests\validate_license.py`
+- `python tests\validate_vault.py`
+- `python tests\validate_intake.py`
+- `python main.py --selftest`
+- `ruff check .`
 
 ## F4 - Extraction And OCR
 
