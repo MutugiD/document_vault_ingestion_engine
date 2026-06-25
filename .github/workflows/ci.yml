@@ -69,6 +69,9 @@ jobs:
       - name: Validate frozen Windows build
         run: python tests\validate_frozen_build.py
 
+      - name: Validate release bundle
+        run: python tests\validate_release_bundle.py
+
       - name: Run application selftest
         run: python main.py --selftest
 

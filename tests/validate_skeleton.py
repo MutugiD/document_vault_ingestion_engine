@@ -18,6 +18,7 @@ PACKAGES = [
     "rag",
     "backup",
     "products",
+    "release",
     "ui",
 ]
 ROOT_FILES = ["README.md", "BUILD.md", "pyproject.toml", "requirements.txt", "main.py", "main.spec"]

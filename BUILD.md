@@ -56,6 +56,20 @@ The automated frozen-build validator runs the same path:
 python tests\validate_frozen_build.py
 ```
 
+## Release Bundle
+
+After the frozen build passes, create the checked release ZIP and sidecar manifest:
+
+```powershell
+python scripts\build_release_bundle.py
+```
+
+The release validator creates the same ZIP under `release-output/`, verifies the sidecar manifest hash, confirms the three product definitions are present, and checks that the bundle does not include obvious secret, private-key, credential, `.env`, recovery-key, or client-document file names:
+
+```powershell
+python tests\validate_release_bundle.py
+```
+
 ## Bundle Rules
 
 The bundle must include:
@@ -66,6 +80,8 @@ The bundle must include:
 - Tesseract executable and traineddata once OCR packaging begins.
 - License public key.
 - JSON/schema files.
+- `products/product_catalog.json`.
+- embedded `release-manifest.json`.
 
 The bundle must not include:
 
