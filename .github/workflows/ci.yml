@@ -60,6 +60,9 @@ jobs:
       - name: Validate packaging configuration
         run: python tests\validate_package.py
 
+      - name: Validate end-to-end product flow
+        run: python tests\validate_e2e.py
+
       - name: Validate frozen Windows build
         run: python tests\validate_frozen_build.py
 
