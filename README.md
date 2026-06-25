@@ -95,6 +95,7 @@ python tests\validate_backup.py
 python tests\validate_cloud_boundary.py
 python tests\validate_ui.py
 python tests\validate_package.py
+python tests\validate_e2e.py
 python tests\validate_frozen_build.py
 python main.py --selftest
 ```

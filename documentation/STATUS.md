@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F11 end-to-end verification planning.
+Release hardening planning.
 
 ## Accepted Decisions
 
@@ -39,9 +39,10 @@ F11 end-to-end verification planning.
 | F8 UI/package | Complete | PySide6 shell, worker pattern, package selftest, `tests/validate_ui.py`, `tests/validate_package.py` |
 | F9 frozen build | Complete | Real PyInstaller one-folder build, frozen executable selftest, `tests/validate_frozen_build.py` |
 | F10 local matter RAG | Complete | Three-product strategy, `matter_rag` entitlement, local hybrid retrieval, citation packet, `tests/validate_rag.py` |
+| F11 end-to-end verification | Complete | Licensed intake-to-RAG-to-backup-to-restore workflow, `tests/validate_e2e.py` |
 
 ## Next Actions
 
-1. Merge F10 only after CI is green.
-2. Start F11 end-to-end verification for licensing, vault, intake, RAG, backup, cloud boundary, UI, and frozen build together.
+1. Merge F11 only after CI is green.
+2. Start release hardening: installer workflow, code signing plan, Tesseract bundling, and clean-machine acceptance.
 3. Keep Wakili-Mkononi, direct e-filing, hosted AI, and real cloud provider SDK integration deferred.

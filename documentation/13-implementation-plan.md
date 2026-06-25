@@ -290,3 +290,38 @@ Definition of done:
 - `python tests\validate_frozen_build.py`
 - `python main.py --selftest`
 - `ruff check .`
+
+## F11 - End To End Verification
+
+Status: Complete.
+
+Validate the integrated licensed product flow across all three published products.
+
+Deliver:
+
+- End-to-end validator.
+- Offline license validation with all paid feature flags.
+- Intake to extraction to encrypted vault custody.
+- Matter and document version creation.
+- Search and Local Matter RAG citation packet.
+- Encrypted backup, managed cloud boundary, restore drill.
+- Restored vault object read verification.
+
+Definition of done:
+
+- `python tests\validate_docs.py`
+- `python tests\validate_skeleton.py`
+- `python tests\validate_license.py`
+- `python tests\validate_vault.py`
+- `python tests\validate_intake.py`
+- `python tests\validate_extraction.py`
+- `python tests\validate_search.py`
+- `python tests\validate_rag.py`
+- `python tests\validate_backup.py`
+- `python tests\validate_cloud_boundary.py`
+- `python tests\validate_ui.py`
+- `python tests\validate_package.py`
+- `python tests\validate_e2e.py`
+- `python tests\validate_frozen_build.py`
+- `python main.py --selftest`
+- `ruff check .`

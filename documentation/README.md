@@ -15,7 +15,7 @@ The documentation discipline is:
 1. Start with [00-system-overview.md](00-system-overview.md) and [01-architecture-e2e.md](01-architecture-e2e.md).
 2. Read [02-defects-and-remedies.md](02-defects-and-remedies.md) for open risks and accepted decisions.
 3. Walk the feature docs in order from [03-local-storage-vault.md](03-local-storage-vault.md) through [10-ui-threading-workflows.md](10-ui-threading-workflows.md).
-4. Close with [11-packaging-distribution.md](11-packaging-distribution.md), [12-error-handling-reporting.md](12-error-handling-reporting.md), [13-implementation-plan.md](13-implementation-plan.md), and [14-three-products-rag-strategy.md](14-three-products-rag-strategy.md).
+4. Close with [11-packaging-distribution.md](11-packaging-distribution.md), [12-error-handling-reporting.md](12-error-handling-reporting.md), [13-implementation-plan.md](13-implementation-plan.md), [14-three-products-rag-strategy.md](14-three-products-rag-strategy.md), and [15-end-to-end-verification.md](15-end-to-end-verification.md).
 5. Use [STATUS.md](STATUS.md) as the live tracker.
 
 ## Document Map
@@ -39,6 +39,7 @@ The documentation discipline is:
 | [12-error-handling-reporting.md](12-error-handling-reporting.md) | Failure modes and reporting |
 | [13-implementation-plan.md](13-implementation-plan.md) | Incremental feature plan |
 | [14-three-products-rag-strategy.md](14-three-products-rag-strategy.md) | Three-product publishing strategy and local RAG boundary |
+| [15-end-to-end-verification.md](15-end-to-end-verification.md) | Integrated licensing, vault, intake, RAG, backup, cloud, restore validation |
 
 ## Status Legend
 

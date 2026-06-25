@@ -25,6 +25,7 @@ REQUIRED_DOCS = [
     "documentation/12-error-handling-reporting.md",
     "documentation/13-implementation-plan.md",
     "documentation/14-three-products-rag-strategy.md",
+    "documentation/15-end-to-end-verification.md",
 ]
 
 
