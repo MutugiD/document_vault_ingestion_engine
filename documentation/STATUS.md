@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F6 backup restore planning.
+F7 managed cloud boundary planning.
 
 ## Accepted Decisions
 
@@ -34,12 +34,12 @@ F6 backup restore planning.
 | F3 intake | Complete | Quarantine import, signature detection, duplicate detection, SQLite records, `tests/validate_intake.py` |
 | F4 extraction/OCR | Complete | PyMuPDF PDF extraction, python-docx extraction, OCR adapter boundary, `tests/validate_extraction.py` |
 | F5 matter/search | Complete | Matter records, document versions, SQLite FTS5, matter-scoped search, `tests/validate_search.py` |
-| F6 backup/restore | Planned | `tests/validate_backup.py` placeholder |
+| F6 backup/restore | Complete | Encrypted local backup package, manifest, restore drill, wrong-key behavior, `tests/validate_backup.py` |
 | F7 cloud boundary | Planned | `tests/validate_cloud_boundary.py` placeholder |
 | F8 UI/package | Planned | `tests/validate_ui.py`, `tests/validate_package.py` placeholders |
 
 ## Next Actions
 
-1. Merge F5 only after CI is green.
-2. Start F6 backup restore on `feature/f6-backup-restore-v1`.
-3. Add encrypted backup packages, manifests, hash verification, restore drill, and wrong-key behavior.
+1. Merge F6 only after CI is green.
+2. Start F7 managed cloud boundary on `feature/f7-managed-cloud-boundary-v1`.
+3. Add provider-neutral grants, metadata allowlist, no long-lived cloud credentials, and encrypted-package-only upload boundary.

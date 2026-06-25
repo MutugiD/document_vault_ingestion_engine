@@ -144,9 +144,30 @@ Definition of done:
 
 ## F6 - Backup Restore
 
-Status: Planned.
+Status: Complete.
 
 Build encrypted local backup packages, manifests, and restore drills.
+
+Deliver:
+
+- Encrypted local backup package.
+- Manifest.
+- Hash verification.
+- Restore drill workspace.
+- Wrong-key behavior.
+
+Definition of done:
+
+- `python tests\validate_docs.py`
+- `python tests\validate_skeleton.py`
+- `python tests\validate_license.py`
+- `python tests\validate_vault.py`
+- `python tests\validate_intake.py`
+- `python tests\validate_extraction.py`
+- `python tests\validate_search.py`
+- `python tests\validate_backup.py`
+- `python main.py --selftest`
+- `ruff check .`
 
 ## F7 - Managed Cloud Boundary
 
