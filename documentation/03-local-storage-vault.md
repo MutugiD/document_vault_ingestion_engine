@@ -40,6 +40,28 @@ vault/
 - Filed/served/court-returned versions are never overwritten.
 - Failed metadata writes must not leave untracked plaintext.
 
+## F2 Implementation Boundary
+
+The first implementation slice creates the local custody core:
+
+- Vault folder initialization.
+- SQLite database creation.
+- `vault_config`, `vault_objects`, and `audit_events` tables.
+- PBKDF2-HMAC-SHA256 recovery-key derivation.
+- AES-GCM encrypted immutable object writes.
+- Object reads only after recovery-key verification.
+- Wrong recovery key failure before object access.
+- Audit entries for initialization and object storage.
+
+Matter records, document lifecycle statuses, version chains, and search indexing are delivered in later feature slices.
+
 ## Verification
 
-`tests/validate_vault.py` will prove encrypted objects are unreadable as plaintext and wrong recovery keys fail safely.
+`tests/validate_vault.py` proves:
+
+- Vault folders and SQLite metadata are created.
+- Encrypted object bytes do not contain plaintext.
+- Correct recovery key can read an object after reopening the vault.
+- Wrong recovery key fails safely.
+- Missing object reads fail safely.
+- Audit ledger records initialization and object storage.

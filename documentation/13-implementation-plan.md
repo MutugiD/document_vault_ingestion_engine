@@ -43,9 +43,27 @@ Definition of done:
 
 ## F2 - Vault
 
-Status: Planned.
+Status: Complete.
 
 Build SQLite metadata, encrypted object write/read, recovery-key flow, and audit ledger.
+
+Deliver:
+
+- Vault folder initialization.
+- SQLite metadata creation.
+- Audit event table.
+- PBKDF2-HMAC-SHA256 recovery-key verification.
+- AES-GCM encrypted object write/read.
+- Wrong-key failure behavior.
+
+Definition of done:
+
+- `python tests\validate_docs.py`
+- `python tests\validate_skeleton.py`
+- `python tests\validate_license.py`
+- `python tests\validate_vault.py`
+- `python main.py --selftest`
+- `ruff check .`
 
 ## F3 - Intake
 
