@@ -36,4 +36,12 @@ Support commercial licensing without weakening local data ownership.
 
 ## Verification
 
-`tests/validate_license.py` will prove valid, tampered, expired, and disabled license behavior.
+`tests/validate_license.py` proves:
+
+- A valid signed license activates paid feature flags.
+- A tampered license fails signature validation.
+- A license bound to another installation fails safely.
+- An expired license disables paid features but still allows local data access.
+- A disabled installation disables paid features but still allows local data access.
+
+`main.py --selftest` also checks that installation identity persistence works in packaged-app style temporary storage.

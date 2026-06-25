@@ -22,13 +22,16 @@ jobs:
           python-version: "3.11"
 
       - name: Install validation tools
-        run: python -m pip install --upgrade pip ruff
+        run: python -m pip install --upgrade pip ruff cryptography
 
       - name: Validate documentation pack
         run: python tests\validate_docs.py
 
       - name: Validate Python skeleton
         run: python tests\validate_skeleton.py
+
+      - name: Validate licensing
+        run: python tests\validate_license.py
 
       - name: Run application selftest
         run: python main.py --selftest

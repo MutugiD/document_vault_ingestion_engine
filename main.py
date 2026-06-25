@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import importlib
 import sys
+import tempfile
+from pathlib import Path
 
 CORE_MODULES = (
     "core",
@@ -27,6 +29,18 @@ def run_selftest() -> int:
         except Exception as exc:  # pragma: no cover - deliberately broad for frozen selftest
             failures.append(f"{module_name}: {exc}")
 
+    try:
+        from licensing import ensure_installation_identity
+
+        with tempfile.TemporaryDirectory() as temporary_dir:
+            identity_path = Path(temporary_dir) / "settings" / "installation.json"
+            first_identity = ensure_installation_identity(identity_path)
+            second_identity = ensure_installation_identity(identity_path)
+            if first_identity.installation_id != second_identity.installation_id:
+                failures.append("licensing: installation ID was not stable")
+    except Exception as exc:  # pragma: no cover - deliberately broad for frozen selftest
+        failures.append(f"licensing selftest: {exc}")
+
     if failures:
         print("SELFTEST FAIL")
         for failure in failures:
@@ -35,6 +49,7 @@ def run_selftest() -> int:
 
     print("SELFTEST PASS")
     print(f"Imported modules: {', '.join(CORE_MODULES)}")
+    print("Licensing installation identity check: pass")
     return 0
 
 
