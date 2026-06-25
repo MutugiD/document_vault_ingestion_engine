@@ -27,6 +27,21 @@ Restore drill must:
 - write restore report
 - avoid touching live vault
 
+## F6 Implementation Boundary
+
+The first backup slice implements:
+
+- Local `.wakilibak` package creation.
+- ZIP payload of vault metadata and encrypted object files.
+- AES-GCM encryption of the payload using a recovery-key-derived backup key.
+- Non-sensitive manifest containing installation ID, snapshot ID, hashes, schema version, app version, timestamp, and size.
+- Restore into a separate restore workspace.
+- Wrong recovery key failure before extraction.
+- Restored metadata readability check.
+- Restore report generation.
+
+Managed cloud upload grants remain in F7. The F6 package is already encrypted and is the only object F7 is allowed to upload.
+
 ## Managed Cloud Backup
 
 Cloud backup uses vendor-managed AWS/GCP/Azure storage through short-lived grants. The desktop app never stores long-lived cloud provider credentials.
@@ -53,4 +68,13 @@ Forbidden cloud metadata:
 
 ## Verification
 
-`tests/validate_backup.py` and `tests/validate_cloud_boundary.py` will prove restore and metadata safety.
+`tests/validate_backup.py` proves:
+
+- Backup package is created with a manifest.
+- Package bytes do not expose sample legal text, client names, or case numbers.
+- Wrong recovery key cannot restore the package.
+- Correct recovery key restores into a clean directory.
+- Restored vault metadata is readable.
+- Restored encrypted objects can be unlocked with the recovery key.
+
+`tests/validate_cloud_boundary.py` will prove F7 metadata safety for managed uploads.
