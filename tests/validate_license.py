@@ -68,6 +68,7 @@ def main() -> None:
         assert active_result.paid_features_enabled
         assert active_result.feature_enabled("document_intake")
         assert active_result.feature_enabled("cloud_backup")
+        assert active_result.feature_enabled("matter_rag")
         assert not active_result.feature_enabled("managed_restore")
 
         tampered_license = LicenseDocument(
@@ -143,6 +144,7 @@ def _signed_license(
         features=FeatureEntitlements(
             document_intake=True,
             cloud_backup=True,
+            matter_rag=True,
             managed_restore=False,
         ),
         expiry=expiry,

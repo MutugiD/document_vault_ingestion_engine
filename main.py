@@ -14,6 +14,7 @@ CORE_MODULES = (
     "vault",
     "intake",
     "search",
+    "rag",
     "backup",
     "ui",
 )

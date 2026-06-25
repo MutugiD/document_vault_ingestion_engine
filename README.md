@@ -1,6 +1,6 @@
 # Document Vault Ingestion Engine
 
-Local-first Windows document vault and ingestion engine for legal-office workflows.
+Local-first Windows legal document vault, ingestion, and matter RAG foundation.
 
 This repository is being built documentation-first and feature by feature: clear architecture docs, a project tracker, small validation scripts, and a Windows packaging path before feature work expands.
 
@@ -23,6 +23,14 @@ Implemented so far:
 - PyInstaller package configuration validation.
 - Real Windows PyInstaller one-folder build and frozen executable selftest.
 
+F10 Local Matter RAG Connector complete.
+
+## Published Products
+
+1. Windows Legal Document Vault.
+2. Document Intake Engine.
+3. Local Matter RAG Connector.
+
 ## Product Boundary
 
 In scope:
@@ -36,12 +44,10 @@ In scope:
 - SQLite FTS5 local search.
 - Local encrypted backups and restore drills.
 - Managed encrypted cloud backup through short-lived AWS/GCP/Azure grants.
+- Local matter-scoped RAG retrieval with citations.
 
 Deferred:
 
-- RAG.
-- Embeddings.
-- Vector databases.
 - Local LLM.
 - Wakili-Mkononi integration.
 - Direct Judiciary e-filing automation.
@@ -62,6 +68,7 @@ Deferred:
   core/
   intake/
   licensing/
+  rag/
   scripts/
   search/
   tests/
@@ -83,6 +90,7 @@ python tests\validate_vault.py
 python tests\validate_intake.py
 python tests\validate_extraction.py
 python tests\validate_search.py
+python tests\validate_rag.py
 python tests\validate_backup.py
 python tests\validate_cloud_boundary.py
 python tests\validate_ui.py

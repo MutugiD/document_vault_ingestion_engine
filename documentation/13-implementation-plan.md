@@ -255,3 +255,38 @@ Definition of done:
 - `python tests\validate_frozen_build.py`
 - `python main.py --selftest`
 - `ruff check .`
+
+## F10 - Local Matter RAG Connector
+
+Status: Complete.
+
+Publish the third solution and implement local, citation-first RAG retrieval over matter document versions.
+
+Deliver:
+
+- Three-product strategy documentation.
+- `matter_rag` license entitlement.
+- Local chunking from extracted document-version text.
+- SQLite-backed RAG chunk store.
+- Hybrid retrieval using sparse lexical and deterministic vector-style scoring.
+- Reranking with lifecycle-aware boost.
+- Matter-scoped retrieval.
+- Citation-first answer packet for a later LLM generation boundary.
+
+Definition of done:
+
+- `python tests\validate_docs.py`
+- `python tests\validate_skeleton.py`
+- `python tests\validate_license.py`
+- `python tests\validate_vault.py`
+- `python tests\validate_intake.py`
+- `python tests\validate_extraction.py`
+- `python tests\validate_search.py`
+- `python tests\validate_rag.py`
+- `python tests\validate_backup.py`
+- `python tests\validate_cloud_boundary.py`
+- `python tests\validate_ui.py`
+- `python tests\validate_package.py`
+- `python tests\validate_frozen_build.py`
+- `python main.py --selftest`
+- `ruff check .`

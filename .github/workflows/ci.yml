@@ -45,6 +45,9 @@ jobs:
       - name: Validate matter search
         run: python tests\validate_search.py
 
+      - name: Validate Local Matter RAG Connector
+        run: python tests\validate_rag.py
+
       - name: Validate backup restore
         run: python tests\validate_backup.py
 
