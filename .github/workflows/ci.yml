@@ -22,7 +22,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install validation tools
-        run: python -m pip install --upgrade pip ruff cryptography
+        run: python -m pip install --upgrade pip ruff cryptography PyMuPDF python-docx
 
       - name: Validate documentation pack
         run: python tests\validate_docs.py
@@ -38,6 +38,9 @@ jobs:
 
       - name: Validate document intake
         run: python tests\validate_intake.py
+
+      - name: Validate extraction and OCR boundary
+        run: python tests\validate_extraction.py
 
       - name: Run application selftest
         run: python main.py --selftest

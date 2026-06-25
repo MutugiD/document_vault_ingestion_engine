@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F4 extraction and OCR planning.
+F5 matter version search planning.
 
 ## Accepted Decisions
 
@@ -32,7 +32,7 @@ F4 extraction and OCR planning.
 | F1 licensing | Complete | Offline license module, `tests/validate_license.py`, `main.py --selftest` licensing smoke check |
 | F2 vault | Complete | SQLite metadata, audit ledger, AES-GCM object storage, `tests/validate_vault.py` |
 | F3 intake | Complete | Quarantine import, signature detection, duplicate detection, SQLite records, `tests/validate_intake.py` |
-| F4 extraction/OCR | Planned | `tests/validate_extraction.py` placeholder |
+| F4 extraction/OCR | Complete | PyMuPDF PDF extraction, python-docx extraction, OCR adapter boundary, `tests/validate_extraction.py` |
 | F5 matter/search | Planned | `tests/validate_search.py` placeholder |
 | F6 backup/restore | Planned | `tests/validate_backup.py` placeholder |
 | F7 cloud boundary | Planned | `tests/validate_cloud_boundary.py` placeholder |
@@ -40,6 +40,6 @@ F4 extraction and OCR planning.
 
 ## Next Actions
 
-1. Merge F3 only after CI is green.
-2. Start F4 extraction and OCR on `feature/f4-extraction-ocr-v1`.
-3. Add PDF extraction, DOCX extraction, OCR adapter boundary, OCR status, and quality warnings.
+1. Merge F4 only after CI is green.
+2. Start F5 matter version search on `feature/f5-matter-search-v1`.
+3. Add matter records, document versions, lifecycle status, SQLite FTS5 indexing, and matter-scoped search.

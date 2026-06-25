@@ -92,9 +92,27 @@ Definition of done:
 
 ## F4 - Extraction And OCR
 
-Status: Planned.
+Status: Complete.
 
 Build PDF extraction, DOCX extraction, and local Tesseract OCR adapter.
+
+Deliver:
+
+- PyMuPDF PDF extraction.
+- python-docx extraction.
+- OCR adapter boundary.
+- OCR status and warnings.
+
+Definition of done:
+
+- `python tests\validate_docs.py`
+- `python tests\validate_skeleton.py`
+- `python tests\validate_license.py`
+- `python tests\validate_vault.py`
+- `python tests\validate_intake.py`
+- `python tests\validate_extraction.py`
+- `python main.py --selftest`
+- `ruff check .`
 
 ## F5 - Matter Version Search
 
