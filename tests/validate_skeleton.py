@@ -9,7 +9,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-PACKAGES = ["core", "licensing", "vault", "intake", "search", "rag", "backup", "ui"]
+PACKAGES = [
+    "core",
+    "licensing",
+    "vault",
+    "intake",
+    "search",
+    "rag",
+    "backup",
+    "products",
+    "ui",
+]
 ROOT_FILES = ["README.md", "BUILD.md", "pyproject.toml", "requirements.txt", "main.py", "main.spec"]
 
 

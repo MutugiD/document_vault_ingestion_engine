@@ -31,6 +31,17 @@ F10 Local Matter RAG Connector complete.
 2. Document Intake Engine.
 3. Local Matter RAG Connector.
 
+The authoritative product catalog lives in:
+
+- `products/product_catalog.json`
+- `products/catalog.py`
+
+Validate it with:
+
+```powershell
+python tests\validate_products.py
+```
+
 ## Product Boundary
 
 In scope:
@@ -68,6 +79,7 @@ Deferred:
   core/
   intake/
   licensing/
+  products/
   rag/
   scripts/
   search/
@@ -85,6 +97,7 @@ From the repo root:
 ```powershell
 python tests\validate_docs.py
 python tests\validate_skeleton.py
+python tests\validate_products.py
 python tests\validate_license.py
 python tests\validate_vault.py
 python tests\validate_intake.py

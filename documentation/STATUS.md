@@ -40,9 +40,10 @@ Release hardening planning.
 | F9 frozen build | Complete | Real PyInstaller one-folder build, frozen executable selftest, `tests/validate_frozen_build.py` |
 | F10 local matter RAG | Complete | Three-product strategy, `matter_rag` entitlement, local hybrid retrieval, citation packet, `tests/validate_rag.py` |
 | F11 end-to-end verification | Complete | Licensed intake-to-RAG-to-backup-to-restore workflow, `tests/validate_e2e.py` |
+| F12 three-product catalog | Complete | Product catalog JSON/API, product validators, release boundaries, `tests/validate_products.py` |
 
 ## Next Actions
 
-1. Merge F11 only after CI is green.
+1. Merge F12 only after CI is green.
 2. Start release hardening: installer workflow, code signing plan, Tesseract bundling, and clean-machine acceptance.
 3. Keep Wakili-Mkononi, direct e-filing, hosted AI, and real cloud provider SDK integration deferred.

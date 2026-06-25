@@ -14,6 +14,7 @@ def main() -> None:
     spec_text = spec_path.read_text(encoding="utf-8")
     assert "DocumentVaultIngestionEngine" in spec_text
     assert "console=False" in spec_text
+    assert "products/product_catalog.json" in spec_text
     assert "private" not in spec_text.lower()
     assert "secret" not in spec_text.lower()
     assert "credential" not in spec_text.lower()
