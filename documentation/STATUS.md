@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-Post-F9 hardening planning.
+F11 end-to-end verification planning.
 
 ## Accepted Decisions
 
@@ -14,7 +14,7 @@ Post-F9 hardening planning.
 | AD2 | Use PyInstaller one-folder packaging first. | Clean, inspectable Windows bundle before installer wrapping. |
 | AD3 | Use signed offline license plus periodic online sync. | Supports unreliable internet while preserving monetization controls. |
 | AD4 | Use client-side encrypted backup packages for cloud. | Admin/backend cannot decrypt legal documents. |
-| AD5 | Defer RAG, embeddings, Wakili-Mkononi, and direct e-filing. | Keeps first product focused on custody, intake, search, and recovery. |
+| AD5 | Publish three products through Local Matter RAG Connector. | Moves RAG into near-term scope while keeping Wakili-Mkononi and direct e-filing deferred. |
 
 ## Open Decisions
 
@@ -38,9 +38,10 @@ Post-F9 hardening planning.
 | F7 cloud boundary | Complete | Provider-neutral grants, metadata allowlist, encrypted-package-only upload boundary, `tests/validate_cloud_boundary.py` |
 | F8 UI/package | Complete | PySide6 shell, worker pattern, package selftest, `tests/validate_ui.py`, `tests/validate_package.py` |
 | F9 frozen build | Complete | Real PyInstaller one-folder build, frozen executable selftest, `tests/validate_frozen_build.py` |
+| F10 local matter RAG | Complete | Three-product strategy, `matter_rag` entitlement, local hybrid retrieval, citation packet, `tests/validate_rag.py` |
 
 ## Next Actions
 
-1. Merge F9 only after CI is green.
-2. Start the next hardening slice: installer smoke test, Tesseract bundling, or full UI workflows.
-3. Keep RAG, embeddings, Wakili-Mkononi, direct e-filing, hosted AI, and real cloud provider SDK integration deferred.
+1. Merge F10 only after CI is green.
+2. Start F11 end-to-end verification for licensing, vault, intake, RAG, backup, cloud boundary, UI, and frozen build together.
+3. Keep Wakili-Mkononi, direct e-filing, hosted AI, and real cloud provider SDK integration deferred.

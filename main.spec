@@ -4,7 +4,7 @@
 from PyInstaller.utils.hooks import collect_submodules
 
 hiddenimports = []
-for package_name in ("backup", "core", "intake", "licensing", "search", "ui", "vault"):
+for package_name in ("backup", "core", "intake", "licensing", "rag", "search", "ui", "vault"):
     hiddenimports += collect_submodules(package_name)
 
 a = Analysis(

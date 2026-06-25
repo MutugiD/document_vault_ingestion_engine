@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Document Vault Ingestion Engine is a Windows local-first system for legal document intake, encrypted custody, local search, backup, and restore.
+Document Vault Ingestion Engine is a Windows local-first system for legal document intake, encrypted custody, local search, local matter RAG retrieval, backup, and restore.
 
 ## Users
 
@@ -21,6 +21,7 @@ Document Vault Ingestion Engine is a Windows local-first system for legal docume
 - Organize documents by matter.
 - Track document versions and lifecycle status.
 - Search locally.
+- Retrieve matter-scoped RAG context with citations.
 - Prepare filing packs for manual court upload.
 - Back up and restore safely.
 - Upload only encrypted backup packages to managed cloud storage.
@@ -28,13 +29,19 @@ Document Vault Ingestion Engine is a Windows local-first system for legal docume
 ## Non-Goals
 
 - No direct court filing automation.
-- No RAG.
-- No embeddings.
-- No vector database.
-- No local LLM.
+- No hosted RAG by default.
+- No hosted embeddings by default.
+- No hosted vector database by default.
+- No local LLM in the current build.
 - No Wakili-Mkononi integration.
 - No hosted document viewing.
 - No cloud OCR by default.
+
+## Published Products
+
+1. Windows Legal Document Vault.
+2. Document Intake Engine.
+3. Local Matter RAG Connector.
 
 ## Stack
 
