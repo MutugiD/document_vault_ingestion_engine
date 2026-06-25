@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F8 UI package planning.
+F8 UI package validation.
 
 ## Accepted Decisions
 
@@ -36,10 +36,10 @@ F8 UI package planning.
 | F5 matter/search | Complete | Matter records, document versions, SQLite FTS5, matter-scoped search, `tests/validate_search.py` |
 | F6 backup/restore | Complete | Encrypted local backup package, manifest, restore drill, wrong-key behavior, `tests/validate_backup.py` |
 | F7 cloud boundary | Complete | Provider-neutral grants, metadata allowlist, encrypted-package-only upload boundary, `tests/validate_cloud_boundary.py` |
-| F8 UI/package | Planned | `tests/validate_ui.py`, `tests/validate_package.py` placeholders |
+| F8 UI/package | Complete | PySide6 shell, worker pattern, package selftest, `tests/validate_ui.py`, `tests/validate_package.py` |
 
 ## Next Actions
 
-1. Merge F7 only after CI is green.
-2. Start F8 UI/package on `feature/f8-ui-package-v1`.
-3. Add PySide6 shell, worker thread pattern, package selftest, and PyInstaller validation.
+1. Merge F8 only after CI is green.
+2. Cut the next planning pass for hardening: real frozen EXE build, installer smoke test, Tesseract bundling, and UI workflows.
+3. Keep RAG, embeddings, Wakili-Mkononi, direct e-filing, hosted AI, and real cloud provider SDK integration deferred.

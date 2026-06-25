@@ -198,6 +198,29 @@ Definition of done:
 
 ## F8 - UI And Package
 
-Status: Planned.
+Status: Complete.
 
 Build PySide6 UI shell, worker threading, `main.spec`, and frozen selftest.
+
+Deliver:
+
+- PySide6 shell.
+- Worker thread pattern.
+- Package selftest.
+- PyInstaller configuration validation.
+
+Definition of done:
+
+- `python tests\validate_docs.py`
+- `python tests\validate_skeleton.py`
+- `python tests\validate_license.py`
+- `python tests\validate_vault.py`
+- `python tests\validate_intake.py`
+- `python tests\validate_extraction.py`
+- `python tests\validate_search.py`
+- `python tests\validate_backup.py`
+- `python tests\validate_cloud_boundary.py`
+- `python tests\validate_ui.py`
+- `python tests\validate_package.py`
+- `python main.py --selftest`
+- `ruff check .`

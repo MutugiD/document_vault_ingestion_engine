@@ -23,6 +23,18 @@ PySide6.
 - Cancellation is cooperative.
 - Closing during a job requires confirmation.
 
+## F8 Implementation Boundary
+
+The first UI slice implements:
+
+- PySide6 application shell.
+- Main window with module readiness cards.
+- `--gui` application entrypoint.
+- `QRunnable` worker pattern with completion/failure signals.
+- Offscreen UI validation for CI.
+
+Full setup wizard, intake queue screens, matter workspace, backup/restore forms, and admin screens are later UI slices.
+
 ## Verification
 
-`tests/validate_ui.py` will use offscreen/headless UI checks once UI begins.
+`tests/validate_ui.py` uses the Qt offscreen platform to instantiate the app, open the main window, and verify the worker-thread pattern.
