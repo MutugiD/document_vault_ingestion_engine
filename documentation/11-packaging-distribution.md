@@ -47,8 +47,23 @@ The frozen-build hardening slice implements:
 
 Installer wrapping, code signing, bundled Tesseract, and clean-machine smoke testing are later distribution hardening slices.
 
+## F13 Implementation Boundary
+
+The release-bundle slice implements:
+
+- Checked ZIP creation from `dist/DocumentVaultIngestionEngine`.
+- Sidecar release manifest with app name, version, platform, product catalog, release files, and SHA-256 hashes.
+- Embedded `release-manifest.json` inside the ZIP without self-referential ZIP hash.
+- Validation that the release includes `DocumentVaultIngestionEngine.exe`, `_internal/products/product_catalog.json`, and the embedded manifest.
+- Guardrails against obvious secret, private-key, credential, `.env`, recovery-key, and client-document file names.
+- CI execution of `tests/validate_release_bundle.py` after the frozen build.
+
+Installer wrapping, code signing, bundled Tesseract binary provenance, and clean-machine VM acceptance remain later distribution hardening slices.
+
 ## Verification
 
 `tests/validate_package.py` checks the spec, confirms no private/secret/credential terms are embedded in packaging config, runs `main.py --selftest`, and verifies PyInstaller is callable.
 
 `tests/validate_frozen_build.py` performs the full local one-folder PyInstaller build and runs the frozen executable selftest.
+
+`tests/validate_release_bundle.py` creates the checked release ZIP and sidecar manifest, verifies the ZIP hash, confirms the three published products are present, and checks release file-name safety boundaries.

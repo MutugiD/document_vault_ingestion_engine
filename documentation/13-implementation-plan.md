@@ -359,3 +359,41 @@ Definition of done:
 - `python tests\validate_frozen_build.py`
 - `python main.py --selftest`
 - `ruff check .`
+
+## F13 - Release Bundle
+
+Status: Complete.
+
+Create a checked Windows release ZIP from the frozen PyInstaller bundle.
+
+Deliver:
+
+- Release bundle Python module.
+- `scripts/build_release_bundle.py` command.
+- Sidecar release manifest with bundle SHA-256.
+- Embedded release manifest in the ZIP.
+- Product catalog metadata in the release manifest.
+- File-level SHA-256 hashes for bundled artifacts.
+- Guardrails against obvious secret, private-key, credential, `.env`, recovery-key, and client-document file names.
+- CI step for `tests\validate_release_bundle.py`.
+
+Definition of done:
+
+- `python tests\validate_docs.py`
+- `python tests\validate_skeleton.py`
+- `python tests\validate_products.py`
+- `python tests\validate_license.py`
+- `python tests\validate_vault.py`
+- `python tests\validate_intake.py`
+- `python tests\validate_extraction.py`
+- `python tests\validate_search.py`
+- `python tests\validate_rag.py`
+- `python tests\validate_backup.py`
+- `python tests\validate_cloud_boundary.py`
+- `python tests\validate_ui.py`
+- `python tests\validate_package.py`
+- `python tests\validate_e2e.py`
+- `python tests\validate_frozen_build.py`
+- `python tests\validate_release_bundle.py`
+- `python main.py --selftest`
+- `ruff check .`

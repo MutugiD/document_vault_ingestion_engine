@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-Release hardening planning.
+F13 release bundle validation.
 
 ## Accepted Decisions
 
@@ -41,9 +41,10 @@ Release hardening planning.
 | F10 local matter RAG | Complete | Three-product strategy, `matter_rag` entitlement, local hybrid retrieval, citation packet, `tests/validate_rag.py` |
 | F11 end-to-end verification | Complete | Licensed intake-to-RAG-to-backup-to-restore workflow, `tests/validate_e2e.py` |
 | F12 three-product catalog | Complete | Product catalog JSON/API, product validators, release boundaries, `tests/validate_products.py` |
+| F13 release bundle | Complete | Checked ZIP, sidecar manifest, product metadata, artifact hashes, `tests/validate_release_bundle.py` |
 
 ## Next Actions
 
-1. Merge F12 only after CI is green.
-2. Start release hardening: installer workflow, code signing plan, Tesseract bundling, and clean-machine acceptance.
+1. Merge F13 only after CI is green.
+2. Start installer workflow planning, code signing plan, Tesseract bundling, and clean-machine acceptance.
 3. Keep Wakili-Mkononi, direct e-filing, hosted AI, and real cloud provider SDK integration deferred.

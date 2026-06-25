@@ -6,7 +6,7 @@ This repository is being built documentation-first and feature by feature: clear
 
 ## Current Status
 
-F9 Windows frozen build validation complete.
+F13 release bundle validation complete.
 
 Implemented so far:
 
@@ -22,6 +22,7 @@ Implemented so far:
 - PySide6 shell and worker pattern.
 - PyInstaller package configuration validation.
 - Real Windows PyInstaller one-folder build and frozen executable selftest.
+- Release ZIP and sidecar manifest validation.
 
 F10 Local Matter RAG Connector complete.
 
@@ -85,6 +86,7 @@ Deferred:
   search/
   tests/
   tools/
+  release/
   ui/
   vault/
   documentation/
@@ -110,6 +112,7 @@ python tests\validate_ui.py
 python tests\validate_package.py
 python tests\validate_e2e.py
 python tests\validate_frozen_build.py
+python tests\validate_release_bundle.py
 python main.py --selftest
 ```
 
