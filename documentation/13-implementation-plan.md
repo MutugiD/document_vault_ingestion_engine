@@ -224,3 +224,34 @@ Definition of done:
 - `python tests\validate_package.py`
 - `python main.py --selftest`
 - `ruff check .`
+
+## F9 - Windows Frozen Build
+
+Status: Complete.
+
+Build and validate the real PyInstaller one-folder Windows bundle.
+
+Deliver:
+
+- Real PyInstaller build through `main.spec`.
+- Windows-friendly `strip=False` bundle settings.
+- Frozen executable existence check.
+- Frozen executable `--selftest` exit-code validation.
+- CI step for `tests\validate_frozen_build.py`.
+
+Definition of done:
+
+- `python tests\validate_docs.py`
+- `python tests\validate_skeleton.py`
+- `python tests\validate_license.py`
+- `python tests\validate_vault.py`
+- `python tests\validate_intake.py`
+- `python tests\validate_extraction.py`
+- `python tests\validate_search.py`
+- `python tests\validate_backup.py`
+- `python tests\validate_cloud_boundary.py`
+- `python tests\validate_ui.py`
+- `python tests\validate_package.py`
+- `python tests\validate_frozen_build.py`
+- `python main.py --selftest`
+- `ruff check .`

@@ -1,8 +1,8 @@
 # Document Vault Ingestion Engine - Planning Documentation
 
-This documentation pack defines the F0 planning and implementation baseline for a local-first Windows legal document vault and ingestion engine.
+This documentation pack defines the planning and implementation baseline for a local-first Windows legal document vault and ingestion engine.
 
-It mirrors the IFC Converter documentation discipline:
+The documentation discipline is:
 
 - architecture before feature work
 - defect and decision register

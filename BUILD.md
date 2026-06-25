@@ -24,6 +24,15 @@ pip install -r requirements-dev.txt
 ```powershell
 python tests\validate_docs.py
 python tests\validate_skeleton.py
+python tests\validate_license.py
+python tests\validate_vault.py
+python tests\validate_intake.py
+python tests\validate_extraction.py
+python tests\validate_search.py
+python tests\validate_backup.py
+python tests\validate_cloud_boundary.py
+python tests\validate_ui.py
+python tests\validate_package.py
 python main.py --selftest
 ```
 
@@ -35,10 +44,16 @@ The first production packaging target is a PyInstaller one-folder bundle:
 pyinstaller main.spec
 ```
 
-The packaged executable must later pass:
+The packaged executable must pass:
 
 ```powershell
 dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe --selftest
+```
+
+The automated frozen-build validator runs the same path:
+
+```powershell
+python tests\validate_frozen_build.py
 ```
 
 ## Bundle Rules
@@ -48,7 +63,7 @@ The bundle must include:
 - Application executable.
 - Python runtime pieces collected by PyInstaller.
 - PySide6 runtime files once UI begins.
-- Tesseract executable and traineddata once OCR begins.
+- Tesseract executable and traineddata once OCR packaging begins.
 - License public key.
 - JSON/schema files.
 

@@ -57,6 +57,9 @@ jobs:
       - name: Validate packaging configuration
         run: python tests\validate_package.py
 
+      - name: Validate frozen Windows build
+        run: python tests\validate_frozen_build.py
+
       - name: Run application selftest
         run: python main.py --selftest
 

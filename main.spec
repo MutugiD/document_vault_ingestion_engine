@@ -1,12 +1,18 @@
 # -*- mode: python ; coding: utf-8 -*-
 # PyInstaller one-folder spec. Build with: pyinstaller main.spec
 
+from PyInstaller.utils.hooks import collect_submodules
+
+hiddenimports = []
+for package_name in ("backup", "core", "intake", "licensing", "search", "ui", "vault"):
+    hiddenimports += collect_submodules(package_name)
+
 a = Analysis(
     ["main.py"],
     pathex=[],
     binaries=[],
     datas=[],
-    hiddenimports=[],
+    hiddenimports=hiddenimports,
     hookspath=["hooks"],
     noarchive=False,
 )
@@ -19,7 +25,7 @@ exe = EXE(
     exclude_binaries=True,
     name="DocumentVaultIngestionEngine",
     debug=False,
-    strip=True,
+    strip=False,
     upx=False,
     console=False,
 )
@@ -27,7 +33,7 @@ coll = COLLECT(
     exe,
     a.binaries,
     a.datas,
-    strip=True,
+    strip=False,
     upx=False,
     name="DocumentVaultIngestionEngine",
 )

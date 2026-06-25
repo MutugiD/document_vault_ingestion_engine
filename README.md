@@ -2,28 +2,26 @@
 
 Local-first Windows document vault and ingestion engine for legal-office workflows.
 
-This repository is being built documentation-first, feature by feature, using the same discipline as the IFC Converter reference project: clear architecture docs, a project tracker, small validation scripts, and a Windows packaging path before feature work expands.
+This repository is being built documentation-first and feature by feature: clear architecture docs, a project tracker, small validation scripts, and a Windows packaging path before feature work expands.
 
 ## Current Status
 
-F0 documentation and skeleton baseline.
+F9 Windows frozen build validation complete.
 
-Implemented in this slice:
+Implemented so far:
 
-- Python package skeleton.
 - Documentation pack under `documentation/`.
-- Windows build guide.
-- Validation scripts under `tests/`.
-- `main.py --selftest` smoke entrypoint.
-
-Not implemented yet:
-
-- Real licensing.
-- Encrypted vault storage.
-- OCR and document parsing.
-- Backup/restore.
-- UI.
-- Packaging output.
+- Python package skeleton and `main.py --selftest`.
+- Signed offline license validation.
+- Encrypted local vault storage.
+- Document intake validation and quarantine records.
+- PDF/DOCX extraction and OCR adapter boundary.
+- Matter/document/version records and SQLite FTS5 search.
+- Encrypted local backup/restore drill.
+- Managed cloud backup boundary.
+- PySide6 shell and worker pattern.
+- PyInstaller package configuration validation.
+- Real Windows PyInstaller one-folder build and frozen executable selftest.
 
 ## Product Boundary
 
@@ -80,6 +78,16 @@ From the repo root:
 ```powershell
 python tests\validate_docs.py
 python tests\validate_skeleton.py
+python tests\validate_license.py
+python tests\validate_vault.py
+python tests\validate_intake.py
+python tests\validate_extraction.py
+python tests\validate_search.py
+python tests\validate_backup.py
+python tests\validate_cloud_boundary.py
+python tests\validate_ui.py
+python tests\validate_package.py
+python tests\validate_frozen_build.py
 python main.py --selftest
 ```
 
