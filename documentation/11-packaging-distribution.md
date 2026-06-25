@@ -60,6 +60,19 @@ The release-bundle slice implements:
 
 Installer wrapping, code signing, bundled Tesseract binary provenance, and clean-machine VM acceptance remain later distribution hardening slices.
 
+## F14 Implementation Boundary
+
+The portable-install smoke slice implements:
+
+- Safe extraction of the checked release ZIP into `test-output/portable-install`.
+- Path traversal protection before ZIP extraction.
+- Frozen executable `--selftest` from the extracted release folder.
+- Frozen executable `--products` from the extracted release folder.
+- Validation that the three published products survive release ZIP extraction.
+- CI execution of `tests/validate_portable_install.py` after release-bundle validation.
+
+Installer wrapping, code signing, bundled Tesseract binary provenance, and clean-machine VM acceptance remain later distribution hardening slices.
+
 ## Verification
 
 `tests/validate_package.py` checks the spec, confirms no private/secret/credential terms are embedded in packaging config, runs `main.py --selftest`, and verifies PyInstaller is callable.
@@ -67,3 +80,5 @@ Installer wrapping, code signing, bundled Tesseract binary provenance, and clean
 `tests/validate_frozen_build.py` performs the full local one-folder PyInstaller build and runs the frozen executable selftest.
 
 `tests/validate_release_bundle.py` creates the checked release ZIP and sidecar manifest, verifies the ZIP hash, confirms the three published products are present, and checks release file-name safety boundaries.
+
+`tests/validate_portable_install.py` extracts that checked release ZIP to an isolated local folder and runs the frozen executable smoke paths from the extracted install.
