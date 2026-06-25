@@ -4,14 +4,26 @@
 from PyInstaller.utils.hooks import collect_submodules
 
 hiddenimports = []
-for package_name in ("backup", "core", "intake", "licensing", "rag", "search", "ui", "vault"):
+for package_name in (
+    "backup",
+    "core",
+    "intake",
+    "licensing",
+    "products",
+    "rag",
+    "search",
+    "ui",
+    "vault",
+):
     hiddenimports += collect_submodules(package_name)
+
+datas = [("products/product_catalog.json", "products")]
 
 a = Analysis(
     ["main.py"],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=datas,
     hiddenimports=hiddenimports,
     hookspath=["hooks"],
     noarchive=False,

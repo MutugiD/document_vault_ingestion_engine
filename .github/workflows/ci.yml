@@ -30,6 +30,9 @@ jobs:
       - name: Validate Python skeleton
         run: python tests\validate_skeleton.py
 
+      - name: Validate published products
+        run: python tests\validate_products.py
+
       - name: Validate licensing
         run: python tests\validate_license.py
 

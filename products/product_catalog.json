@@ -1,0 +1,110 @@
+{
+  "products": [
+    {
+      "slug": "windows-legal-document-vault",
+      "name": "Windows Legal Document Vault",
+      "summary": "Licensed local encrypted vault for matter records, document versions, audit events, search, backup, restore, and recovery ownership.",
+      "license_features": [
+        "document_intake",
+        "cloud_backup",
+        "managed_restore"
+      ],
+      "modules": [
+        "licensing",
+        "vault",
+        "search",
+        "backup",
+        "ui"
+      ],
+      "validators": [
+        "tests/validate_license.py",
+        "tests/validate_vault.py",
+        "tests/validate_search.py",
+        "tests/validate_backup.py",
+        "tests/validate_cloud_boundary.py",
+        "tests/validate_ui.py",
+        "tests/validate_package.py",
+        "tests/validate_frozen_build.py"
+      ],
+      "documentation": [
+        "documentation/03-local-storage-vault.md",
+        "documentation/06-matter-document-versioning.md",
+        "documentation/07-search-indexing.md",
+        "documentation/08-licensing-security.md",
+        "documentation/09-backup-restore-cloud.md",
+        "documentation/11-packaging-distribution.md"
+      ],
+      "release_artifacts": [
+        "dist/DocumentVaultIngestionEngine/DocumentVaultIngestionEngine.exe",
+        "dist/DocumentVaultIngestionEngine/_internal"
+      ],
+      "deferred": [
+        "installer wrapping",
+        "code signing",
+        "clean-machine VM acceptance"
+      ]
+    },
+    {
+      "slug": "document-intake-engine",
+      "name": "Document Intake Engine",
+      "summary": "Scanner/manual import pipeline for quarantine, validation, duplicate detection, PDF/DOCX extraction, OCR boundary, and vault handoff preparation.",
+      "license_features": [
+        "document_intake"
+      ],
+      "modules": [
+        "intake",
+        "vault",
+        "ui"
+      ],
+      "validators": [
+        "tests/validate_intake.py",
+        "tests/validate_extraction.py",
+        "tests/validate_e2e.py"
+      ],
+      "documentation": [
+        "documentation/04-document-intake-validation.md",
+        "documentation/05-text-extraction-ocr.md",
+        "documentation/10-ui-threading-workflows.md",
+        "documentation/15-end-to-end-verification.md"
+      ],
+      "release_artifacts": [
+        "dist/DocumentVaultIngestionEngine/DocumentVaultIngestionEngine.exe"
+      ],
+      "deferred": [
+        "bundled Tesseract binary",
+        "watched-folder daemon",
+        "operator review UI"
+      ]
+    },
+    {
+      "slug": "local-matter-rag-connector",
+      "name": "Local Matter RAG Connector",
+      "summary": "Local citation-first RAG retrieval over matter document versions, using matter-scoped chunks, hybrid retrieval, reranking, and grounded context packets.",
+      "license_features": [
+        "matter_rag"
+      ],
+      "modules": [
+        "rag",
+        "search",
+        "licensing"
+      ],
+      "validators": [
+        "tests/validate_rag.py",
+        "tests/validate_e2e.py"
+      ],
+      "documentation": [
+        "documentation/14-three-products-rag-strategy.md",
+        "documentation/15-end-to-end-verification.md",
+        "documentation/08-licensing-security.md"
+      ],
+      "release_artifacts": [
+        "dist/DocumentVaultIngestionEngine/DocumentVaultIngestionEngine.exe"
+      ],
+      "deferred": [
+        "hosted LLM generation",
+        "hosted embeddings",
+        "Wakili-Mkononi integration"
+      ]
+    }
+  ]
+}

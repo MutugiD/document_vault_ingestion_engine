@@ -10,6 +10,13 @@ The product line now publishes three near-term solutions from the same local-fir
 
 Wakili-Mkononi integration, direct Judiciary e-filing automation, hosted AI, and remote provider SDK execution remain later integration layers. The first RAG work is local, citation-first, and matter-scoped.
 
+The machine-readable product catalog is:
+
+- `products/product_catalog.json`
+- `products/catalog.py`
+
+`tests/validate_products.py` proves each published product maps to existing modules, validators, documentation, license features, and release artifacts.
+
 ## Product 1 - Windows Legal Document Vault
 
 Purpose:

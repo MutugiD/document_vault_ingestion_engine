@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -16,6 +17,7 @@ CORE_MODULES = (
     "search",
     "rag",
     "backup",
+    "products",
     "ui",
 )
 
@@ -58,6 +60,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Document Vault Ingestion Engine")
     parser.add_argument("--selftest", action="store_true", help="run packaged-app smoke checks")
     parser.add_argument("--gui", action="store_true", help="launch the Windows desktop shell")
+    parser.add_argument(
+        "--products",
+        action="store_true",
+        help="print the published product catalog",
+    )
     return parser.parse_args(argv)
 
 
@@ -69,8 +76,22 @@ def main(argv: list[str] | None = None) -> int:
         from ui import run_gui
 
         return run_gui(sys.argv[:1])
+    if args.products:
+        from products import load_product_catalog
 
-    print("Document Vault Ingestion Engine. Run with --gui or --selftest.")
+        payload = [
+            {
+                "slug": product.slug,
+                "name": product.name,
+                "summary": product.summary,
+                "license_features": list(product.license_features),
+            }
+            for product in load_product_catalog()
+        ]
+        print(json.dumps({"products": payload}, indent=2, sort_keys=True))
+        return 0
+
+    print("Document Vault Ingestion Engine. Run with --gui, --products, or --selftest.")
     return 0
 
 

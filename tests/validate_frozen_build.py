@@ -41,6 +41,15 @@ def main() -> None:
     )
     assert frozen_selftest.returncode == 0, frozen_selftest.stdout + frozen_selftest.stderr
 
+    frozen_products = subprocess.run(
+        [str(FROZEN_EXE), "--products"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert frozen_products.returncode == 0, frozen_products.stdout + frozen_products.stderr
+
     print("FROZEN BUILD VALIDATION PASS")
 
 
