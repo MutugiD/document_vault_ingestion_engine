@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F3 document intake planning.
+F4 extraction and OCR planning.
 
 ## Accepted Decisions
 
@@ -31,7 +31,7 @@ F3 document intake planning.
 | F0 documentation and skeleton | Complete | PR #1 merged, documentation pack, package dirs, validators |
 | F1 licensing | Complete | Offline license module, `tests/validate_license.py`, `main.py --selftest` licensing smoke check |
 | F2 vault | Complete | SQLite metadata, audit ledger, AES-GCM object storage, `tests/validate_vault.py` |
-| F3 intake | Planned | `tests/validate_intake.py` placeholder |
+| F3 intake | Complete | Quarantine import, signature detection, duplicate detection, SQLite records, `tests/validate_intake.py` |
 | F4 extraction/OCR | Planned | `tests/validate_extraction.py` placeholder |
 | F5 matter/search | Planned | `tests/validate_search.py` placeholder |
 | F6 backup/restore | Planned | `tests/validate_backup.py` placeholder |
@@ -40,6 +40,6 @@ F3 document intake planning.
 
 ## Next Actions
 
-1. Merge F2 only after CI is green.
-2. Start F3 document intake on `feature/f3-document-intake-v1`.
-3. Add quarantine workspace, file signature detection, SHA-256 duplicate checks, and intake records.
+1. Merge F3 only after CI is green.
+2. Start F4 extraction and OCR on `feature/f4-extraction-ocr-v1`.
+3. Add PDF extraction, DOCX extraction, OCR adapter boundary, OCR status, and quality warnings.
