@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "feature/**"
+
+jobs:
+  validate:
+    name: Validate documentation and skeleton
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install validation tools
+        run: python -m pip install --upgrade pip ruff
+
+      - name: Validate documentation pack
+        run: python tests\validate_docs.py
+
+      - name: Validate Python skeleton
+        run: python tests\validate_skeleton.py
+
+      - name: Run application selftest
+        run: python main.py --selftest
+
+      - name: Lint Python files
+        run: ruff check .
