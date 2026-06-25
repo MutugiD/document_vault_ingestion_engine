@@ -48,6 +48,9 @@ jobs:
       - name: Validate backup restore
         run: python tests\validate_backup.py
 
+      - name: Validate managed cloud boundary
+        run: python tests\validate_cloud_boundary.py
+
       - name: Run application selftest
         run: python main.py --selftest
 

@@ -1,5 +1,22 @@
 """Backup package for local snapshots, restore drills, and cloud grant boundaries."""
 
+from backup.cloud_boundary import (
+    ALLOWED_CLOUD_METADATA_KEYS,
+    FORBIDDEN_CLOUD_METADATA_KEYS,
+    CloudBoundaryError,
+    CloudGrant,
+    CloudSnapshot,
+    InMemoryGrantBackend,
+    UploadResult,
+    assert_cloud_metadata_safe,
+    assert_no_long_lived_credentials,
+    cloud_metadata_from_manifest,
+    create_download_grant,
+    create_upload_grant,
+    delete_snapshot,
+    list_snapshots,
+    upload_encrypted_snapshot,
+)
 from backup.core import (
     BackupError,
     BackupManifest,
@@ -12,12 +29,27 @@ from backup.core import (
 )
 
 __all__ = [
+    "ALLOWED_CLOUD_METADATA_KEYS",
     "BackupError",
     "BackupManifest",
     "BackupPackage",
+    "CloudBoundaryError",
+    "CloudGrant",
+    "CloudSnapshot",
+    "FORBIDDEN_CLOUD_METADATA_KEYS",
+    "InMemoryGrantBackend",
     "InvalidBackupKeyError",
     "RestoreReport",
+    "UploadResult",
+    "assert_cloud_metadata_safe",
+    "assert_no_long_lived_credentials",
+    "cloud_metadata_from_manifest",
     "create_local_backup",
+    "create_download_grant",
+    "create_upload_grant",
+    "delete_snapshot",
+    "list_snapshots",
     "read_backup_manifest",
     "restore_backup_package",
+    "upload_encrypted_snapshot",
 ]
