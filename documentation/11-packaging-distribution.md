@@ -35,8 +35,20 @@ The first packaging slice implements:
 - Packaged-app `main.py --selftest` smoke path.
 - PyInstaller availability check in CI.
 
-Full frozen executable build, installer wrapping, code signing, bundled Tesseract, and clean-machine smoke testing are later distribution hardening slices.
+## F9 Implementation Boundary
+
+The frozen-build hardening slice implements:
+
+- Real PyInstaller one-folder build on Windows.
+- Frozen executable existence check.
+- `_internal` runtime folder existence check.
+- Frozen `DocumentVaultIngestionEngine.exe --selftest` exit-code validation.
+- `strip=False` in `main.spec` to avoid GNU strip warnings on Windows.
+
+Installer wrapping, code signing, bundled Tesseract, and clean-machine smoke testing are later distribution hardening slices.
 
 ## Verification
 
 `tests/validate_package.py` checks the spec, confirms no private/secret/credential terms are embedded in packaging config, runs `main.py --selftest`, and verifies PyInstaller is callable.
+
+`tests/validate_frozen_build.py` performs the full local one-folder PyInstaller build and runs the frozen executable selftest.
