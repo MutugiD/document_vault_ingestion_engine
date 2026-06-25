@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F2 encrypted vault planning.
+F3 document intake planning.
 
 ## Accepted Decisions
 
@@ -30,7 +30,7 @@ F2 encrypted vault planning.
 | --- | --- | --- |
 | F0 documentation and skeleton | Complete | PR #1 merged, documentation pack, package dirs, validators |
 | F1 licensing | Complete | Offline license module, `tests/validate_license.py`, `main.py --selftest` licensing smoke check |
-| F2 vault | Planned | `tests/validate_vault.py` placeholder |
+| F2 vault | Complete | SQLite metadata, audit ledger, AES-GCM object storage, `tests/validate_vault.py` |
 | F3 intake | Planned | `tests/validate_intake.py` placeholder |
 | F4 extraction/OCR | Planned | `tests/validate_extraction.py` placeholder |
 | F5 matter/search | Planned | `tests/validate_search.py` placeholder |
@@ -40,6 +40,6 @@ F2 encrypted vault planning.
 
 ## Next Actions
 
-1. Merge F1 only after CI is green.
-2. Start F2 encrypted vault on `feature/f2-encrypted-vault-v1`.
-3. Add SQLite metadata, audit ledger, AES-GCM object storage, and wrong-key validation.
+1. Merge F2 only after CI is green.
+2. Start F3 document intake on `feature/f3-document-intake-v1`.
+3. Add quarantine workspace, file signature detection, SHA-256 duplicate checks, and intake records.

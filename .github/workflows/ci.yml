@@ -33,6 +33,9 @@ jobs:
       - name: Validate licensing
         run: python tests\validate_license.py
 
+      - name: Validate encrypted vault
+        run: python tests\validate_vault.py
+
       - name: Run application selftest
         run: python main.py --selftest
 
