@@ -66,6 +66,19 @@ Forbidden cloud metadata:
 - extracted text
 - recovery keys
 
+## F7 Implementation Boundary
+
+The managed cloud boundary implements:
+
+- Provider-neutral grant model for AWS, Azure, and GCP targets.
+- Short-lived upload/download grant representation.
+- Encrypted `.wakilibak` package-only upload boundary.
+- Cloud-visible metadata allowlist.
+- Rejection of matter names, client names, case numbers, filenames, OCR text, extracted text, source hashes, recovery keys, and cloud credential fields.
+- Snapshot list/delete boundary through the owner backend abstraction.
+
+This slice does not call AWS, Azure, or GCP SDKs directly. The desktop app remains dependent on your backend to issue grants and broker provider storage.
+
 ## Verification
 
 `tests/validate_backup.py` proves:
@@ -78,3 +91,11 @@ Forbidden cloud metadata:
 - Restored encrypted objects can be unlocked with the recovery key.
 
 `tests/validate_cloud_boundary.py` will prove F7 metadata safety for managed uploads.
+`tests/validate_cloud_boundary.py` proves:
+
+- Upload boundary accepts encrypted backup packages.
+- Cloud metadata contains only allowlisted fields.
+- Client/case metadata is rejected.
+- Long-lived cloud credential fields are rejected.
+- Non-`.wakilibak` package upload is rejected.
+- Snapshot listing and deletion stay inside the owner backend boundary.
