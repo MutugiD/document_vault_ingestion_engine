@@ -116,9 +116,31 @@ Definition of done:
 
 ## F5 - Matter Version Search
 
-Status: Planned.
+Status: Complete.
 
 Build matter records, document versions, lifecycle status, and SQLite FTS5 search.
+
+Deliver:
+
+- Matter records.
+- Document records.
+- Immutable document version records.
+- Lifecycle status on documents and versions.
+- SQLite FTS5 indexing.
+- Matter-scoped search.
+- Search index rebuild.
+
+Definition of done:
+
+- `python tests\validate_docs.py`
+- `python tests\validate_skeleton.py`
+- `python tests\validate_license.py`
+- `python tests\validate_vault.py`
+- `python tests\validate_intake.py`
+- `python tests\validate_extraction.py`
+- `python tests\validate_search.py`
+- `python main.py --selftest`
+- `ruff check .`
 
 ## F6 - Backup Restore
 

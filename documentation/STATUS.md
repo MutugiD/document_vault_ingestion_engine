@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F5 matter version search planning.
+F6 backup restore planning.
 
 ## Accepted Decisions
 
@@ -33,13 +33,13 @@ F5 matter version search planning.
 | F2 vault | Complete | SQLite metadata, audit ledger, AES-GCM object storage, `tests/validate_vault.py` |
 | F3 intake | Complete | Quarantine import, signature detection, duplicate detection, SQLite records, `tests/validate_intake.py` |
 | F4 extraction/OCR | Complete | PyMuPDF PDF extraction, python-docx extraction, OCR adapter boundary, `tests/validate_extraction.py` |
-| F5 matter/search | Planned | `tests/validate_search.py` placeholder |
+| F5 matter/search | Complete | Matter records, document versions, SQLite FTS5, matter-scoped search, `tests/validate_search.py` |
 | F6 backup/restore | Planned | `tests/validate_backup.py` placeholder |
 | F7 cloud boundary | Planned | `tests/validate_cloud_boundary.py` placeholder |
 | F8 UI/package | Planned | `tests/validate_ui.py`, `tests/validate_package.py` placeholders |
 
 ## Next Actions
 
-1. Merge F4 only after CI is green.
-2. Start F5 matter version search on `feature/f5-matter-search-v1`.
-3. Add matter records, document versions, lifecycle status, SQLite FTS5 indexing, and matter-scoped search.
+1. Merge F5 only after CI is green.
+2. Start F6 backup restore on `feature/f6-backup-restore-v1`.
+3. Add encrypted backup packages, manifests, hash verification, restore drill, and wrong-key behavior.

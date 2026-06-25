@@ -47,6 +47,18 @@ Organize documents by matter and preserve version/lifecycle history.
 - Superseded
 - Archived
 
+## F5 Implementation Boundary
+
+The first matter/versioning slice implements:
+
+- Matter records.
+- Document records linked to matters.
+- Immutable document version rows.
+- Auto-incrementing version numbers per document.
+- Lifecycle status captured on documents and versions.
+
+Protected lifecycle enforcement for filed, served, court-returned, superseded, and archived documents will be expanded in later workflow/UI slices.
+
 ## Verification
 
-Feature tests will prove immutable version creation and protected filed/served versions.
+`tests/validate_search.py` proves immutable version creation by adding multiple versions to the same document and verifying sequential version numbers.

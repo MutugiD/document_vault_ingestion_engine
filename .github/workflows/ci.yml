@@ -42,6 +42,9 @@ jobs:
       - name: Validate extraction and OCR boundary
         run: python tests\validate_extraction.py
 
+      - name: Validate matter search
+        run: python tests\validate_search.py
+
       - name: Run application selftest
         run: python main.py --selftest
 
