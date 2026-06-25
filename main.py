@@ -6,7 +6,6 @@ import argparse
 import importlib
 import sys
 
-
 CORE_MODULES = (
     "core",
     "licensing",
