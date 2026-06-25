@@ -56,6 +56,7 @@ def run_selftest() -> int:
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Document Vault Ingestion Engine")
     parser.add_argument("--selftest", action="store_true", help="run packaged-app smoke checks")
+    parser.add_argument("--gui", action="store_true", help="launch the Windows desktop shell")
     return parser.parse_args(argv)
 
 
@@ -63,8 +64,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(list(sys.argv[1:] if argv is None else argv))
     if args.selftest:
         return run_selftest()
+    if args.gui:
+        from ui import run_gui
 
-    print("Document Vault Ingestion Engine skeleton. Run with --selftest.")
+        return run_gui(sys.argv[:1])
+
+    print("Document Vault Ingestion Engine. Run with --gui or --selftest.")
     return 0
 
 
