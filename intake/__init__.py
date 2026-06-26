@@ -18,6 +18,14 @@ from intake.extraction import (
     ExtractionResult,
     extract_text,
 )
+from intake.ocr_runtime import (
+    OcrRuntimeError,
+    TesseractRuntime,
+    TesseractRuntimeManifest,
+    create_tesseract_manifest,
+    load_tesseract_manifest,
+    validate_tesseract_runtime,
+)
 
 __all__ = [
     "ACCEPTED_STATUS",
@@ -25,13 +33,19 @@ __all__ = [
     "OCR_FAILED",
     "OCR_NOT_REQUIRED",
     "OCR_PENDING",
+    "OcrRuntimeError",
     "ExtractionError",
     "ExtractionResult",
+    "TesseractRuntime",
+    "TesseractRuntimeManifest",
     "REJECTED_STATUS",
     "IntakeError",
     "IntakeRecord",
+    "create_tesseract_manifest",
     "detect_file_type",
     "extract_text",
     "import_document",
     "list_intake_records",
+    "load_tesseract_manifest",
+    "validate_tesseract_runtime",
 ]

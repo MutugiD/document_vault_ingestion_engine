@@ -97,6 +97,20 @@ The bundle must include:
 - `products/product_catalog.json`.
 - embedded `release-manifest.json`.
 
+The Tesseract runtime folder must include a manifest that records:
+
+- provider `tesseract`
+- Windows platform `windows-x64`
+- `tesseract.exe`
+- required `tessdata/<language>.traineddata` files
+- SHA-256 and byte size for every OCR runtime file
+
+Validate the OCR runtime contract with:
+
+```powershell
+python tests\validate_ocr_runtime.py
+```
+
 The bundle must not include:
 
 - Vendor private signing keys.

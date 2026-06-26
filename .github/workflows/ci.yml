@@ -45,6 +45,9 @@ jobs:
       - name: Validate extraction and OCR boundary
         run: python tests\validate_extraction.py
 
+      - name: Validate OCR runtime bundle contract
+        run: python tests\validate_ocr_runtime.py
+
       - name: Validate matter search
         run: python tests\validate_search.py
 
