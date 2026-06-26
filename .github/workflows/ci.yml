@@ -33,6 +33,9 @@ jobs:
       - name: Validate published products
         run: python tests\validate_products.py
 
+      - name: Validate security scan
+        run: python tests\validate_security_scan.py
+
       - name: Validate licensing
         run: python tests\validate_license.py
 

@@ -6,7 +6,7 @@ This repository is being built documentation-first and feature by feature: clear
 
 ## Current Status
 
-F15 OCR runtime bundle contract complete.
+F16 security scan validation complete.
 
 Implemented so far:
 
@@ -17,6 +17,7 @@ Implemented so far:
 - Document intake validation and quarantine records.
 - PDF/DOCX extraction and OCR adapter boundary.
 - Tesseract OCR runtime bundle manifest validation.
+- Repository and release security scan validation.
 - Matter/document/version records and SQLite FTS5 search.
 - Encrypted local backup/restore drill.
 - Managed cloud backup boundary.
@@ -86,6 +87,7 @@ Deferred:
   rag/
   scripts/
   search/
+  security_checks/
   tests/
   tools/
   release/
@@ -102,6 +104,7 @@ From the repo root:
 python tests\validate_docs.py
 python tests\validate_skeleton.py
 python tests\validate_products.py
+python tests\validate_security_scan.py
 python tests\validate_license.py
 python tests\validate_vault.py
 python tests\validate_intake.py
