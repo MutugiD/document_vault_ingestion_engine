@@ -515,3 +515,51 @@ Definition of done:
 - `python tests\validate_portable_install.py`
 - `python main.py --selftest`
 - `ruff check .`
+
+## F17 - Real-World RAG End To End
+
+Status: Complete.
+
+Validate a realistic legal-document workflow with old PDF, DOCX pleading, scanned PDF, many grounded questions, copies, local vault saving, backup, cloud metadata, and restore.
+
+Deliver:
+
+- Old archived PDF fixture generation.
+- DOCX pleading fixture generation.
+- Image-only scanned PDF fixture generation.
+- Legacy `.doc` unsupported-file check.
+- Duplicate copy detection.
+- Quarantine copy preservation checks.
+- Encrypted vault object checks.
+- Matter, document, and version records for accepted files.
+- Matter-scoped RAG index and forty grounded RAG questions.
+- OCR-pending scanned PDF exclusion from RAG chunks.
+- Encrypted backup plaintext-leak checks.
+- Managed cloud metadata allowlist check.
+- Restore drill that reads original bytes for PDF, DOCX, and scanned PDF.
+- CI step for `tests\validate_real_world_rag_e2e.py`.
+
+Definition of done:
+
+- `python tests\validate_docs.py`
+- `python tests\validate_skeleton.py`
+- `python tests\validate_products.py`
+- `python tests\validate_security_scan.py`
+- `python tests\validate_license.py`
+- `python tests\validate_vault.py`
+- `python tests\validate_intake.py`
+- `python tests\validate_extraction.py`
+- `python tests\validate_ocr_runtime.py`
+- `python tests\validate_search.py`
+- `python tests\validate_rag.py`
+- `python tests\validate_backup.py`
+- `python tests\validate_cloud_boundary.py`
+- `python tests\validate_ui.py`
+- `python tests\validate_package.py`
+- `python tests\validate_e2e.py`
+- `python tests\validate_real_world_rag_e2e.py`
+- `python tests\validate_frozen_build.py`
+- `python tests\validate_release_bundle.py`
+- `python tests\validate_portable_install.py`
+- `python main.py --selftest`
+- `ruff check .`
