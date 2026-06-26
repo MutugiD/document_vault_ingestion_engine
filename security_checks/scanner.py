@@ -79,6 +79,7 @@ EXCLUDED_DIRS = {
     "test-output",
     "__pycache__",
 }
+SELF_REFERENTIAL_PATTERN_FILES = {"security_checks/scanner.py"}
 
 
 def scan_repository(root: Path) -> tuple[SecurityFinding, ...]:
@@ -105,6 +106,8 @@ def scan_paths(paths: list[Path], root: Path) -> tuple[SecurityFinding, ...]:
             findings.append(SecurityFinding(relative, "forbidden_filename", lowered))
         text = _read_text_safely(path)
         if text is None:
+            continue
+        if relative in SELF_REFERENTIAL_PATTERN_FILES:
             continue
         for rule, pattern in SECRET_PATTERNS:
             if pattern.search(text):
