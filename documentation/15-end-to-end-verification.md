@@ -33,6 +33,27 @@ Prove the three published products work together as one licensed local-first sys
 15. Restore the backup into a clean restore workspace.
 16. Reopen the restored vault and read the encrypted object with the recovery key.
 
+## F17 Real-World RAG Boundary
+
+`tests/validate_real_world_rag_e2e.py` expands the integrated workflow with realistic legal-document fixtures:
+
+1. Generate an old archived PDF with land, rent, lease, registry, and reconstruction facts.
+2. Generate a DOCX pleading with defence, counterclaim, evidence, deadline, and hearing-preparation facts.
+3. Generate an image-only scanned PDF that has no extractable text and must remain `pending_tesseract`.
+4. Import the PDF, DOCX, and scanned PDF through quarantine.
+5. Confirm intake copies source files and does not move or delete them.
+6. Import a duplicate PDF copy and confirm duplicate hash detection.
+7. Import a legacy `.doc` file and confirm current unsupported-file behavior.
+8. Store original bytes as encrypted immutable vault objects.
+9. Confirm encrypted object files do not equal plaintext source bytes.
+10. Add matter, document, and version records for all accepted files.
+11. Build a matter-scoped RAG index that excludes OCR-pending scanned content.
+12. Ask forty grounded questions across the PDF and DOCX facts.
+13. Confirm every RAG answer packet includes citations and the expected grounded phrase.
+14. Create an encrypted backup and confirm plaintext legal/client phrases are absent from package bytes.
+15. Upload through the managed cloud boundary and confirm metadata contains only allowlisted fields.
+16. Restore the backup and verify all original PDF, DOCX, and scanned-PDF bytes can be read from the restored vault.
+
 ## Licensing Assertions
 
 The validator proves that the local product flow requires an active signed license for paid feature flags. It also preserves the existing security rule:
@@ -67,6 +88,7 @@ python tests\validate_cloud_boundary.py
 python tests\validate_ui.py
 python tests\validate_package.py
 python tests\validate_e2e.py
+python tests\validate_real_world_rag_e2e.py
 python tests\validate_frozen_build.py
 python main.py --selftest
 ruff check .

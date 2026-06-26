@@ -91,7 +91,8 @@
       ],
       "validators": [
         "tests/validate_rag.py",
-        "tests/validate_e2e.py"
+        "tests/validate_e2e.py",
+        "tests/validate_real_world_rag_e2e.py"
       ],
       "documentation": [
         "documentation/14-three-products-rag-strategy.md",

@@ -6,7 +6,7 @@ This repository is being built documentation-first and feature by feature: clear
 
 ## Current Status
 
-F16 security scan validation complete.
+F17 real-world RAG end-to-end validation complete.
 
 Implemented so far:
 
@@ -21,6 +21,7 @@ Implemented so far:
 - Matter/document/version records and SQLite FTS5 search.
 - Encrypted local backup/restore drill.
 - Managed cloud backup boundary.
+- Real-world PDF, DOCX, scanned PDF, RAG, backup, and restore validation.
 - PySide6 shell and worker pattern.
 - PyInstaller package configuration validation.
 - Real Windows PyInstaller one-folder build and frozen executable selftest.
@@ -117,6 +118,7 @@ python tests\validate_cloud_boundary.py
 python tests\validate_ui.py
 python tests\validate_package.py
 python tests\validate_e2e.py
+python tests\validate_real_world_rag_e2e.py
 python tests\validate_frozen_build.py
 python tests\validate_release_bundle.py
 python tests\validate_portable_install.py
