@@ -59,6 +59,7 @@
       "validators": [
         "tests/validate_intake.py",
         "tests/validate_extraction.py",
+        "tests/validate_ocr_runtime.py",
         "tests/validate_e2e.py"
       ],
       "documentation": [

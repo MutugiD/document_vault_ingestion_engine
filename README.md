@@ -6,7 +6,7 @@ This repository is being built documentation-first and feature by feature: clear
 
 ## Current Status
 
-F14 portable install smoke validation complete.
+F15 OCR runtime bundle contract complete.
 
 Implemented so far:
 
@@ -16,6 +16,7 @@ Implemented so far:
 - Encrypted local vault storage.
 - Document intake validation and quarantine records.
 - PDF/DOCX extraction and OCR adapter boundary.
+- Tesseract OCR runtime bundle manifest validation.
 - Matter/document/version records and SQLite FTS5 search.
 - Encrypted local backup/restore drill.
 - Managed cloud backup boundary.
@@ -105,6 +106,7 @@ python tests\validate_license.py
 python tests\validate_vault.py
 python tests\validate_intake.py
 python tests\validate_extraction.py
+python tests\validate_ocr_runtime.py
 python tests\validate_search.py
 python tests\validate_rag.py
 python tests\validate_backup.py
