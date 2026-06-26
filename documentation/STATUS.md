@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F15 OCR runtime bundle contract.
+F16 security scan validation.
 
 ## Accepted Decisions
 
@@ -44,9 +44,10 @@ F15 OCR runtime bundle contract.
 | F13 release bundle | Complete | Checked ZIP, sidecar manifest, product metadata, artifact hashes, `tests/validate_release_bundle.py` |
 | F14 portable install smoke | Complete | Release ZIP extraction, frozen executable `--selftest`, product catalog check, `tests/validate_portable_install.py` |
 | F15 OCR runtime bundle contract | Complete | Tesseract runtime manifest, hash/size checks, path guard, `tests/validate_ocr_runtime.py` |
+| F16 security scan | Complete | Repository and release filename/secret-shape scan, `tests/validate_security_scan.py` |
 
 ## Next Actions
 
-1. Merge F15 only after CI is green.
+1. Merge F16 only after CI is green.
 2. Start actual vetted Tesseract binary provenance, installer wrapper planning, code signing plan, and clean-machine VM acceptance.
 3. Keep Wakili-Mkononi, direct e-filing, hosted AI, and real cloud provider SDK integration deferred.
