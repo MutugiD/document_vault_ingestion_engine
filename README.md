@@ -6,7 +6,7 @@ This repository is being built documentation-first and feature by feature: clear
 
 ## Current Status
 
-F13 release bundle validation complete.
+F14 portable install smoke validation complete.
 
 Implemented so far:
 
@@ -23,6 +23,7 @@ Implemented so far:
 - PyInstaller package configuration validation.
 - Real Windows PyInstaller one-folder build and frozen executable selftest.
 - Release ZIP and sidecar manifest validation.
+- Portable install smoke validation from the release ZIP.
 
 F10 Local Matter RAG Connector complete.
 
@@ -113,6 +114,7 @@ python tests\validate_package.py
 python tests\validate_e2e.py
 python tests\validate_frozen_build.py
 python tests\validate_release_bundle.py
+python tests\validate_portable_install.py
 python main.py --selftest
 ```
 

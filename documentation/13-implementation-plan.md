@@ -397,3 +397,41 @@ Definition of done:
 - `python tests\validate_release_bundle.py`
 - `python main.py --selftest`
 - `ruff check .`
+
+## F14 - Portable Install Smoke
+
+Status: Complete.
+
+Validate the release ZIP as a portable Windows install before installer wrapping begins.
+
+Deliver:
+
+- Portable install smoke Python module.
+- `scripts/portable_install_smoke.py` command.
+- Safe ZIP extraction with path traversal guard.
+- Frozen executable `--selftest` from the extracted folder.
+- Frozen executable `--products` from the extracted folder.
+- Product catalog validation after extraction.
+- CI step for `tests\validate_portable_install.py`.
+
+Definition of done:
+
+- `python tests\validate_docs.py`
+- `python tests\validate_skeleton.py`
+- `python tests\validate_products.py`
+- `python tests\validate_license.py`
+- `python tests\validate_vault.py`
+- `python tests\validate_intake.py`
+- `python tests\validate_extraction.py`
+- `python tests\validate_search.py`
+- `python tests\validate_rag.py`
+- `python tests\validate_backup.py`
+- `python tests\validate_cloud_boundary.py`
+- `python tests\validate_ui.py`
+- `python tests\validate_package.py`
+- `python tests\validate_e2e.py`
+- `python tests\validate_frozen_build.py`
+- `python tests\validate_release_bundle.py`
+- `python tests\validate_portable_install.py`
+- `python main.py --selftest`
+- `ruff check .`

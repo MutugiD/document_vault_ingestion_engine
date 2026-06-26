@@ -72,6 +72,9 @@ jobs:
       - name: Validate release bundle
         run: python tests\validate_release_bundle.py
 
+      - name: Validate portable install smoke
+        run: python tests\validate_portable_install.py
+
       - name: Run application selftest
         run: python main.py --selftest
 

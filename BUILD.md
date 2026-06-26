@@ -70,6 +70,20 @@ The release validator creates the same ZIP under `release-output/`, verifies the
 python tests\validate_release_bundle.py
 ```
 
+## Portable Install Smoke
+
+After the release bundle is created, extract it to an isolated local folder and run the frozen executable from that extracted location:
+
+```powershell
+python scripts\portable_install_smoke.py
+```
+
+The automated validator runs the same path and checks both `--selftest` and `--products` from the extracted release folder:
+
+```powershell
+python tests\validate_portable_install.py
+```
+
 ## Bundle Rules
 
 The bundle must include:
@@ -94,4 +108,4 @@ The bundle must not include:
 
 ## Clean Machine Acceptance
 
-Before any release, copy the final bundle to a clean Windows VM with no Python and no Visual Studio installed. Run the frozen `--selftest`, then run the end-to-end import, vault, backup, and restore workflow.
+Before any release, copy the final bundle to a clean Windows VM with no Python and no Visual Studio installed. Run the portable install smoke test, then run the end-to-end import, vault, backup, and restore workflow.
