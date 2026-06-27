@@ -14,6 +14,7 @@
 | real-world grounded questions | `tests/validate_real_world_rag_e2e.py` |
 | scanned pending-OCR behavior without runtime | `tests/validate_real_world_rag_e2e.py` |
 | scanned OCR text retrieval when engine exists | `tests/validate_real_world_rag_e2e.py` |
+| private folder RAG smoke | `tests/validate_manual_ingest_smoke.py` |
 
 ## Partially Implemented
 
@@ -29,7 +30,6 @@
 | Feature | Validator Needed |
 | --- | --- |
 | RAG question UI | UI workflow validator |
-| manual private matter RAG smoke | manual ingest smoke validator |
 | RAG index rebuild controls | RAG/search validator extension |
 | improved no-context behavior in UI | UI/RAG validator |
 
@@ -49,5 +49,6 @@
 python tests\validate_rag.py
 python tests\validate_e2e.py
 python tests\validate_real_world_rag_e2e.py
+python tests\validate_manual_ingest_smoke.py
 python tests\validate_security_scan.py
 ```

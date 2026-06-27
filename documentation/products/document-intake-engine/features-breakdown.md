@@ -19,6 +19,8 @@
 | image OCR adapter | `tests/validate_extraction.py` |
 | scanned PDF OCR fallback | `tests/validate_extraction.py`, `tests/validate_real_world_rag_e2e.py` |
 | OCR text handoff to RAG | `tests/validate_real_world_rag_e2e.py` |
+| manual private ingest runner | `tests/validate_manual_ingest_smoke.py` |
+| redacted private ingest output | `tests/validate_manual_ingest_smoke.py` |
 
 ## Partially Implemented
 
@@ -26,14 +28,12 @@
 | --- | --- | --- |
 | OCR | execution adapter exists and supports fake/real engines | vetted Tesseract binary provenance |
 | scanned PDFs | page/image OCR fallback exists | clean-machine bundled runtime validation |
-| private document testing | deterministic generated fixtures exist | manual local folder runner |
 | UI review | worker shell exists | operator review queue and duplicate/OCR status screens |
 
 ## Missing For MVP
 
 | Feature | Validator Needed |
 | --- | --- |
-| manual private ingest runner | manual smoke validator |
 | vetted Tesseract binary bundle | release bundle validator extension |
 
 ## Missing For Commercial Release
@@ -44,7 +44,7 @@
 | operator review UI | UI workflow validator |
 | bundled Tesseract provenance | release bundle validator |
 | OCR runtime clean-machine validation | portable install validator extension |
-| redacted ingestion logs | security scan/log validator |
+| redacted production ingestion logs | security scan/log validator |
 
 ## Release Validation Commands
 
@@ -53,6 +53,7 @@ python tests\validate_intake.py
 python tests\validate_extraction.py
 python tests\validate_ocr_runtime.py
 python tests\validate_real_world_rag_e2e.py
+python tests\validate_manual_ingest_smoke.py
 python tests\validate_frozen_build.py
 python tests\validate_release_bundle.py
 python tests\validate_portable_install.py

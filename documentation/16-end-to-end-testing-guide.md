@@ -304,6 +304,7 @@ python tests\validate_ui.py
 python tests\validate_package.py
 python tests\validate_e2e.py
 python tests\validate_real_world_rag_e2e.py
+python tests\validate_manual_ingest_smoke.py
 python tests\validate_frozen_build.py
 python tests\validate_release_bundle.py
 python tests\validate_portable_install.py
@@ -332,6 +333,7 @@ For manual local testing with your own files:
    pleading.docx
    scanned-annexure.pdf
    duplicate-copy.pdf
+   legacy-word-file.doc
    ```
 
 3. Do not commit these files.
@@ -345,13 +347,19 @@ For manual local testing with your own files:
    test-output/
    ```
 
-The next implementation slice should add a private local CLI such as:
+5. Run the local-only private smoke runner:
 
-```powershell
-python scripts\manual_ingest_smoke.py --input D:\commercial\private-vault-test-documents
+   ```powershell
+   python scripts\manual_ingest_smoke.py --input D:\commercial\private-vault-test-documents
+   ```
+
+Expected:
+
+```text
+MANUAL INGEST SMOKE PASS
 ```
 
-That script should remain local-only and must never upload raw documents.
+The runner validates PDF, DOCX, scanned PDF, duplicate copy behavior, unsupported legacy `.doc`, vault encryption, search, RAG, backup, and restore. It prints redacted counts/statuses only and must not print raw document text or filenames.
 
 ## Failure Triage
 
@@ -363,7 +371,7 @@ Use this table:
 | wrong recovery key behavior | `vault/`, `backup/`, `tests/validate_vault.py`, `tests/validate_backup.py` |
 | PDF/DOCX import failure | `intake/`, `tests/validate_intake.py` |
 | empty PDF text | `intake/extraction.py`, OCR status in result |
-| scanned PDF not searchable | expected until OCR implementation is added |
+| scanned PDF not searchable | check Tesseract runtime discovery and `tests/validate_ocr_runtime.py` |
 | RAG answer has no citations | run `tests/validate_rag.py`, then `tests/validate_real_world_rag_e2e.py` |
 | backup leaks plaintext | `backup/`, `tests/validate_backup.py`, `tests/validate_real_world_rag_e2e.py` |
 | cloud metadata contains legal identifiers | `backup/cloud_boundary.py`, `tests/validate_cloud_boundary.py` |
@@ -375,7 +383,7 @@ Use this table:
 ## Current Known Boundaries
 
 - Legacy `.doc` is rejected; DOCX is supported.
-- Scanned PDFs remain `pending_tesseract` until OCR execution is implemented.
+- Scanned PDFs remain `pending_tesseract` when no Tesseract runtime is present; with a valid bundled runtime, OCR text can feed search and RAG locally.
 - RAG is local retrieval with citations; it does not call an LLM.
 - Cloud backup is a boundary using short-lived grants; no real provider SDK upload is active.
 - Wakili-Mkononi integration and direct e-filing are deferred.
