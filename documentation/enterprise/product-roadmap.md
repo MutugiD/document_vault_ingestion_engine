@@ -85,7 +85,7 @@ Definition of done:
 
 Branch: `feature/f30-installer-code-signing-publishing-v1`
 
-Status: Active.
+Status: Complete.
 
 Deliver:
 
@@ -107,14 +107,18 @@ Definition of done:
 
 Branch: `feature/f31-automatic-update-channel-v1`
 
+Status: Active.
+
 Deliver:
 
 - Signed update manifest, version check, availability check, unsigned update
   rejection, no silent forced update, rollback-safe boundary, and offline behavior.
+- RSA-PSS/SHA-256 verifier and offline-safe update result.
 
 Definition of done:
 
 - `python tests\validate_package.py`
+- `python tests\validate_update_channel.py`
 - `python tests\validate_security_scan.py`
 - `python main.py --selftest`
 

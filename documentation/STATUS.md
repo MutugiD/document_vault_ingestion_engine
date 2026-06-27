@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F30 Installer, code signing, and publishing.
+F31 Automatic update channel.
 
 ## Accepted Decisions
 
@@ -58,10 +58,11 @@ F30 Installer, code signing, and publishing.
 | F27 enterprise documentation masterpack | Complete | Enterprise architecture, roadmap, CI/CD release gate, security, Windows distribution, E2E validation, and commercial operations docs |
 | F28 native app end-to-end workflow hardening | Complete | Shared native workflow runner, CLI command, UI workflow button, provider-key redaction, and app-level validator |
 | F29 Kenyan public document corpus E2E expansion | Complete | Expanded public manifest metadata, hash-report downloader, duplicate/legacy/scanned/DOCX coverage, redacted citation/confidence report |
-| F30 installer, code signing, and publishing | Active | Installer publishing manifest, signature verification script, publishing guide, and installer metadata validator |
+| F30 installer, code signing, and publishing | Complete | Installer publishing manifest, signature verification script, publishing guide, and installer metadata validator |
+| F31 automatic update channel | Active | Signed update manifest verifier, tamper rejection, user-approval requirement, version comparison, and offline-safe update result |
 
 ## Next Actions
 
-1. Merge F30 only after package, frozen build, release bundle, portable install, installer publishing, security, and Ruff checks pass.
-2. Start F31 automatic update channel.
-3. Continue through F32-F35 one PR at a time until admin/payment, managed cloud, Wakili-Mkononi, and hosted AI boundaries are complete.
+1. Merge F31 only after update channel, security, selftest, docs, products, and Ruff checks pass.
+2. Start F32 admin, license sync, and payment entitlement backend boundary.
+3. Continue through F33-F35 one PR at a time until managed cloud, Wakili-Mkononi, and hosted AI boundaries are complete.
