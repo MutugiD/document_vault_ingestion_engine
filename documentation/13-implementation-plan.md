@@ -717,7 +717,7 @@ Definition of done:
 
 ## F25 - Production Windows UI
 
-Status: Planned.
+Status: Complete.
 
 Build the usable PySide6 application.
 

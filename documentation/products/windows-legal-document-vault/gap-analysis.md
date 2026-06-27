@@ -4,7 +4,7 @@
 | --- | --- | --- | --- | --- | --- |
 | admin/license sync boundary exists | admin can enable/disable paid features through sync | real owner backend endpoint and operator dashboard | high | hosted admin integration validator | monetization |
 | payment entitlement model exists | paid plans map cleanly to product modules | hosted payment provider webhook/backend wiring | high | entitlement integration validator | monetization |
-| encrypted vault works | operator can manage matters through UI | production UI screens | high | UI workflow validator | usability |
+| production UI workflow tabs exist | operator can execute real workflows through UI actions | bind UI actions to live vault/intake/search/backup services | high | UI workflow integration validator | usability |
 | managed grant client boundary exists | cloud uploads/downloads use owner backend grants | deployed owner backend service | high | cloud backend integration validator | backup operations |
 | release ZIP works | user installs with installer | installer wrapper | medium | installer validator | distribution |
 | unsigned EXE works | commercial release is signed | code-signing workflow | medium | signed artifact validator | trust/publishing |
@@ -13,12 +13,12 @@
 
 ## Immediate Gap Order
 
-1. Production Windows UI.
+1. PyInstaller release packaging hardening.
 2. Installer and code signing.
 3. Automatic update channel.
-4. Hosted admin dashboard endpoint wiring.
-5. Hosted payment provider/backend wiring.
-6. Deployed cloud grant backend integration.
+4. Bind production UI actions to live services.
+5. Hosted admin dashboard endpoint wiring.
+6. Hosted payment provider/backend wiring.
 
 ## Gap Closure Rule
 

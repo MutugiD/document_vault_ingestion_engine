@@ -11,7 +11,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from PySide6.QtCore import QEventLoop, QTimer  # noqa: E402
+from PySide6.QtCore import QEventLoop, QObject, QTimer  # noqa: E402
 
 from ui import DEFAULT_MODULES, BackgroundWorker, MainWindow, create_app  # noqa: E402
 
@@ -22,6 +22,40 @@ def main() -> None:
     assert window.windowTitle() == "Document Vault Ingestion Engine"
     assert window.minimumWidth() >= 900
     assert len(DEFAULT_MODULES) >= 7
+    assert window.tabs.count() == 9
+    expected_widgets = (
+        "setupPage",
+        "firmNameInput",
+        "primaryUserInput",
+        "deviceNicknameInput",
+        "recoveryKeyConfirmedCheck",
+        "licensePage",
+        "licenseFileInput",
+        "licenseStatusLabel",
+        "vaultPage",
+        "vaultPathInput",
+        "recoveryKeyInput",
+        "matterPage",
+        "matterList",
+        "importPage",
+        "documentReviewQueue",
+        "ocrStatusLabel",
+        "duplicateStatusLabel",
+        "searchRagPage",
+        "matterSearchInput",
+        "ragQuestionInput",
+        "ragCitationPacketOutput",
+        "backupPage",
+        "backupStatusLabel",
+        "restoreStatusLabel",
+        "adminPage",
+        "installationStatusLabel",
+        "entitlementStatusLabel",
+        "aboutPage",
+        "releaseInfoLabel",
+    )
+    for object_name in expected_widgets:
+        assert window.findChild(QObject, object_name) is not None, object_name
 
     loop = QEventLoop()
     worker = BackgroundWorker(lambda: "worker-ok")
