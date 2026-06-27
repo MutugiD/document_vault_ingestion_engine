@@ -139,3 +139,4 @@ Start here:
 - [documentation/README.md](documentation/README.md)
 - [documentation/STATUS.md](documentation/STATUS.md)
 - [documentation/13-implementation-plan.md](documentation/13-implementation-plan.md)
+- [documentation/16-end-to-end-testing-guide.md](documentation/16-end-to-end-testing-guide.md)
