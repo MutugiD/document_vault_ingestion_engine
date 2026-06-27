@@ -651,7 +651,7 @@ Definition of done:
 
 ## F22 - Admin And License Sync Backend Boundary
 
-Status: Planned.
+Status: Complete.
 
 Implement commercial licensing/admin sync boundary.
 
@@ -670,7 +670,7 @@ Definition of done:
 
 - `python tests\validate_license.py`
 - `python tests\validate_security_scan.py`
-- admin payload privacy validator
+- admin payload privacy validator inside `tests\validate_license.py`
 
 ## F23 - Managed Cloud Grant Backend
 
