@@ -674,7 +674,7 @@ Definition of done:
 
 ## F23 - Managed Cloud Grant Backend
 
-Status: Planned.
+Status: Complete.
 
 Implement backend-facing grant client boundary for AWS S3, Azure Blob, and Google Cloud Storage.
 
@@ -683,6 +683,7 @@ Deliver:
 - short-lived upload grants.
 - short-lived download grants.
 - encrypted-package-only upload path.
+- encrypted-package-only download path.
 - allowlisted cloud metadata.
 - no long-lived cloud credentials on the PC.
 
