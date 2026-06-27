@@ -36,6 +36,7 @@ python tests\validate_cloud_boundary.py
 python tests\validate_ui.py
 python tests\validate_package.py
 python tests\validate_e2e.py
+python tests\validate_native_workflow.py
 python tests\validate_real_world_rag_e2e.py
 python tests\validate_public_kenyan_e2e.py
 python tests\validate_manual_ingest_smoke.py
@@ -64,4 +65,3 @@ ruff check .
 - A packaging failure blocks distribution but does not change local data access.
 - A cloud or hosted AI outage must degrade to local vault/search/RAG behavior when
   local entitlements permit it.
-

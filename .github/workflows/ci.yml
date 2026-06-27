@@ -75,6 +75,9 @@ jobs:
       - name: Validate end-to-end product flow
         run: python tests\validate_e2e.py
 
+      - name: Validate native app workflow
+        run: python tests\validate_native_workflow.py
+
       - name: Validate real-world RAG end-to-end flow
         run: python tests\validate_real_world_rag_e2e.py
 
