@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provide a responsive Windows desktop UI for intake, matters, backup, and restore.
+Provide a responsive Windows desktop UI for intake, matters, backup, restore, licensing, and local RAG.
 
 ## UI Stack
 
@@ -15,6 +15,23 @@ PySide6.
 - Intake queue.
 - Matter/document workspace.
 - Backup and restore.
+- Admin/license status.
+- Search and Local Matter RAG.
+
+## F25 Workflow Surface
+
+The production workbench includes tabs for:
+
+- first-run setup
+- license activation
+- vault initialization and recovery key entry
+- matter list
+- document import/review queue
+- OCR status and duplicate status
+- matter search and Local Matter RAG question panel
+- backup status and restore drill
+- admin/license status
+- release/about information
 
 ## Threading Rules
 
@@ -33,8 +50,8 @@ The first UI slice implements:
 - `QRunnable` worker pattern with completion/failure signals.
 - Offscreen UI validation for CI.
 
-Full setup wizard, intake queue screens, matter workspace, backup/restore forms, and admin screens are later UI slices.
+F25 expands the shell into workflow tabs for setup, licensing, vault initialization, matters, import/OCR review, search/RAG, backup/restore, admin status, and release information. Later UI slices wire these controls to the live vault/intake/search/backup services.
 
 ## Verification
 
-`tests/validate_ui.py` uses the Qt offscreen platform to instantiate the app, open the main window, and verify the worker-thread pattern.
+`tests/validate_ui.py` uses the Qt offscreen platform to instantiate the app, open the main window, verify the workflow tabs and key controls, and verify the worker-thread pattern.

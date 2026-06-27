@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F24 payment entitlements.
+F25 production Windows UI.
 
 ## Accepted Decisions
 
@@ -53,9 +53,10 @@ F24 payment entitlements.
 | F22 admin and license sync backend boundary | Complete | Privacy-safe check-in payload, sync state, admin disablement, grace-expired paid feature stop, local data access preserved |
 | F23 managed cloud grant backend | Complete | AWS/Azure/GCP grant requests, encrypted-package upload/download boundary, credential-bearing grant rejection |
 | F24 payment entitlements | Complete | Plan features, active/suspended/expired behavior, admin override, cloud/RAG disablement without local lockout |
+| F25 production Windows UI | Complete | PySide6 workflow tabs for setup, license, vault, matters, import/OCR, search/RAG, backup/restore, admin status, and release info |
 
 ## Next Actions
 
-1. Merge F24 only after CI is green.
-2. Start F25 production Windows UI.
-3. Continue through F26-F30 until PyInstaller packaging, installer/signing, update channel, Wakili-Mkononi integration, and hosted AI boundary are complete.
+1. Merge F25 only after CI is green.
+2. Start F26 PyInstaller bundling and release packaging.
+3. Continue through F27-F30 until installer/signing, update channel, Wakili-Mkononi integration, and hosted AI boundary are complete.

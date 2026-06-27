@@ -13,6 +13,7 @@
 | payment plan entitlement model | `tests/validate_license.py` |
 | suspended/expired paid feature behavior | `tests/validate_license.py` |
 | admin payment override state | `tests/validate_license.py` |
+| production workflow UI tabs | `tests/validate_ui.py` |
 | encrypted object store | `tests/validate_vault.py` |
 | recovery-key unlock | `tests/validate_vault.py` |
 | wrong recovery key failure | `tests/validate_vault.py`, `tests/validate_backup.py` |
@@ -33,7 +34,6 @@
 
 | Feature | Current State | Missing |
 | --- | --- | --- |
-| UI | PySide6 shell exists | production operator screens |
 | cloud backup | provider grant client boundary exists | real hosted backend deployment |
 | distribution | one-folder and release ZIP exist | installer wrapper, code signing, clean VM signed report |
 
@@ -41,9 +41,8 @@
 
 | Feature | Validator Needed |
 | --- | --- |
-| first-run production setup flow | `tests/validate_ui.py` extension |
-| license activation UI | `tests/validate_ui.py` extension |
-| vault recovery/export UX | UI workflow validator |
+| live UI action wiring | UI workflow integration validator |
+| vault recovery/export execution wiring | UI workflow integration validator |
 | clean Windows VM checklist artifact | package/release validator extension |
 
 ## Missing For Commercial Release
