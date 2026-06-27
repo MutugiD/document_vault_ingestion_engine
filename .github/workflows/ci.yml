@@ -75,6 +75,9 @@ jobs:
       - name: Validate real-world RAG end-to-end flow
         run: python tests\validate_real_world_rag_e2e.py
 
+      - name: Validate manual private-document smoke runner
+        run: python tests\validate_manual_ingest_smoke.py
+
       - name: Validate frozen Windows build
         run: python tests\validate_frozen_build.py
 

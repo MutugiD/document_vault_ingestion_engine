@@ -631,7 +631,7 @@ Definition of done:
 
 ## F21 - Manual Private Document Test Runner
 
-Status: Planned.
+Status: Complete.
 
 Add a local-only test runner for private documents outside the repo.
 
@@ -645,7 +645,7 @@ Deliver:
 
 Definition of done:
 
-- manual smoke validator
+- `python tests\validate_manual_ingest_smoke.py`
 - `python tests\validate_security_scan.py`
 - `python tests\validate_real_world_rag_e2e.py`
 

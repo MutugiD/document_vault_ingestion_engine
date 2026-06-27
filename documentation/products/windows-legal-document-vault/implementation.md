@@ -23,6 +23,7 @@ python tests\validate_vault.py
 python tests\validate_search.py
 python tests\validate_backup.py
 python tests\validate_cloud_boundary.py
+python tests\validate_manual_ingest_smoke.py
 python tests\validate_ui.py
 python tests\validate_package.py
 python tests\validate_frozen_build.py

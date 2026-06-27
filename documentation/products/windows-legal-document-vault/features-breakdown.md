@@ -16,6 +16,7 @@
 | encrypted backup package | `tests/validate_backup.py` |
 | restore drill | `tests/validate_backup.py`, `tests/validate_e2e.py` |
 | managed cloud metadata boundary | `tests/validate_cloud_boundary.py` |
+| private folder vault smoke | `tests/validate_manual_ingest_smoke.py` |
 | PyInstaller frozen executable | `tests/validate_frozen_build.py` |
 | checked release ZIP | `tests/validate_release_bundle.py` |
 | portable install smoke | `tests/validate_portable_install.py` |
@@ -37,7 +38,6 @@
 | first-run production setup flow | `tests/validate_ui.py` extension |
 | license activation UI | `tests/validate_ui.py` extension |
 | vault recovery/export UX | UI workflow validator |
-| manual private document test runner | `tests/validate_manual_ingest_smoke.py` |
 | clean Windows VM checklist artifact | package/release validator extension |
 
 ## Missing For Commercial Release
@@ -59,6 +59,7 @@ python tests\validate_vault.py
 python tests\validate_search.py
 python tests\validate_backup.py
 python tests\validate_cloud_boundary.py
+python tests\validate_manual_ingest_smoke.py
 python tests\validate_frozen_build.py
 python tests\validate_release_bundle.py
 python tests\validate_portable_install.py
