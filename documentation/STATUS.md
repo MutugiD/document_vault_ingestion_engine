@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F22 admin and license sync backend boundary.
+F23 managed cloud grant backend.
 
 ## Accepted Decisions
 
@@ -51,9 +51,10 @@ F22 admin and license sync backend boundary.
 | F20 OCR execution and Tesseract bundling | Complete | OCR engine adapter, runtime discovery, image OCR, scanned PDF fallback, RAG E2E OCR coverage |
 | F21 manual private document test runner | Complete | Local-only private folder runner, redacted output, intake, vault, search, RAG, backup, restore coverage |
 | F22 admin and license sync backend boundary | Complete | Privacy-safe check-in payload, sync state, admin disablement, grace-expired paid feature stop, local data access preserved |
+| F23 managed cloud grant backend | Complete | AWS/Azure/GCP grant requests, encrypted-package upload/download boundary, credential-bearing grant rejection |
 
 ## Next Actions
 
-1. Merge F22 only after CI is green.
-2. Start F23 managed cloud grant backend.
-3. Continue through F24-F30 until payment entitlements, production UI, PyInstaller packaging, installer/signing, update channel, Wakili-Mkononi integration, and hosted AI boundary are complete.
+1. Merge F23 only after CI is green.
+2. Start F24 payment entitlements.
+3. Continue through F25-F30 until production UI, PyInstaller packaging, installer/signing, update channel, Wakili-Mkononi integration, and hosted AI boundary are complete.

@@ -79,6 +79,19 @@ The managed cloud boundary implements:
 
 This slice does not call AWS, Azure, or GCP SDKs directly. The desktop app remains dependent on your backend to issue grants and broker provider storage.
 
+## F23 Managed Grant Backend Boundary
+
+The backend-facing client boundary now adds:
+
+- provider-specific short-lived grants for AWS S3, Azure Blob, and Google Cloud Storage targets
+- upload grant request payloads without cloud credentials
+- encrypted `.wakilibak` package upload through the owner-backend abstraction
+- encrypted `.wakilibak` package download through the owner-backend abstraction
+- provider-scoped snapshot listing and deletion
+- rejection of credential-bearing grants or payloads
+
+The desktop app still does not hold AWS access keys, Azure connection strings, Google service-account JSON, provider private keys, or client secrets. It only receives short-lived upload/download grants and moves already-encrypted backup packages.
+
 ## Verification
 
 `tests/validate_backup.py` proves:
@@ -99,3 +112,5 @@ This slice does not call AWS, Azure, or GCP SDKs directly. The desktop app remai
 - Long-lived cloud credential fields are rejected.
 - Non-`.wakilibak` package upload is rejected.
 - Snapshot listing and deletion stay inside the owner backend boundary.
+- AWS, Azure, and GCP grant paths can upload and download only encrypted `.wakilibak` packages.
+- Credential-bearing grants are rejected.

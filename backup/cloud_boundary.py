@@ -69,6 +69,24 @@ class CloudGrant:
 
 
 @dataclass(frozen=True)
+class CloudGrantRequest:
+    provider: CloudProvider
+    operation: GrantOperation
+    installation_id: str
+    snapshot_id: str
+
+    def to_mapping(self) -> dict[str, str]:
+        payload = {
+            "provider": self.provider,
+            "operation": self.operation,
+            "installation_id": self.installation_id,
+            "snapshot_id": self.snapshot_id,
+        }
+        assert_no_long_lived_credentials(payload)
+        return payload
+
+
+@dataclass(frozen=True)
 class CloudSnapshot:
     provider: CloudProvider
     metadata: dict[str, object]
@@ -82,11 +100,20 @@ class UploadResult:
     uploaded_bytes: int
 
 
+@dataclass(frozen=True)
+class DownloadResult:
+    provider: CloudProvider
+    snapshot_id: str
+    path: Path
+    downloaded_bytes: int
+
+
 class InMemoryGrantBackend:
     """Local test double for the owner backend that issues short-lived grants."""
 
     def __init__(self) -> None:
         self._snapshots: dict[tuple[str, str], CloudSnapshot] = {}
+        self._packages: dict[tuple[str, str], bytes] = {}
 
     def create_upload_grant(
         self,
@@ -108,12 +135,15 @@ class InMemoryGrantBackend:
         self,
         provider: CloudProvider,
         metadata: dict[str, object],
+        encrypted_package: bytes,
     ) -> None:
         safe_metadata = assert_cloud_metadata_safe(metadata)
-        self._snapshots[(provider, str(safe_metadata["snapshot_id"]))] = CloudSnapshot(
+        key = (provider, str(safe_metadata["snapshot_id"]))
+        self._snapshots[key] = CloudSnapshot(
             provider=provider,
             metadata=safe_metadata,
         )
+        self._packages[key] = encrypted_package
 
     def list_snapshots(self, installation_id: str) -> list[CloudSnapshot]:
         return [
@@ -129,6 +159,18 @@ class InMemoryGrantBackend:
                 and snapshot.metadata["snapshot_id"] == snapshot_id
             ):
                 del self._snapshots[key]
+                self._packages.pop(key, None)
+
+    def download_package(
+        self,
+        provider: CloudProvider,
+        installation_id: str,
+        snapshot_id: str,
+    ) -> bytes:
+        snapshot = self._snapshots.get((provider, snapshot_id))
+        if snapshot is None or snapshot.metadata["installation_id"] != installation_id:
+            raise CloudBoundaryError("snapshot is not available from owner backend")
+        return self._packages[(provider, snapshot_id)]
 
 
 def create_upload_grant(
@@ -149,6 +191,7 @@ def upload_encrypted_snapshot(
         raise CloudBoundaryError("grant is not an upload grant")
     if grant.is_expired:
         raise CloudBoundaryError("grant has expired")
+    assert_no_long_lived_credentials(grant.required_headers)
     if encrypted_package.suffix.lower() != ".wakilibak":
         raise CloudBoundaryError("cloud upload boundary only accepts encrypted backup packages")
 
@@ -161,7 +204,7 @@ def upload_encrypted_snapshot(
     metadata = cloud_metadata_from_manifest(manifest, upload_status="uploaded")
     safe_metadata = assert_cloud_metadata_safe(metadata)
     if backend is not None:
-        backend.register_upload(grant.provider, safe_metadata)
+        backend.register_upload(grant.provider, safe_metadata, encrypted_package.read_bytes())
     return UploadResult(
         provider=grant.provider,
         snapshot_id=manifest.snapshot_id,
@@ -180,6 +223,40 @@ def create_download_grant(
     snapshot_id: str,
 ) -> CloudGrant:
     return _create_grant(provider, "download", installation_id, snapshot_id)
+
+
+def download_encrypted_snapshot(
+    grant: CloudGrant,
+    target_path: Path,
+    *,
+    backend: InMemoryGrantBackend,
+) -> DownloadResult:
+    if grant.operation != "download":
+        raise CloudBoundaryError("grant is not a download grant")
+    if grant.is_expired:
+        raise CloudBoundaryError("grant has expired")
+    assert_no_long_lived_credentials(grant.required_headers)
+    if target_path.suffix.lower() != ".wakilibak":
+        raise CloudBoundaryError("cloud download boundary only writes encrypted backup packages")
+
+    package_bytes = backend.download_package(
+        grant.provider,
+        grant.installation_id,
+        grant.snapshot_id,
+    )
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    target_path.write_bytes(package_bytes)
+    manifest = read_backup_manifest(target_path)
+    if manifest.installation_id != grant.installation_id:
+        raise CloudBoundaryError("downloaded package installation does not match grant")
+    if manifest.snapshot_id != grant.snapshot_id:
+        raise CloudBoundaryError("downloaded package snapshot does not match grant")
+    return DownloadResult(
+        provider=grant.provider,
+        snapshot_id=grant.snapshot_id,
+        path=target_path,
+        downloaded_bytes=len(package_bytes),
+    )
 
 
 def delete_snapshot(
@@ -238,12 +315,17 @@ def _create_grant(
     if provider not in {"aws", "azure", "gcp"}:
         raise CloudBoundaryError(f"unsupported provider: {provider}")
     expires_at = datetime.now(UTC) + timedelta(minutes=15)
+    url = {
+        "aws": f"https://s3-presigned.example.invalid/upload/{snapshot_id}",
+        "azure": f"https://blob-grants.example.invalid/container/{snapshot_id}",
+        "gcp": f"https://storage.googleapis.example.invalid/upload/{snapshot_id}",
+    }[provider]
     return CloudGrant(
         provider=provider,
         operation=operation,
         installation_id=installation_id,
         snapshot_id=snapshot_id,
-        url=f"https://backup-grants.example.invalid/{provider}/{operation}/{snapshot_id}",
+        url=url,
         expires_at=expires_at,
         required_headers={"x-wakili-installation-id": installation_id},
     )

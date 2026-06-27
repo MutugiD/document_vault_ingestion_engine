@@ -19,6 +19,7 @@
 | encrypted backup package | `tests/validate_backup.py` |
 | restore drill | `tests/validate_backup.py`, `tests/validate_e2e.py` |
 | managed cloud metadata boundary | `tests/validate_cloud_boundary.py` |
+| AWS/Azure/GCP grant upload/download boundary | `tests/validate_cloud_boundary.py` |
 | private folder vault smoke | `tests/validate_manual_ingest_smoke.py` |
 | PyInstaller frozen executable | `tests/validate_frozen_build.py` |
 | checked release ZIP | `tests/validate_release_bundle.py` |
@@ -30,7 +31,7 @@
 | Feature | Current State | Missing |
 | --- | --- | --- |
 | UI | PySide6 shell exists | production operator screens |
-| cloud backup | grant boundary exists | real backend grant service and provider upload adapters |
+| cloud backup | provider grant client boundary exists | real hosted backend deployment |
 | distribution | one-folder and release ZIP exist | installer wrapper, code signing, clean VM signed report |
 
 ## Missing For MVP
@@ -50,7 +51,7 @@
 | installer wrapper | installer validator |
 | code signing | signed artifact validator |
 | automatic update channel | signed update manifest validator |
-| real cloud grant backend | cloud grant backend validator |
+| hosted cloud grant backend deployment | cloud grant backend validator |
 
 ## Release Validation Commands
 

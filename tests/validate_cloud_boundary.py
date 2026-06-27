@@ -12,6 +12,8 @@ sys.path.insert(0, str(ROOT))
 from backup import (  # noqa: E402
     ALLOWED_CLOUD_METADATA_KEYS,
     CloudBoundaryError,
+    CloudGrant,
+    CloudGrantRequest,
     InMemoryGrantBackend,
     assert_cloud_metadata_safe,
     assert_no_long_lived_credentials,
@@ -19,6 +21,7 @@ from backup import (  # noqa: E402
     create_local_backup,
     create_upload_grant,
     delete_snapshot,
+    download_encrypted_snapshot,
     list_snapshots,
     upload_encrypted_snapshot,
 )
@@ -48,32 +51,47 @@ def main() -> None:
         )
 
         backend = InMemoryGrantBackend()
-        upload_grant = create_upload_grant(
-            "aws",
-            installation_id,
-            package.manifest.snapshot_id,
-        )
-        upload_result = upload_encrypted_snapshot(
-            upload_grant,
-            backup_path,
-            backend=backend,
-        )
-        assert set(upload_result.metadata) == ALLOWED_CLOUD_METADATA_KEYS
-        assert upload_result.metadata["installation_id"] == installation_id
-        assert upload_result.metadata["snapshot_id"] == package.manifest.snapshot_id
-        assert upload_result.uploaded_bytes == backup_path.stat().st_size
+        for provider in ("aws", "azure", "gcp"):
+            request = CloudGrantRequest(
+                provider=provider,
+                operation="upload",
+                installation_id=installation_id,
+                snapshot_id=package.manifest.snapshot_id,
+            )
+            assert request.to_mapping()["provider"] == provider
+            upload_grant = create_upload_grant(
+                provider,
+                installation_id,
+                package.manifest.snapshot_id,
+            )
+            upload_result = upload_encrypted_snapshot(
+                upload_grant,
+                backup_path,
+                backend=backend,
+            )
+            assert set(upload_result.metadata) == ALLOWED_CLOUD_METADATA_KEYS
+            assert upload_result.metadata["installation_id"] == installation_id
+            assert upload_result.metadata["snapshot_id"] == package.manifest.snapshot_id
+            assert upload_result.uploaded_bytes == backup_path.stat().st_size
+
+            download_grant = create_download_grant(
+                provider,
+                installation_id,
+                package.manifest.snapshot_id,
+            )
+            assert download_grant.operation == "download"
+            assert download_grant.url.startswith("https://")
+            downloaded_path = workspace / f"downloaded-{provider}.wakilibak"
+            download_result = download_encrypted_snapshot(
+                download_grant,
+                downloaded_path,
+                backend=backend,
+            )
+            assert download_result.downloaded_bytes == backup_path.stat().st_size
+            assert downloaded_path.read_bytes() == backup_path.read_bytes()
 
         snapshots = list_snapshots(backend, installation_id)
-        assert len(snapshots) == 1
-        assert snapshots[0].metadata == upload_result.metadata
-
-        download_grant = create_download_grant(
-            "aws",
-            installation_id,
-            package.manifest.snapshot_id,
-        )
-        assert download_grant.operation == "download"
-        assert download_grant.url.startswith("https://")
+        assert len(snapshots) == 3
 
         try:
             assert_cloud_metadata_safe(upload_result.metadata | {"client_name": "Forbidden"})
@@ -88,6 +106,25 @@ def main() -> None:
             pass
         else:
             raise AssertionError("long-lived credential payload was accepted")
+
+        try:
+            upload_encrypted_snapshot(
+                CloudGrant(
+                    provider="aws",
+                    operation="upload",
+                    installation_id=installation_id,
+                    snapshot_id=package.manifest.snapshot_id,
+                    url="https://s3-presigned.example.invalid/upload/test",
+                    expires_at=upload_grant.expires_at,
+                    required_headers={"aws_secret_access_key": "do-not-store"},
+                ),
+                backup_path,
+                backend=backend,
+            )
+        except CloudBoundaryError:
+            pass
+        else:
+            raise AssertionError("credential-bearing grant was accepted")
 
         plaintext_path = workspace / "plain.zip"
         plaintext_path.write_bytes(b"not an encrypted backup package")
