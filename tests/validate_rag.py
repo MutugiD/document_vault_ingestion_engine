@@ -128,6 +128,7 @@ def main() -> None:
         assert global_results[0].chunk.matter_id == nairobi_matter.matter_id
         assert global_results[0].citation.citation_id == "C1"
         assert global_results[0].rerank_score >= global_results[-1].rerank_score
+        assert 0 < global_results[0].confidence <= 1
 
         scoped_results = retrieve_context(
             vault_root,
@@ -153,6 +154,7 @@ def main() -> None:
         assert "[C1]" in packet.grounded_context
         assert "Use only the cited local context" in packet.safety_notice
         assert "invoice default" in packet.grounded_context
+        assert 0 < packet.confidence <= 1
 
     print("RAG VALIDATION PASS")
 

@@ -10,6 +10,7 @@ Keep local RAG reliable before adding any hosted AI or Wakili-Mkononi integratio
 | --- | --- | --- |
 | F20 | `feature/f20-ocr-execution-v1` | Complete: scanned document text availability for RAG |
 | F21 | `feature/f21-manual-private-document-test-runner-v1` | Complete: private document RAG smoke path |
+| F26 | `feature/f26-release-kenyan-e2e-v1` | Complete: public Kenyan legal document E2E with citations and confidence |
 | F25 | `feature/f25-production-windows-ui-v1` | RAG question panel and citations |
 | F29 | `feature/f29-wakili-mkononi-integration-v1` | matter export and citation packet handoff |
 | F30 | `feature/f30-hosted-ai-llm-boundary-v1` | cited-context-only hosted AI boundary |
@@ -21,6 +22,7 @@ python tests\validate_rag.py
 python tests\validate_e2e.py
 python tests\validate_real_world_rag_e2e.py
 python tests\validate_manual_ingest_smoke.py
+python tests\validate_public_kenyan_e2e.py
 python tests\validate_security_scan.py
 ```
 

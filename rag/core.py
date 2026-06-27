@@ -53,6 +53,7 @@ class RagRetrievalResult:
     sparse_score: float
     vector_score: float
     rerank_score: float
+    confidence: float
 
 
 @dataclass(frozen=True)
@@ -62,6 +63,7 @@ class RagAnswerPacket:
     citations: tuple[Citation, ...]
     retrieval_results: tuple[RagRetrievalResult, ...]
     safety_notice: str
+    confidence: float
 
 
 def initialize_rag_store(vault_root: Path) -> None:
@@ -134,6 +136,7 @@ def retrieve_context(
             continue
         lifecycle_boost = 0.04 if chunk.lifecycle_status in {"filed", "served"} else 0.0
         rerank_score = (0.55 * sparse_score) + (0.40 * vector_score) + lifecycle_boost
+        confidence = _confidence_from_score(rerank_score)
         scored.append(
             RagRetrievalResult(
                 chunk=chunk,
@@ -148,6 +151,7 @@ def retrieve_context(
                 sparse_score=sparse_score,
                 vector_score=vector_score,
                 rerank_score=rerank_score,
+                confidence=confidence,
             )
         )
 
@@ -166,6 +170,7 @@ def retrieve_context(
             sparse_score=result.sparse_score,
             vector_score=result.vector_score,
             rerank_score=result.rerank_score,
+            confidence=result.confidence,
         )
         for index, result in enumerate(ordered)
     )
@@ -195,7 +200,16 @@ def build_answer_packet(
         citations=tuple(result.citation for result in results),
         retrieval_results=results,
         safety_notice=safety_notice,
+        confidence=answer_confidence(results),
     )
+
+
+def answer_confidence(results: tuple[RagRetrievalResult, ...]) -> float:
+    if not results:
+        return 0.0
+    top = results[0].confidence
+    citation_boost = min(0.15, 0.03 * len(results))
+    return round(min(1.0, top + citation_boost), 3)
 
 
 def chunk_text(
@@ -346,6 +360,10 @@ def _cosine_similarity(left: list[float], right: list[float]) -> float:
         left_value * right_value for left_value, right_value in zip(left, right, strict=True)
     )
     return max(0.0, similarity)
+
+
+def _confidence_from_score(score: float) -> float:
+    return round(max(0.0, min(1.0, score)), 3)
 
 
 def _tokenize(text: str) -> tuple[str, ...]:

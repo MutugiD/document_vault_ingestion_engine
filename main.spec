@@ -6,6 +6,7 @@ from pathlib import Path
 
 hiddenimports = []
 for package_name in (
+    "ai",
     "backup",
     "core",
     "intake",
@@ -18,7 +19,11 @@ for package_name in (
 ):
     hiddenimports += collect_submodules(package_name)
 
-datas = [("products/product_catalog.json", "products")]
+datas = [
+    ("products/product_catalog.json", "products"),
+    ("resources/license_public_key.pem", "resources"),
+    ("resources/public_kenyan_legal_docs.json", "resources"),
+]
 tesseract_runtime = Path("runtime") / "tesseract"
 if tesseract_runtime.exists():
     datas.append((str(tesseract_runtime), "runtime/tesseract"))

@@ -15,6 +15,7 @@ PyInstaller one-folder build through `main.spec`.
 - PySide6 runtime files once UI begins
 - Tesseract binaries once OCR begins
 - license public key
+- public Kenyan legal document manifest
 - schema/config templates
 
 ## Bundle Excludes
@@ -60,6 +61,21 @@ The release-bundle slice implements:
 
 Installer wrapping, code signing, bundled Tesseract binary provenance, and clean-machine VM acceptance remain later distribution hardening slices.
 
+## F26 Implementation Boundary
+
+The release-hardening slice implements:
+
+- `resources/license_public_key.pem` inclusion.
+- `resources/public_kenyan_legal_docs.json` inclusion.
+- Native `--providers` status command with redacted API-key state.
+- Native `--public-kenya-e2e` verification command.
+- Public Kenyan document downloader for manual/legal-field validation.
+- RAG answer confidence in citation packets.
+- Windows distribution checklist in `17-windows-distribution-release-checklist.md`.
+- Release ZIP validation for required resources and safety boundaries.
+
+Installer wrapping, code signing, automatic updates, Wakili-Mkononi integration, and hosted AI remain later commercial slices.
+
 ## F14 Implementation Boundary
 
 The portable-install smoke slice implements:
@@ -79,6 +95,6 @@ Installer wrapping, code signing, bundled Tesseract binary provenance, and clean
 
 `tests/validate_frozen_build.py` performs the full local one-folder PyInstaller build and runs the frozen executable selftest.
 
-`tests/validate_release_bundle.py` creates the checked release ZIP and sidecar manifest, verifies the ZIP hash, confirms the three published products are present, and checks release file-name safety boundaries.
+`tests/validate_release_bundle.py` creates the checked release ZIP and sidecar manifest, verifies the ZIP hash, confirms the three published products and required resources are present, and checks release file-name safety boundaries.
 
 `tests/validate_portable_install.py` extracts that checked release ZIP to an isolated local folder and runs the frozen executable smoke paths from the extracted install.

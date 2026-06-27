@@ -291,6 +291,7 @@ python tests\validate_docs.py
 python tests\validate_skeleton.py
 python tests\validate_products.py
 python tests\validate_security_scan.py
+python tests\validate_ai_providers.py
 python tests\validate_license.py
 python tests\validate_vault.py
 python tests\validate_intake.py
@@ -304,6 +305,7 @@ python tests\validate_ui.py
 python tests\validate_package.py
 python tests\validate_e2e.py
 python tests\validate_real_world_rag_e2e.py
+python tests\validate_public_kenyan_e2e.py
 python tests\validate_manual_ingest_smoke.py
 python tests\validate_frozen_build.py
 python tests\validate_release_bundle.py
@@ -360,6 +362,50 @@ MANUAL INGEST SMOKE PASS
 ```
 
 The runner validates PDF, DOCX, scanned PDF, duplicate copy behavior, unsupported legacy `.doc`, vault encryption, search, RAG, backup, and restore. It prints redacted counts/statuses only and must not print raw document text or filenames.
+
+## Testing With Public Kenyan Legal Documents
+
+Download the public manifest set:
+
+```powershell
+python scripts\download_public_kenyan_docs.py --output test-output\public-kenyan-documents
+```
+
+Run the native app verification:
+
+```powershell
+python main.py --public-kenya-e2e test-output\public-kenyan-documents
+```
+
+After a frozen build:
+
+```powershell
+dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe --public-kenya-e2e test-output\public-kenyan-documents
+```
+
+Expected output includes:
+
+- `indexed_documents`
+- `rag_chunks`
+- `answers`
+- `citations`
+- `confidence`
+- `restore_verified`
+
+## AI Provider Keys
+
+Set provider keys through environment variables or the AI Keys tab:
+
+```powershell
+$env:DOCUMENT_VAULT_OPENAI_API_KEY="..."
+$env:DOCUMENT_VAULT_ANTHROPIC_API_KEY="..."
+$env:DOCUMENT_VAULT_GOOGLE_API_KEY="..."
+$env:DOCUMENT_VAULT_AZURE_OPENAI_API_KEY="..."
+$env:DOCUMENT_VAULT_MISTRAL_API_KEY="..."
+python main.py --providers
+```
+
+The command must show configured providers with redacted key values only.
 
 ## Failure Triage
 

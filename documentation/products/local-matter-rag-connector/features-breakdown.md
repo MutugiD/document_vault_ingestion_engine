@@ -10,11 +10,13 @@
 | sparse lexical scoring | `tests/validate_rag.py` |
 | lifecycle-aware reranking | `tests/validate_rag.py` |
 | citation packet | `tests/validate_rag.py` |
+| answer confidence score | `tests/validate_rag.py` |
 | safety notice | `tests/validate_rag.py` |
 | real-world grounded questions | `tests/validate_real_world_rag_e2e.py` |
 | scanned pending-OCR behavior without runtime | `tests/validate_real_world_rag_e2e.py` |
 | scanned OCR text retrieval when engine exists | `tests/validate_real_world_rag_e2e.py` |
 | private folder RAG smoke | `tests/validate_manual_ingest_smoke.py` |
+| public Kenyan legal document RAG E2E | `tests/validate_public_kenyan_e2e.py` |
 
 ## Partially Implemented
 
@@ -50,5 +52,6 @@ python tests\validate_rag.py
 python tests\validate_e2e.py
 python tests\validate_real_world_rag_e2e.py
 python tests\validate_manual_ingest_smoke.py
+python tests\validate_public_kenyan_e2e.py
 python tests\validate_security_scan.py
 ```

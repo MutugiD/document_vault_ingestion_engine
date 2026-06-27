@@ -12,6 +12,7 @@ Make the vault commercially ready as the secure local foundation for all product
 | F24 | `feature/f24-payment-entitlements-v1` | Complete: plans, suspended/expired/active states, local recovery allowed |
 | F25 | `feature/f25-production-windows-ui-v1` | Complete: first-run, license, vault, matter, search, backup, restore screens |
 | F23 | `feature/f23-managed-cloud-grant-backend-v1` | Complete: provider-neutral grant client and backend-facing contract |
+| F26 | `feature/f26-release-kenyan-e2e-v1` | Complete: hardened release bundle, public Kenyan E2E, provider-key status |
 | F27 | `feature/f27-installer-code-signing-publishing-v1` | installer wrapper, signing guide, clean VM report |
 | F28 | `feature/f28-automatic-update-channel-v1` | signed update manifest, offline-safe checks |
 
@@ -24,6 +25,8 @@ python tests\validate_search.py
 python tests\validate_backup.py
 python tests\validate_cloud_boundary.py
 python tests\validate_manual_ingest_smoke.py
+python tests\validate_ai_providers.py
+python tests\validate_public_kenyan_e2e.py
 python tests\validate_ui.py
 python tests\validate_package.py
 python tests\validate_frozen_build.py

@@ -22,7 +22,7 @@ def main() -> None:
     assert window.windowTitle() == "Document Vault Ingestion Engine"
     assert window.minimumWidth() >= 900
     assert len(DEFAULT_MODULES) >= 7
-    assert window.tabs.count() == 9
+    assert window.tabs.count() == 10
     expected_widgets = (
         "setupPage",
         "firmNameInput",
@@ -45,6 +45,13 @@ def main() -> None:
         "matterSearchInput",
         "ragQuestionInput",
         "ragCitationPacketOutput",
+        "providerKeysPage",
+        "openaiApiKeyInput",
+        "anthropicApiKeyInput",
+        "googleApiKeyInput",
+        "azureOpenaiApiKeyInput",
+        "mistralApiKeyInput",
+        "providerKeyStatusLabel",
         "backupPage",
         "backupStatusLabel",
         "restoreStatusLabel",
