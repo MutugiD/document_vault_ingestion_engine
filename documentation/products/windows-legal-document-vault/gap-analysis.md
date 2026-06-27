@@ -2,7 +2,7 @@
 
 | Current State | Expected Product Behavior | Missing Implementation | Priority | Validator Needed | Impact |
 | --- | --- | --- | --- | --- | --- |
-| offline license works | admin can enable/disable paid features through sync | admin/license sync payload and privacy validator | high | license/admin sync validator | monetization |
+| admin/license sync boundary exists | admin can enable/disable paid features through sync | real owner backend endpoint and operator dashboard | high | hosted admin integration validator | monetization |
 | feature flags exist | paid plans map cleanly to product modules | payment entitlement model | high | entitlement validator | monetization |
 | encrypted vault works | operator can manage matters through UI | production UI screens | high | UI workflow validator | usability |
 | local backup works | cloud uploads use owner backend grants | real grant client/backend contract | high | cloud backend validator | backup operations |
@@ -13,12 +13,12 @@
 
 ## Immediate Gap Order
 
-1. Admin/license sync backend boundary.
+1. Managed cloud grant backend.
 2. Payment entitlements.
 3. Production Windows UI.
-4. Managed cloud grant backend.
-5. Installer and code signing.
-6. Automatic update channel.
+4. Installer and code signing.
+5. Automatic update channel.
+6. Hosted admin dashboard endpoint wiring.
 
 ## Gap Closure Rule
 

@@ -20,11 +20,26 @@ from licensing import (  # noqa: E402
     DISABLED_STATUS,
     EXPIRED_STATUS,
     INSTALLATION_MISMATCH_STATUS,
+    PAID_ACTIVE_STATE,
+    PAID_DISABLED_STATE,
+    PAID_SUSPENDED_STATE,
+    SYNC_ACTIVE_STATUS,
+    SYNC_DISABLED_STATUS,
+    SYNC_GRACE_EXPIRED_STATUS,
+    BackupHealth,
     FeatureEntitlements,
     LicenseDocument,
+    LicenseSyncError,
+    LicenseSyncResponse,
+    LicenseValidationResult,
+    assert_payload_privacy,
+    build_license_check_in_payload,
     canonical_license_bytes,
     ensure_installation_identity,
+    evaluate_effective_entitlements,
     read_license_file,
+    record_license_sync_success,
+    sync_grace_expiry,
     verify_license_document,
     write_license_file,
 )
@@ -127,7 +142,121 @@ def main() -> None:
         assert not disabled_result.paid_features_enabled
         assert not disabled_result.feature_enabled("cloud_backup")
 
+        _validate_admin_license_sync_boundary(
+            identity.installation_id,
+            active_result,
+        )
+
     print("LICENSE VALIDATION PASS")
+
+
+def _validate_admin_license_sync_boundary(
+    installation_id: str,
+    active_result: LicenseValidationResult,
+) -> None:
+    generated_at = datetime(2026, 6, 25, 12, 0, tzinfo=UTC)
+    payload = build_license_check_in_payload(
+        installation_id=installation_id,
+        app_version="0.1.0",
+        device_nickname="Nairobi Office Laptop",
+        license_result=active_result,
+        backup_health=BackupHealth(
+            status="healthy",
+            last_success_age_hours=2,
+            pending_upload_count=0,
+        ),
+        generated_at=generated_at,
+    )
+    mapping = payload.to_mapping()
+    assert set(mapping) == {
+        "schema_version",
+        "installation_id",
+        "license_id",
+        "app_version",
+        "device_nickname",
+        "license_status",
+        "paid_entitlement_state",
+        "feature_flags",
+        "coarse_backup_health",
+        "generated_at",
+    }
+    serialized = str(mapping).lower()
+    for forbidden in (
+        "matter_name",
+        "client_name",
+        "case_number",
+        "filename",
+        "ocr_text",
+        "prompt",
+        "sha256",
+        "recovery",
+    ):
+        assert forbidden not in serialized
+
+    try:
+        assert_payload_privacy({"client_name": "not allowed"})
+    except LicenseSyncError:
+        pass
+    else:
+        raise AssertionError("client data was allowed in license check-in payload")
+
+    active_sync = LicenseSyncResponse(
+        installation_status=SYNC_ACTIVE_STATUS,
+        paid_entitlement_state=PAID_ACTIVE_STATE,
+        enabled_features=frozenset({"document_intake", "cloud_backup"}),
+        server_time=generated_at,
+        grace_expires_at=sync_grace_expiry(generated_at),
+    )
+    sync_state = record_license_sync_success(active_sync)
+    effective = evaluate_effective_entitlements(
+        active_result,
+        sync_state=sync_state,
+        as_of=generated_at,
+    )
+    assert effective.status == SYNC_ACTIVE_STATUS
+    assert effective.paid_features_enabled
+    assert effective.online_feature_enabled("cloud_backup")
+    assert not effective.feature_enabled("matter_rag")
+    assert effective.allows_local_data_access
+
+    disabled_sync = record_license_sync_success(
+        LicenseSyncResponse(
+            installation_status=SYNC_DISABLED_STATUS,
+            paid_entitlement_state=PAID_SUSPENDED_STATE,
+            enabled_features=frozenset(),
+            server_time=generated_at,
+            grace_expires_at=sync_grace_expiry(generated_at),
+            reason="disabled by admin",
+        )
+    )
+    disabled_effective = evaluate_effective_entitlements(
+        active_result,
+        sync_state=disabled_sync,
+        as_of=generated_at,
+    )
+    assert disabled_effective.status == SYNC_DISABLED_STATUS
+    assert disabled_effective.allows_local_data_access
+    assert not disabled_effective.paid_features_enabled
+    assert not disabled_effective.online_features_enabled
+    assert not disabled_effective.feature_enabled("document_intake")
+
+    expired_grace_effective = evaluate_effective_entitlements(
+        active_result,
+        sync_state=sync_state,
+        as_of=generated_at.replace(year=2026, month=7, day=25),
+    )
+    assert expired_grace_effective.status == SYNC_GRACE_EXPIRED_STATUS
+    assert expired_grace_effective.allows_local_data_access
+    assert not expired_grace_effective.paid_features_enabled
+    assert not expired_grace_effective.online_features_enabled
+
+    no_local_data_effective = evaluate_effective_entitlements(
+        LicenseValidationResult(BAD_SIGNATURE_STATUS, reason="tampered"),
+        sync_state=sync_state,
+        as_of=generated_at,
+    )
+    assert no_local_data_effective.paid_entitlement_state == PAID_DISABLED_STATE
+    assert not no_local_data_effective.allows_local_data_access
 
 
 def _signed_license(

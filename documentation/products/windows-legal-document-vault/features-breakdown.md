@@ -7,6 +7,9 @@
 | installation ID | `tests/validate_license.py` |
 | signed offline license | `tests/validate_license.py` |
 | feature flags | `tests/validate_license.py` |
+| admin/license sync payload boundary | `tests/validate_license.py` |
+| admin disablement local-access rule | `tests/validate_license.py` |
+| sync grace behavior | `tests/validate_license.py` |
 | encrypted object store | `tests/validate_vault.py` |
 | recovery-key unlock | `tests/validate_vault.py` |
 | wrong recovery key failure | `tests/validate_vault.py`, `tests/validate_backup.py` |
@@ -27,7 +30,6 @@
 | Feature | Current State | Missing |
 | --- | --- | --- |
 | UI | PySide6 shell exists | production operator screens |
-| admin/license sync | offline license exists | online check-in, admin enable/disable, paid entitlement sync |
 | cloud backup | grant boundary exists | real backend grant service and provider upload adapters |
 | distribution | one-folder and release ZIP exist | installer wrapper, code signing, clean VM signed report |
 
@@ -44,7 +46,6 @@
 
 | Feature | Validator Needed |
 | --- | --- |
-| admin/license sync backend boundary | license/admin privacy validator |
 | payment entitlements | entitlement validator |
 | installer wrapper | installer validator |
 | code signing | signed artifact validator |

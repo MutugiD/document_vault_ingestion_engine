@@ -8,7 +8,7 @@ Make the vault commercially ready as the secure local foundation for all product
 
 | Feature | Branch | Scope |
 | --- | --- | --- |
-| F22 | `feature/f22-admin-license-sync-boundary-v1` | check-in payload, privacy boundary, admin enable/disable, grace behavior |
+| F22 | `feature/f22-admin-license-sync-boundary-v1` | Complete: check-in payload, privacy boundary, admin enable/disable, grace behavior |
 | F24 | `feature/f24-payment-entitlements-v1` | plans, suspended/expired/active states, local recovery allowed |
 | F25 | `feature/f25-production-windows-ui-v1` | first-run, license, vault, matter, search, backup, restore screens |
 | F23 | `feature/f23-managed-cloud-grant-backend-v1` | provider-neutral grant client and backend-facing contract |
