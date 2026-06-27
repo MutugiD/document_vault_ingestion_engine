@@ -12,7 +12,34 @@ from docx import Document
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from intake import OCR_NOT_REQUIRED, OCR_PENDING, extract_text  # noqa: E402
+from intake import (  # noqa: E402
+    OCR_COMPLETED,
+    OCR_FAILED,
+    OCR_NOT_REQUIRED,
+    OCR_PENDING,
+    extract_text,
+)
+
+
+class FakeOcrEngine:
+    def __init__(self, text: str, *, fail: bool = False) -> None:
+        self.text = text
+        self.fail = fail
+        self.calls: list[Path] = []
+
+    def recognize_image(
+        self,
+        image_path: Path,
+        *,
+        languages: tuple[str, ...] | None = None,
+    ) -> str:
+        del languages
+        self.calls.append(image_path)
+        if self.fail:
+            from intake import OcrRuntimeError
+
+            raise OcrRuntimeError("fake OCR failure")
+        return self.text
 
 
 def main() -> None:
@@ -43,6 +70,31 @@ def main() -> None:
         assert image_result.ocr_status == OCR_PENDING
         assert "ocr_adapter_pending" in image_result.warnings
 
+        fake_ocr = FakeOcrEngine("Scanned affidavit text from OCR")
+        image_ocr_result = extract_text(image_path, ocr_engine=fake_ocr)
+        assert image_ocr_result.ocr_status == OCR_COMPLETED
+        assert image_ocr_result.text == "Scanned affidavit text from OCR"
+        assert "ocr_text_extracted" in image_ocr_result.warnings
+        assert fake_ocr.calls == [image_path]
+
+        failing_ocr_result = extract_text(image_path, ocr_engine=FakeOcrEngine("", fail=True))
+        assert failing_ocr_result.ocr_status == OCR_FAILED
+        assert "ocr_failed" in failing_ocr_result.warnings
+
+        scanned_pdf_path = workspace / "scanned-annexure.pdf"
+        _write_image_only_pdf(scanned_pdf_path)
+        scanned_pending = extract_text(scanned_pdf_path)
+        assert scanned_pending.ocr_status == OCR_PENDING
+        assert "empty_extracted_text" in scanned_pending.warnings
+
+        scanned_ocr = FakeOcrEngine("OCR text from image only PDF annexure")
+        scanned_result = extract_text(scanned_pdf_path, ocr_engine=scanned_ocr)
+        assert scanned_result.detected_file_type == "pdf"
+        assert scanned_result.page_count == 1
+        assert scanned_result.ocr_status == OCR_COMPLETED
+        assert "image only PDF annexure" in scanned_result.text
+        assert "ocr_text_extracted" in scanned_result.warnings
+
         unsupported_path = workspace / "notes.txt"
         unsupported_path.write_text("not supported for extraction", encoding="utf-8")
         unsupported_result = extract_text(unsupported_path)
@@ -65,6 +117,16 @@ def _write_docx(path: Path, text: str) -> None:
     document = Document()
     document.add_paragraph(text)
     document.save(path)
+
+
+def _write_image_only_pdf(path: Path) -> None:
+    document = fitz.open()
+    page = document.new_page(width=595, height=842)
+    pixmap = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 320, 120), False)
+    pixmap.clear_with(230)
+    page.insert_image(fitz.Rect(72, 120, 523, 320), pixmap=pixmap)
+    document.save(path)
+    document.close()
 
 
 if __name__ == "__main__":

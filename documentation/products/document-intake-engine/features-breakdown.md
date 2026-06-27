@@ -15,13 +15,17 @@
 | DOCX text extraction | `tests/validate_extraction.py` |
 | scanned/image-only PDF pending OCR | `tests/validate_real_world_rag_e2e.py` |
 | Tesseract runtime manifest | `tests/validate_ocr_runtime.py` |
+| Tesseract runtime discovery | `tests/validate_ocr_runtime.py` |
+| image OCR adapter | `tests/validate_extraction.py` |
+| scanned PDF OCR fallback | `tests/validate_extraction.py`, `tests/validate_real_world_rag_e2e.py` |
+| OCR text handoff to RAG | `tests/validate_real_world_rag_e2e.py` |
 
 ## Partially Implemented
 
 | Feature | Current State | Missing |
 | --- | --- | --- |
-| OCR | runtime manifest exists | actual Tesseract execution |
-| scanned PDFs | accepted with empty text pending OCR | page/image OCR fallback |
+| OCR | execution adapter exists and supports fake/real engines | vetted Tesseract binary provenance |
+| scanned PDFs | page/image OCR fallback exists | clean-machine bundled runtime validation |
 | private document testing | deterministic generated fixtures exist | manual local folder runner |
 | UI review | worker shell exists | operator review queue and duplicate/OCR status screens |
 
@@ -29,11 +33,8 @@
 
 | Feature | Validator Needed |
 | --- | --- |
-| Tesseract execution adapter | extraction/OCR validator extension |
-| image OCR | extraction/OCR validator extension |
-| scanned PDF OCR fallback | real-world RAG E2E extension |
-| OCR quality warnings | extraction validator extension |
 | manual private ingest runner | manual smoke validator |
+| vetted Tesseract binary bundle | release bundle validator extension |
 
 ## Missing For Commercial Release
 

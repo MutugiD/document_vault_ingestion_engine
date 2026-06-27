@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import tomllib
 import zipfile
 from dataclasses import asdict, dataclass
@@ -16,6 +17,7 @@ from products import load_product_catalog
 APP_NAME = "DocumentVaultIngestionEngine"
 PLATFORM = "windows-x64"
 MANIFEST_NAME = "release-manifest.json"
+REQUIRE_TESSERACT_BUNDLE_ENV = "DOCUMENT_VAULT_REQUIRE_TESSERACT_BUNDLE"
 FORBIDDEN_NAME_MARKERS = (
     ".env",
     "client-document",
@@ -195,11 +197,18 @@ def _write_zip(zip_path: Path, frozen_bundle_dir: Path, manifest: ReleaseManifes
 
 
 def _assert_required_entries(names: list[str]) -> None:
-    required_suffixes = (
+    required_suffixes = [
         f"{APP_NAME}/{APP_NAME}.exe",
         f"{APP_NAME}/_internal/products/product_catalog.json",
         f"{APP_NAME}/{MANIFEST_NAME}",
-    )
+    ]
+    if os.environ.get(REQUIRE_TESSERACT_BUNDLE_ENV) == "1":
+        required_suffixes.extend(
+            [
+                f"{APP_NAME}/_internal/runtime/tesseract/tesseract-runtime.json",
+                f"{APP_NAME}/_internal/runtime/tesseract/tesseract.exe",
+            ]
+        )
     missing = [suffix for suffix in required_suffixes if suffix not in names]
     if missing:
         raise ReleaseBundleError(f"release ZIP is missing required entries: {missing}")

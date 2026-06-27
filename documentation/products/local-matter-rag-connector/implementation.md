@@ -8,7 +8,7 @@ Keep local RAG reliable before adding any hosted AI or Wakili-Mkononi integratio
 
 | Feature | Branch | Scope |
 | --- | --- | --- |
-| F20 | `feature/f20-ocr-execution-v1` | scanned document text availability for RAG |
+| F20 | `feature/f20-ocr-execution-v1` | Complete: scanned document text availability for RAG |
 | F21 | `feature/f21-manual-private-document-test-runner-v1` | private document RAG smoke path |
 | F25 | `feature/f25-production-windows-ui-v1` | RAG question panel and citations |
 | F29 | `feature/f29-wakili-mkononi-integration-v1` | matter export and citation packet handoff |

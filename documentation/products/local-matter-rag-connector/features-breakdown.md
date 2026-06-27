@@ -12,7 +12,8 @@
 | citation packet | `tests/validate_rag.py` |
 | safety notice | `tests/validate_rag.py` |
 | real-world grounded questions | `tests/validate_real_world_rag_e2e.py` |
-| scanned pending-OCR exclusion | `tests/validate_real_world_rag_e2e.py` |
+| scanned pending-OCR behavior without runtime | `tests/validate_real_world_rag_e2e.py` |
+| scanned OCR text retrieval when engine exists | `tests/validate_real_world_rag_e2e.py` |
 
 ## Partially Implemented
 
@@ -21,7 +22,7 @@
 | answer generation | citation packet exists | local/hosted generation boundary |
 | semantic retrieval | deterministic scoring exists | real embeddings or local model path |
 | UI | no production RAG panel | question panel with citations |
-| OCR input quality | OCR-pending exclusion exists | OCR execution for scanned matter evidence |
+| OCR input quality | scanned OCR text can feed RAG | vetted bundled Tesseract binary |
 
 ## Missing For MVP
 

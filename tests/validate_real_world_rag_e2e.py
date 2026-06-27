@@ -27,6 +27,7 @@ from backup import (  # noqa: E402
 from intake import (  # noqa: E402
     ACCEPTED_STATUS,
     DUPLICATE_STATUS,
+    OCR_COMPLETED,
     OCR_NOT_REQUIRED,
     OCR_PENDING,
     REJECTED_STATUS,
@@ -66,6 +67,22 @@ class StoredFixture:
     extracted_text: str
 
 
+class FakeOcrEngine:
+    def __init__(self, text: str) -> None:
+        self.text = text
+        self.calls: list[Path] = []
+
+    def recognize_image(
+        self,
+        image_path: Path,
+        *,
+        languages: tuple[str, ...] | None = None,
+    ) -> str:
+        del languages
+        self.calls.append(image_path)
+        return self.text
+
+
 def main() -> None:
     vault_phrase = "real world rag validator recovery phrase"
     with tempfile.TemporaryDirectory() as temporary_dir:
@@ -101,6 +118,10 @@ def main() -> None:
         _write_docx(pleading_docx, pleading_text)
         _write_image_only_pdf(scanned_pdf)
         legacy_doc.write_bytes(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1legacy word bytes")
+
+        scan_without_runtime = extract_text(scanned_pdf)
+        assert scan_without_runtime.ocr_status == OCR_PENDING
+        assert scan_without_runtime.text == ""
 
         vault_session = initialize_vault(vault_root, vault_phrase)
         matter = create_matter(
@@ -141,6 +162,7 @@ def main() -> None:
             title="Scanned Annexure Pending OCR",
             document_type="Annexure",
             lifecycle_status=DRAFT_STATUS,
+            ocr_engine=FakeOcrEngine("Handwritten annexure note confirms payment voucher PV-77"),
         )
 
         duplicate_copy = source_dir / "copy-of-1978-archived-lease.pdf"
@@ -159,8 +181,10 @@ def main() -> None:
         _assert_vault_copy_and_encryption(vault_session, stored_docx)
         _assert_vault_copy_and_encryption(vault_session, stored_scan)
 
-        expected_chunks = len(chunk_text(stored_old_pdf.extracted_text)) + len(
-            chunk_text(stored_docx.extracted_text)
+        expected_chunks = (
+            len(chunk_text(stored_old_pdf.extracted_text))
+            + len(chunk_text(stored_docx.extracted_text))
+            + len(chunk_text(stored_scan.extracted_text))
         )
         indexed_count = build_rag_index(vault_root, matter_id=matter.matter_id)
         assert indexed_count == expected_chunks
@@ -186,15 +210,21 @@ def main() -> None:
             assert expected_phrase.lower() in packet.grounded_context.lower(), question
             assert "Use only the cited local context" in packet.safety_notice
 
+        scan_packet = build_answer_packet(
+            vault_root,
+            "Which payment voucher is handwritten on the scanned annexure PV-77?",
+            matter_id=matter.matter_id,
+            top_k=4,
+        )
+        assert scan_packet.citations
+        assert "PV-77" in scan_packet.grounded_context
+
         scan_results = retrieve_context(
             vault_root,
-            "What handwritten note appears on the scanned annexure without OCR?",
+            "What handwritten note appears on the scanned annexure PV-77?",
             matter_id=matter.matter_id,
         )
-        assert all(result.chunk.document_id != stored_scan.document_id for result in scan_results)
-        assert "scanned annexure pending OCR" not in "\n".join(
-            result.chunk.text.lower() for result in scan_results
-        )
+        assert any(result.chunk.document_id == stored_scan.document_id for result in scan_results)
 
         backup_package = create_local_backup(
             vault_root,
@@ -255,6 +285,7 @@ def _intake_store_and_version(
     title: str,
     document_type: str,
     lifecycle_status: str,
+    ocr_engine=None,
 ) -> StoredFixture:
     record = import_document(vault_root, source_path)
     assert record.status == ACCEPTED_STATUS
@@ -263,13 +294,13 @@ def _intake_store_and_version(
     assert record.quarantine_path.read_bytes() == source_path.read_bytes()
     assert source_path.exists(), "intake must not move or delete source documents"
 
-    extraction = extract_text(record.quarantine_path)
-    if source_path.name.startswith("scanned-"):
+    extraction = extract_text(record.quarantine_path, ocr_engine=ocr_engine)
+    if source_path.name.startswith("scanned-") and ocr_engine is None:
         assert extraction.ocr_status == OCR_PENDING
         assert extraction.text == ""
         assert "empty_extracted_text" in extraction.warnings
     else:
-        assert extraction.ocr_status == OCR_NOT_REQUIRED
+        assert extraction.ocr_status in {OCR_NOT_REQUIRED, OCR_COMPLETED}
         assert extraction.text
 
     stored_object = vault_session.write_object(
