@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F29 Kenyan public document corpus E2E expansion.
+F30 Installer, code signing, and publishing.
 
 ## Accepted Decisions
 
@@ -57,10 +57,11 @@ F29 Kenyan public document corpus E2E expansion.
 | F26 PyInstaller bundling and release packaging | Complete | Release ZIP includes product catalog, license public key, public Kenyan doc manifest, provider-key status, public Kenyan E2E command, and checklist |
 | F27 enterprise documentation masterpack | Complete | Enterprise architecture, roadmap, CI/CD release gate, security, Windows distribution, E2E validation, and commercial operations docs |
 | F28 native app end-to-end workflow hardening | Complete | Shared native workflow runner, CLI command, UI workflow button, provider-key redaction, and app-level validator |
-| F29 Kenyan public document corpus E2E expansion | Active | Expanded public manifest metadata, hash-report downloader, duplicate/legacy/scanned/DOCX coverage, redacted citation/confidence report |
+| F29 Kenyan public document corpus E2E expansion | Complete | Expanded public manifest metadata, hash-report downloader, duplicate/legacy/scanned/DOCX coverage, redacted citation/confidence report |
+| F30 installer, code signing, and publishing | Active | Installer publishing manifest, signature verification script, publishing guide, and installer metadata validator |
 
 ## Next Actions
 
-1. Merge F29 only after public Kenyan E2E, real-world RAG E2E, backup, security, and Ruff checks pass.
-2. Start F30 installer, code signing, and publishing.
-3. Continue through F31-F35 one PR at a time until update channel, admin/payment, managed cloud, Wakili-Mkononi, and hosted AI boundaries are complete.
+1. Merge F30 only after package, frozen build, release bundle, portable install, installer publishing, security, and Ruff checks pass.
+2. Start F31 automatic update channel.
+3. Continue through F32-F35 one PR at a time until admin/payment, managed cloud, Wakili-Mkononi, and hosted AI boundaries are complete.

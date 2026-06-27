@@ -21,6 +21,7 @@ This checklist is the final Windows publishing gate for Kenyan legal practices.
 python tests\validate_frozen_build.py
 python tests\validate_release_bundle.py
 python tests\validate_portable_install.py
+python tests\validate_installer_publishing.py
 ```
 
 ## Public Kenyan Document Verification
@@ -66,6 +67,7 @@ On a clean Windows machine:
 5. Run public Kenyan document verification with downloaded public PDFs.
 6. Launch `DocumentVaultIngestionEngine.exe --gui`.
 7. Confirm setup, license, vault, import/OCR, search/RAG, backup, admin, AI key, and about tabs render.
+8. Verify signed artifacts with `tools\verify_windows_signature.ps1`.
 
 ## Publishing Blockers
 
