@@ -776,7 +776,7 @@ Definition of done:
 
 ## F27 - Enterprise Documentation Masterpack
 
-Status: Active.
+Status: Complete.
 
 Add the documentation-first enterprise control layer before more code work.
 
@@ -800,7 +800,7 @@ Definition of done:
 
 ## F28 - Native App End-To-End Workflow Hardening
 
-Status: Planned.
+Status: Active.
 
 Make the app prove the local product flow natively, not only through isolated scripts.
 
@@ -813,6 +813,8 @@ Deliver:
 - provider API key settings for OpenAI, Anthropic, and future providers.
 - redacted provider status display.
 - no API keys in logs or backups.
+- shared native workflow runner used by CLI, UI, and validators.
+- `main.py --native-workflow-e2e` with redacted JSON output.
 
 Definition of done:
 
@@ -820,6 +822,7 @@ Definition of done:
 - `python tests\validate_e2e.py`
 - `python tests\validate_rag.py`
 - `python tests\validate_ai_providers.py`
+- `python tests\validate_native_workflow.py`
 - `python tests\validate_security_scan.py`
 
 ## F29 - Kenyan Public Document Corpus E2E Expansion

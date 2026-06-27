@@ -77,6 +77,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="print the published product catalog",
     )
+    parser.add_argument(
+        "--native-workflow-e2e",
+        action="store_true",
+        help="run the native app workflow verification with redacted output",
+    )
     return parser.parse_args(argv)
 
 
@@ -105,6 +110,12 @@ def main(argv: list[str] | None = None) -> int:
         with tempfile.TemporaryDirectory(prefix="dv-public-ke-app-") as temporary_dir:
             report = run_public_kenyan_e2e(args.public_kenya_e2e, Path(temporary_dir))
         print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
+    if args.native_workflow_e2e:
+        from core import run_native_app_workflow
+
+        report = run_native_app_workflow()
+        print(json.dumps(report.to_mapping(), indent=2, sort_keys=True))
         return 0
     if args.products:
         from products import load_product_catalog

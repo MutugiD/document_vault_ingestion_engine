@@ -17,6 +17,8 @@ hardening and public Kenyan document E2E commands.
 
 Branch: `feature/f27-enterprise-documentation-masterpack-v1`
 
+Status: Complete.
+
 Deliver:
 
 - Enterprise architecture, roadmap, CI/CD, release, security, validation, Windows
@@ -35,12 +37,16 @@ Definition of done:
 
 Branch: `feature/f28-native-app-e2e-workflows-v1`
 
+Status: Active.
+
 Deliver:
 
 - Native workflow validation for setup, license, vault, import, OCR, matter,
   search, RAG, backup, restore, admin status, and provider-key settings.
 - Redacted provider key status for OpenAI, Anthropic, and future providers.
 - App-level E2E validator that follows the UI/backend boundary.
+- Shared native workflow runner used by CLI, UI, and tests.
+- `main.py --native-workflow-e2e` with redacted JSON output.
 
 Definition of done:
 
@@ -48,6 +54,7 @@ Definition of done:
 - `python tests\validate_e2e.py`
 - `python tests\validate_rag.py`
 - `python tests\validate_ai_providers.py`
+- `python tests\validate_native_workflow.py`
 - `python tests\validate_security_scan.py`
 
 ## F29 - Kenyan Public Document Corpus E2E Expansion
@@ -167,4 +174,3 @@ Definition of done:
 - `python tests\validate_rag.py`
 - `python tests\validate_real_world_rag_e2e.py`
 - `python tests\validate_security_scan.py`
-

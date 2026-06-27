@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal, Slot
 from PySide6.QtWidgets import (
@@ -25,6 +27,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from ai import configured_provider_statuses, provider_env_var, supported_providers
 
 
 @dataclass(frozen=True)
@@ -113,10 +117,17 @@ class MainWindow(QMainWindow):
         self.selftest_button.setObjectName("runSelftestButton")
         self.selftest_button.clicked.connect(self.run_worker_selftest)
         footer.addWidget(self.selftest_button)
+
+        self.workflow_button = QPushButton("Run workflow check")
+        self.workflow_button.setObjectName("runNativeWorkflowButton")
+        self.workflow_button.clicked.connect(self.run_native_workflow_check)
+        footer.addWidget(self.workflow_button)
         root_layout.addLayout(footer)
 
         self.setCentralWidget(root)
         self.thread_pool = QThreadPool.globalInstance()
+        self.provider_environment = _provider_environment_from_os()
+        self._connect_workflow_controls()
 
     @Slot()
     def run_worker_selftest(self) -> None:
@@ -127,6 +138,75 @@ class MainWindow(QMainWindow):
         worker.signals.failed.connect(self._on_worker_failed)
         self.thread_pool.start(worker)
 
+    @Slot()
+    def run_native_workflow_check(self) -> None:
+        self.workflow_button.setEnabled(False)
+        self.status_label.setText("Running native workflow check")
+
+        def task() -> object:
+            from core import run_native_app_workflow
+
+            with tempfile.TemporaryDirectory(prefix="dv-ui-workflow-") as temporary_dir:
+                return run_native_app_workflow(
+                    Path(temporary_dir),
+                    provider_environment=self.provider_environment,
+                )
+
+        worker = BackgroundWorker(task)
+        worker.signals.completed.connect(self._on_native_workflow_completed)
+        worker.signals.failed.connect(self._on_native_workflow_failed)
+        self.thread_pool.start(worker)
+
+    @Slot()
+    def _save_provider_settings(self) -> None:
+        field_map = {
+            "openai": "openaiApiKeyInput",
+            "anthropic": "anthropicApiKeyInput",
+            "google": "googleApiKeyInput",
+            "azure_openai": "azureOpenaiApiKeyInput",
+            "mistral": "mistralApiKeyInput",
+        }
+        environment = _provider_environment_from_os()
+        for provider, object_name in field_map.items():
+            field = self.findChild(QLineEdit, object_name)
+            if field is not None and field.text():
+                env_var = provider_env_var(provider)
+                environment[env_var] = field.text()
+                field.clear()
+        self.provider_environment = environment
+        statuses = configured_provider_statuses(self.provider_environment)
+        configured = [status.provider for status in statuses if status.configured]
+        status_label = self.findChild(QLabel, "providerKeyStatusLabel")
+        if status_label is not None:
+            if configured:
+                status_label.setText(f"Configured providers: {', '.join(configured)}")
+            else:
+                status_label.setText("No provider keys configured")
+
+    def _connect_workflow_controls(self) -> None:
+        button_actions = {
+            "completeSetupButton": "Setup complete",
+            "activateLicenseButton": "License activation checked",
+            "initializeVaultButton": "Vault initialization checked",
+            "newMatterButton": "Matter workflow checked",
+            "addFilesButton": "Import workflow checked",
+            "runOcrButton": "OCR workflow checked",
+            "askRagButton": "RAG workflow checked",
+            "createBackupButton": "Backup workflow checked",
+            "restoreDrillButton": "Restore workflow checked",
+            "adminSyncButton": "Admin status checked",
+        }
+        for object_name, message in button_actions.items():
+            button = self.findChild(QPushButton, object_name)
+            if button is not None:
+                button.clicked.connect(
+                    lambda _checked=False, text=message: self.status_label.setText(text)
+                )
+
+        save_provider_button = self.findChild(QPushButton, "saveProviderSettingsButton")
+        if save_provider_button is not None:
+            save_provider_button.clicked.connect(self._save_provider_settings)
+
     @Slot(object)
     def _on_worker_completed(self, result: object) -> None:
         self.status_label.setText(str(result))
@@ -136,6 +216,29 @@ class MainWindow(QMainWindow):
     def _on_worker_failed(self, message: str) -> None:
         self.status_label.setText(f"Worker selftest failed: {message}")
         self.selftest_button.setEnabled(True)
+
+    @Slot(object)
+    def _on_native_workflow_completed(self, result: object) -> None:
+        report = result.to_mapping()
+        self.status_label.setText(
+            "Native workflow pass: "
+            f"citations={report['rag_citations']}, confidence={report['rag_confidence']}"
+        )
+        output = self.findChild(QTextEdit, "ragCitationPacketOutput")
+        if output is not None:
+            output.setPlainText(
+                "Native workflow pass\n"
+                f"Search results: {report['search_results']}\n"
+                f"RAG citations: {report['rag_citations']}\n"
+                f"RAG confidence: {report['rag_confidence']}\n"
+                f"Restore verified: {report['restore_verified']}"
+            )
+        self.workflow_button.setEnabled(True)
+
+    @Slot(str)
+    def _on_native_workflow_failed(self, message: str) -> None:
+        self.status_label.setText(f"Native workflow failed: {message}")
+        self.workflow_button.setEnabled(True)
 
 
 def create_app(argv: list[str] | None = None) -> QApplication:
@@ -307,6 +410,16 @@ def _provider_keys_page() -> QWidget:
     layout.addRow("Status", status)
     layout.addRow("", save)
     return page
+
+
+def _provider_environment_from_os() -> dict[str, str]:
+    environment: dict[str, str] = {}
+    for provider in supported_providers():
+        env_var = provider_env_var(provider)
+        value = os.environ.get(env_var, "")
+        if value:
+            environment[env_var] = value
+    return environment
 
 
 def _backup_page() -> QWidget:

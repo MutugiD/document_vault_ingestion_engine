@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from PySide6.QtCore import QEventLoop, QObject, QTimer  # noqa: E402
+from PySide6.QtWidgets import QLabel, QLineEdit, QPushButton, QTextEdit  # noqa: E402
 
 from ui import DEFAULT_MODULES, BackgroundWorker, MainWindow, create_app  # noqa: E402
 
@@ -52,6 +53,7 @@ def main() -> None:
         "azureOpenaiApiKeyInput",
         "mistralApiKeyInput",
         "providerKeyStatusLabel",
+        "saveProviderSettingsButton",
         "backupPage",
         "backupStatusLabel",
         "restoreStatusLabel",
@@ -60,9 +62,22 @@ def main() -> None:
         "entitlementStatusLabel",
         "aboutPage",
         "releaseInfoLabel",
+        "runNativeWorkflowButton",
     )
     for object_name in expected_widgets:
         assert window.findChild(QObject, object_name) is not None, object_name
+
+    openai_key = window.findChild(QLineEdit, "openaiApiKeyInput")
+    provider_status = window.findChild(QLabel, "providerKeyStatusLabel")
+    save_provider = window.findChild(QPushButton, "saveProviderSettingsButton")
+    assert openai_key is not None
+    assert provider_status is not None
+    assert save_provider is not None
+    openai_key.setText("sk-ui-secret-123456")
+    save_provider.click()
+    assert "openai" in provider_status.text()
+    assert "sk-ui-secret" not in provider_status.text()
+    assert openai_key.text() == ""
 
     loop = QEventLoop()
     worker = BackgroundWorker(lambda: "worker-ok")
@@ -75,6 +90,33 @@ def main() -> None:
 
     assert result.get("value") == "worker-ok"
     assert "error" not in result
+
+    workflow_loop = QEventLoop()
+    workflow_button = window.findChild(QPushButton, "runNativeWorkflowButton")
+    status_label = window.findChild(QLabel, "statusLabel")
+    rag_output = window.findChild(QTextEdit, "ragCitationPacketOutput")
+    assert workflow_button is not None
+    assert status_label is not None
+    assert rag_output is not None
+    workflow_button.click()
+
+    def maybe_quit_workflow() -> None:
+        if "Native workflow pass" in status_label.text():
+            workflow_loop.quit()
+
+    poll_timer = QTimer()
+    poll_timer.timeout.connect(maybe_quit_workflow)
+    poll_timer.start(100)
+    QTimer.singleShot(15000, workflow_loop.quit)
+    workflow_loop.exec()
+    poll_timer.stop()
+
+    assert "Native workflow pass" in status_label.text()
+    assert "RAG citations:" in rag_output.toPlainText()
+    assert "sk-ui-secret" not in status_label.text()
+    assert "sk-ui-secret" not in rag_output.toPlainText()
+    assert "invoice default evidence" not in rag_output.toPlainText()
+
     window.close()
     app.processEvents()
 
