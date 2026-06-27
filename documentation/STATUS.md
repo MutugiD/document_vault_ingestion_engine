@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F28 Native app end-to-end workflow hardening.
+F29 Kenyan public document corpus E2E expansion.
 
 ## Accepted Decisions
 
@@ -56,10 +56,11 @@ F28 Native app end-to-end workflow hardening.
 | F25 production Windows UI | Complete | PySide6 workflow tabs for setup, license, vault, matters, import/OCR, search/RAG, backup/restore, admin status, and release info |
 | F26 PyInstaller bundling and release packaging | Complete | Release ZIP includes product catalog, license public key, public Kenyan doc manifest, provider-key status, public Kenyan E2E command, and checklist |
 | F27 enterprise documentation masterpack | Complete | Enterprise architecture, roadmap, CI/CD release gate, security, Windows distribution, E2E validation, and commercial operations docs |
-| F28 native app end-to-end workflow hardening | Active | Shared native workflow runner, CLI command, UI workflow button, provider-key redaction, and app-level validator |
+| F28 native app end-to-end workflow hardening | Complete | Shared native workflow runner, CLI command, UI workflow button, provider-key redaction, and app-level validator |
+| F29 Kenyan public document corpus E2E expansion | Active | Expanded public manifest metadata, hash-report downloader, duplicate/legacy/scanned/DOCX coverage, redacted citation/confidence report |
 
 ## Next Actions
 
-1. Merge F28 only after UI, E2E, RAG, AI-provider, native workflow, security, and Ruff checks pass.
-2. Start F29 Kenyan public document corpus E2E expansion.
-3. Continue through F30-F35 one PR at a time until installer/signing, update channel, admin/payment, managed cloud, Wakili-Mkononi, and hosted AI boundaries are complete.
+1. Merge F29 only after public Kenyan E2E, real-world RAG E2E, backup, security, and Ruff checks pass.
+2. Start F30 installer, code signing, and publishing.
+3. Continue through F31-F35 one PR at a time until update channel, admin/payment, managed cloud, Wakili-Mkononi, and hosted AI boundaries are complete.

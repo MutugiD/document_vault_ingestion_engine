@@ -800,7 +800,7 @@ Definition of done:
 
 ## F28 - Native App End-To-End Workflow Hardening
 
-Status: Active.
+Status: Complete.
 
 Make the app prove the local product flow natively, not only through isolated scripts.
 
@@ -827,7 +827,7 @@ Definition of done:
 
 ## F29 - Kenyan Public Document Corpus E2E Expansion
 
-Status: Planned.
+Status: Active.
 
 Expand the public Kenyan legal document test set and make it repeatable.
 
@@ -840,6 +840,7 @@ Deliver:
 - confidence scoring checks.
 - no raw document text in logs.
 - copy behavior checks for intake, quarantine, vault storage, backup, and restore.
+- redacted report containing citation metadata, confidence, file-type counts, duplicate count, unsupported count, OCR count, and restore state.
 
 Definition of done:
 

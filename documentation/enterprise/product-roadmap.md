@@ -37,7 +37,7 @@ Definition of done:
 
 Branch: `feature/f28-native-app-e2e-workflows-v1`
 
-Status: Active.
+Status: Complete.
 
 Deliver:
 
@@ -61,6 +61,8 @@ Definition of done:
 
 Branch: `feature/f29-kenyan-public-corpus-e2e-v1`
 
+Status: Active.
+
 Deliver:
 
 - Expanded public-source manifest for Kenyan legal documents.
@@ -68,6 +70,8 @@ Deliver:
 - PDF, scanned PDF, DOCX where legally available, duplicate, corrupt, and legacy
   unsupported-file coverage.
 - Many-question RAG checks with citations and confidence.
+- Redacted output with no raw extracted legal text in logs.
+- Duplicate copy, unsupported legacy `.doc`, DOCX, and scanned PDF sidecar OCR coverage.
 
 Definition of done:
 
