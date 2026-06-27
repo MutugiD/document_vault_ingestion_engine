@@ -149,8 +149,10 @@ def _build_manifest(frozen_bundle_dir: Path, project_root: Path) -> ReleaseManif
     products = tuple(asdict(product) for product in load_product_catalog())
     validation_scripts = (
         "tests/validate_products.py",
+        "tests/validate_ai_providers.py",
         "tests/validate_package.py",
         "tests/validate_e2e.py",
+        "tests/validate_public_kenyan_e2e.py",
         "tests/validate_frozen_build.py",
         "tests/validate_release_bundle.py",
     )
@@ -200,6 +202,8 @@ def _assert_required_entries(names: list[str]) -> None:
     required_suffixes = [
         f"{APP_NAME}/{APP_NAME}.exe",
         f"{APP_NAME}/_internal/products/product_catalog.json",
+        f"{APP_NAME}/_internal/resources/license_public_key.pem",
+        f"{APP_NAME}/_internal/resources/public_kenyan_legal_docs.json",
         f"{APP_NAME}/{MANIFEST_NAME}",
     ]
     if os.environ.get(REQUIRE_TESSERACT_BUNDLE_ENV) == "1":

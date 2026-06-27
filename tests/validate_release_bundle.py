@@ -35,6 +35,11 @@ def main() -> None:
     assert {product["slug"] for product in manifest.products} == EXPECTED_PRODUCTS
     assert any(item.path == f"{APP_NAME}.exe" for item in manifest.files)
     assert any(item.path == "_internal/products/product_catalog.json" for item in manifest.files)
+    assert any(item.path == "_internal/resources/license_public_key.pem" for item in manifest.files)
+    assert any(
+        item.path == "_internal/resources/public_kenyan_legal_docs.json"
+        for item in manifest.files
+    )
 
     sidecar_payload = json.loads(release_bundle.manifest_path.read_text(encoding="utf-8"))
     assert sidecar_payload["bundle_sha256"] == manifest.bundle_sha256
@@ -43,6 +48,8 @@ def main() -> None:
         names = archive.namelist()
         assert f"{APP_NAME}/{APP_NAME}.exe" in names
         assert f"{APP_NAME}/_internal/products/product_catalog.json" in names
+        assert f"{APP_NAME}/_internal/resources/license_public_key.pem" in names
+        assert f"{APP_NAME}/_internal/resources/public_kenyan_legal_docs.json" in names
         assert f"{APP_NAME}/release-manifest.json" in names
         assert not any(".env" in name.lower() for name in names)
         assert not any("private_key" in name.lower() for name in names)

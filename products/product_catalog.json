@@ -23,6 +23,7 @@
         "tests/validate_backup.py",
         "tests/validate_cloud_boundary.py",
         "tests/validate_manual_ingest_smoke.py",
+        "tests/validate_ai_providers.py",
         "tests/validate_ui.py",
         "tests/validate_package.py",
         "tests/validate_frozen_build.py"
@@ -103,6 +104,7 @@
         "tests/validate_rag.py",
         "tests/validate_e2e.py",
         "tests/validate_manual_ingest_smoke.py",
+        "tests/validate_public_kenyan_e2e.py",
         "tests/validate_real_world_rag_e2e.py"
       ],
       "documentation": [

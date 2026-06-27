@@ -6,19 +6,19 @@
 | payment entitlement model exists | paid plans map cleanly to product modules | hosted payment provider webhook/backend wiring | high | entitlement integration validator | monetization |
 | production UI workflow tabs exist | operator can execute real workflows through UI actions | bind UI actions to live vault/intake/search/backup services | high | UI workflow integration validator | usability |
 | managed grant client boundary exists | cloud uploads/downloads use owner backend grants | deployed owner backend service | high | cloud backend integration validator | backup operations |
-| release ZIP works | user installs with installer | installer wrapper | medium | installer validator | distribution |
+| hardened release ZIP works | user installs with installer | installer wrapper | medium | installer validator | distribution |
 | unsigned EXE works | commercial release is signed | code-signing workflow | medium | signed artifact validator | trust/publishing |
 | no update channel | signed update checks exist | update manifest and updater boundary | medium | update validator | maintenance |
 | docs exist | clean-machine report is repeatable | VM test report template and checklist | medium | package validator extension | release readiness |
 
 ## Immediate Gap Order
 
-1. PyInstaller release packaging hardening.
-2. Installer and code signing.
-3. Automatic update channel.
-4. Bind production UI actions to live services.
-5. Hosted admin dashboard endpoint wiring.
-6. Hosted payment provider/backend wiring.
+1. Installer and code signing.
+2. Automatic update channel.
+3. Bind production UI actions to live services.
+4. Hosted admin dashboard endpoint wiring.
+5. Hosted payment provider/backend wiring.
+6. Clean Windows lawyer-machine field report.
 
 ## Gap Closure Rule
 

@@ -10,6 +10,7 @@ import tempfile
 from pathlib import Path
 
 CORE_MODULES = (
+    "ai",
     "core",
     "licensing",
     "vault",
@@ -61,6 +62,17 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--selftest", action="store_true", help="run packaged-app smoke checks")
     parser.add_argument("--gui", action="store_true", help="launch the Windows desktop shell")
     parser.add_argument(
+        "--providers",
+        action="store_true",
+        help="print redacted AI provider API-key configuration status",
+    )
+    parser.add_argument(
+        "--public-kenya-e2e",
+        type=Path,
+        default=None,
+        help="run public Kenyan document vault/RAG verification for an input folder",
+    )
+    parser.add_argument(
         "--products",
         action="store_true",
         help="print the published product catalog",
@@ -76,6 +88,24 @@ def main(argv: list[str] | None = None) -> int:
         from ui import run_gui
 
         return run_gui(sys.argv[:1])
+    if args.providers:
+        from ai import configured_provider_statuses
+
+        print(
+            json.dumps(
+                {"providers": [status.to_mapping() for status in configured_provider_statuses()]},
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+    if args.public_kenya_e2e is not None:
+        from scripts.public_kenyan_e2e import run_public_kenyan_e2e
+
+        with tempfile.TemporaryDirectory(prefix="dv-public-ke-app-") as temporary_dir:
+            report = run_public_kenyan_e2e(args.public_kenya_e2e, Path(temporary_dir))
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
     if args.products:
         from products import load_product_catalog
 

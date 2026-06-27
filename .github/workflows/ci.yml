@@ -39,6 +39,9 @@ jobs:
       - name: Validate licensing
         run: python tests\validate_license.py
 
+      - name: Validate AI provider key settings
+        run: python tests\validate_ai_providers.py
+
       - name: Validate encrypted vault
         run: python tests\validate_vault.py
 
@@ -74,6 +77,9 @@ jobs:
 
       - name: Validate real-world RAG end-to-end flow
         run: python tests\validate_real_world_rag_e2e.py
+
+      - name: Validate public Kenyan document E2E flow
+        run: python tests\validate_public_kenyan_e2e.py
 
       - name: Validate manual private-document smoke runner
         run: python tests\validate_manual_ingest_smoke.py

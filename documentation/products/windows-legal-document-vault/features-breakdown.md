@@ -14,6 +14,7 @@
 | suspended/expired paid feature behavior | `tests/validate_license.py` |
 | admin payment override state | `tests/validate_license.py` |
 | production workflow UI tabs | `tests/validate_ui.py` |
+| provider API-key status boundary | `tests/validate_ai_providers.py` |
 | encrypted object store | `tests/validate_vault.py` |
 | recovery-key unlock | `tests/validate_vault.py` |
 | wrong recovery key failure | `tests/validate_vault.py`, `tests/validate_backup.py` |
@@ -27,6 +28,7 @@
 | private folder vault smoke | `tests/validate_manual_ingest_smoke.py` |
 | PyInstaller frozen executable | `tests/validate_frozen_build.py` |
 | checked release ZIP | `tests/validate_release_bundle.py` |
+| public Kenyan document release verification | `tests/validate_public_kenyan_e2e.py` |
 | portable install smoke | `tests/validate_portable_install.py` |
 | security scan | `tests/validate_security_scan.py` |
 
@@ -35,7 +37,7 @@
 | Feature | Current State | Missing |
 | --- | --- | --- |
 | cloud backup | provider grant client boundary exists | real hosted backend deployment |
-| distribution | one-folder and release ZIP exist | installer wrapper, code signing, clean VM signed report |
+| distribution | hardened one-folder and release ZIP exist | installer wrapper, code signing, clean VM signed report |
 
 ## Missing For MVP
 
@@ -43,7 +45,7 @@
 | --- | --- |
 | live UI action wiring | UI workflow integration validator |
 | vault recovery/export execution wiring | UI workflow integration validator |
-| clean Windows VM checklist artifact | package/release validator extension |
+| clean Windows VM execution report | package/release validator extension |
 
 ## Missing For Commercial Release
 
@@ -63,6 +65,8 @@ python tests\validate_search.py
 python tests\validate_backup.py
 python tests\validate_cloud_boundary.py
 python tests\validate_manual_ingest_smoke.py
+python tests\validate_ai_providers.py
+python tests\validate_public_kenyan_e2e.py
 python tests\validate_frozen_build.py
 python tests\validate_release_bundle.py
 python tests\validate_portable_install.py

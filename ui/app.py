@@ -97,6 +97,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(_matter_page(), "Matters")
         self.tabs.addTab(_import_page(), "Import")
         self.tabs.addTab(_search_rag_page(), "Search and RAG")
+        self.tabs.addTab(_provider_keys_page(), "AI Keys")
         self.tabs.addTab(_backup_page(), "Backup")
         self.tabs.addTab(_admin_page(), "Admin")
         self.tabs.addTab(_about_page(modules), "About")
@@ -280,6 +281,31 @@ def _search_rag_page() -> QWidget:
     layout.addWidget(ask_box)
     layout.addWidget(ask_button)
     layout.addWidget(answer_box)
+    return page
+
+
+def _provider_keys_page() -> QWidget:
+    page = QWidget()
+    page.setObjectName("providerKeysPage")
+    layout = QFormLayout(page)
+    providers = (
+        ("OpenAI", "openaiApiKeyInput"),
+        ("Anthropic", "anthropicApiKeyInput"),
+        ("Google", "googleApiKeyInput"),
+        ("Azure OpenAI", "azureOpenaiApiKeyInput"),
+        ("Mistral", "mistralApiKeyInput"),
+    )
+    for label, object_name in providers:
+        field = QLineEdit()
+        field.setObjectName(object_name)
+        field.setEchoMode(QLineEdit.EchoMode.Password)
+        layout.addRow(label, field)
+    status = QLabel("Provider keys are local settings")
+    status.setObjectName("providerKeyStatusLabel")
+    save = QPushButton("Save provider settings")
+    save.setObjectName("saveProviderSettingsButton")
+    layout.addRow("Status", status)
+    layout.addRow("", save)
     return page
 
 

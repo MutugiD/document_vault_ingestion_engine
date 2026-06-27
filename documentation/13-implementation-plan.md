@@ -746,7 +746,7 @@ Definition of done:
 
 ## F26 - PyInstaller Bundling And Release Packaging
 
-Status: Planned.
+Status: Complete.
 
 Make Windows distribution production-ready.
 
@@ -756,6 +756,9 @@ Deliver:
 - Tesseract bundle inclusion.
 - product catalog inclusion.
 - license public key inclusion.
+- public Kenyan legal document manifest inclusion.
+- provider API-key status command.
+- native public Kenyan document E2E command with citations and confidence.
 - no private keys.
 - no `.env`.
 - no credentials.
