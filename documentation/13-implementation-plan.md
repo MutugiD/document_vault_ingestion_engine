@@ -774,7 +774,79 @@ Definition of done:
 - `python tests\validate_portable_install.py`
 - `python tests\validate_security_scan.py`
 
-## F27 - Installer, Code Signing, And Publishing
+## F27 - Enterprise Documentation Masterpack
+
+Status: Active.
+
+Add the documentation-first enterprise control layer before more code work.
+
+Deliver:
+
+- enterprise architecture.
+- enterprise product roadmap.
+- CI/CD and release gates.
+- security and compliance rules.
+- Windows distribution plan.
+- end-to-end validation plan.
+- commercial operations plan.
+- docs validation requiring the enterprise masterpack.
+
+Definition of done:
+
+- `python tests\validate_docs.py`
+- `python tests\validate_products.py`
+- `python tests\validate_security_scan.py`
+- `ruff check .`
+
+## F28 - Native App End-To-End Workflow Hardening
+
+Status: Planned.
+
+Make the app prove the local product flow natively, not only through isolated scripts.
+
+Deliver:
+
+- first-run setup workflow validation.
+- license activation/status display validation.
+- vault initialization validation.
+- document import, OCR/extraction, matter creation, search, RAG, backup, and restore workflow validation.
+- provider API key settings for OpenAI, Anthropic, and future providers.
+- redacted provider status display.
+- no API keys in logs or backups.
+
+Definition of done:
+
+- `python tests\validate_ui.py`
+- `python tests\validate_e2e.py`
+- `python tests\validate_rag.py`
+- `python tests\validate_ai_providers.py`
+- `python tests\validate_security_scan.py`
+
+## F29 - Kenyan Public Document Corpus E2E Expansion
+
+Status: Planned.
+
+Expand the public Kenyan legal document test set and make it repeatable.
+
+Deliver:
+
+- public source manifest with URL, source name, expected file type, and hash after download.
+- downloader that stores files outside tracked repo content.
+- PDF, scanned PDF, DOCX where legally available, duplicate copy, corrupt file, and unsupported `.doc` coverage.
+- many-question RAG test set with expected citation behavior.
+- confidence scoring checks.
+- no raw document text in logs.
+- copy behavior checks for intake, quarantine, vault storage, backup, and restore.
+
+Definition of done:
+
+- `python scripts\download_public_kenyan_docs.py --output test-output\public-kenyan-documents`
+- `python tests\validate_public_kenyan_e2e.py`
+- `python tests\validate_real_world_rag_e2e.py`
+- `python tests\validate_backup.py`
+- `python tests\validate_security_scan.py`
+
+## F30 - Installer, Code Signing, And Publishing
 
 Status: Planned.
 
@@ -798,7 +870,7 @@ Definition of done:
 - `python tests\validate_release_bundle.py`
 - `python tests\validate_portable_install.py`
 
-## F28 - Automatic Update Channel
+## F31 - Automatic Update Channel
 
 Status: Planned.
 
@@ -819,7 +891,54 @@ Definition of done:
 - unsigned update rejection.
 - offline app continuation when update server is unavailable.
 
-## F29 - Wakili-Mkononi Integration
+## F32 - Admin, License Sync, And Payment Entitlement Backend Boundary
+
+Status: Planned.
+
+Complete the enterprise commercial boundary without exposing documents.
+
+Deliver:
+
+- installation check-in payload.
+- admin enable/disable state.
+- license sync result.
+- payment plan state.
+- active/suspended/expired behavior.
+- local export and recovery always allowed.
+- paid cloud/RAG/hosted features disabled when entitlement is invalid.
+- privacy validator for admin payload fields.
+
+Definition of done:
+
+- `python tests\validate_license.py`
+- `python tests\validate_security_scan.py`
+- `python tests\validate_e2e.py`
+
+## F33 - Managed Cloud Backup Backend Boundary
+
+Status: Planned.
+
+Make cloud backup enterprise-ready while keeping documents encrypted client-side.
+
+Deliver:
+
+- AWS S3 upload/download grant contract.
+- Azure Blob upload/download grant contract.
+- Google Cloud Storage upload/download grant contract.
+- encrypted-package-only upload.
+- allowlisted metadata only.
+- interrupted upload safety.
+- restore from clean machine with license plus recovery key.
+- no long-lived cloud credentials on the PC.
+
+Definition of done:
+
+- `python tests\validate_cloud_boundary.py`
+- `python tests\validate_backup.py`
+- `python tests\validate_e2e.py`
+- `python tests\validate_security_scan.py`
+
+## F34 - Wakili-Mkononi Integration
 
 Status: Planned.
 
@@ -840,7 +959,7 @@ Definition of done:
 - RAG citation packet preservation.
 - disabled entitlement blocks sync but not local vault access.
 
-## F30 - Hosted AI/LLM Boundary
+## F35 - Hosted AI/LLM Boundary
 
 Status: Planned.
 

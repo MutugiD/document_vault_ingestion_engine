@@ -16,8 +16,9 @@ The documentation discipline is:
 2. Read [02-defects-and-remedies.md](02-defects-and-remedies.md) for open risks and accepted decisions.
 3. Walk the feature docs in order from [03-local-storage-vault.md](03-local-storage-vault.md) through [10-ui-threading-workflows.md](10-ui-threading-workflows.md).
 4. Close with [11-packaging-distribution.md](11-packaging-distribution.md), [12-error-handling-reporting.md](12-error-handling-reporting.md), [13-implementation-plan.md](13-implementation-plan.md), [14-three-products-rag-strategy.md](14-three-products-rag-strategy.md), [15-end-to-end-verification.md](15-end-to-end-verification.md), [16-end-to-end-testing-guide.md](16-end-to-end-testing-guide.md), and [17-windows-distribution-release-checklist.md](17-windows-distribution-release-checklist.md).
-5. Read [products/README.md](products/README.md) for product-specific architecture, features, gaps, and implementation plans.
-6. Use [STATUS.md](STATUS.md) as the live tracker.
+5. Read [enterprise/README.md](enterprise/README.md) for the enterprise architecture, release, CI/CD, validation, and commercial roadmap.
+6. Read [products/README.md](products/README.md) for product-specific architecture, features, gaps, and implementation plans.
+7. Use [STATUS.md](STATUS.md) as the live tracker.
 
 ## Document Map
 
@@ -43,6 +44,14 @@ The documentation discipline is:
 | [15-end-to-end-verification.md](15-end-to-end-verification.md) | Integrated licensing, vault, intake, RAG, backup, cloud, restore validation |
 | [16-end-to-end-testing-guide.md](16-end-to-end-testing-guide.md) | Windows end-to-end testing guide and failure triage |
 | [17-windows-distribution-release-checklist.md](17-windows-distribution-release-checklist.md) | Windows release, public Kenyan document verification, and distribution gate |
+| [enterprise/README.md](enterprise/README.md) | Enterprise masterpack index |
+| [enterprise/architecture.md](enterprise/architecture.md) | Enterprise architecture, product boundaries, local storage, and packaging |
+| [enterprise/product-roadmap.md](enterprise/product-roadmap.md) | F27-F35 PR roadmap and definitions of done |
+| [enterprise/ci-cd-release.md](enterprise/ci-cd-release.md) | CI/CD, release gates, PR rules, and validation command set |
+| [enterprise/security-compliance.md](enterprise/security-compliance.md) | Privacy, license, backup, and hosted AI security rules |
+| [enterprise/windows-distribution.md](enterprise/windows-distribution.md) | Windows packaging, installer, signing, and clean-machine path |
+| [enterprise/e2e-validation-plan.md](enterprise/e2e-validation-plan.md) | End-to-end local, Kenyan corpus, private smoke, and provider validation |
+| [enterprise/commercial-operations.md](enterprise/commercial-operations.md) | Admin, licensing, payment, managed cloud, support, and completion standard |
 | [products/README.md](products/README.md) | Product-specific architecture, features, gaps, and implementation plans |
 
 Product folders contain `architecture.md`, `features-breakdown.md`, `gap-analysis.md`, and `implementation.md` for each commercial product.
