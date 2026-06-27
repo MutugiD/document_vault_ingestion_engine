@@ -852,7 +852,7 @@ Definition of done:
 
 ## F30 - Installer, Code Signing, And Publishing
 
-Status: Active.
+Status: Complete.
 
 Add commercial distribution packaging.
 
@@ -879,7 +879,7 @@ Definition of done:
 
 ## F31 - Automatic Update Channel
 
-Status: Planned.
+Status: Active.
 
 Add signed update planning and first implementation boundary.
 
@@ -891,12 +891,16 @@ Deliver:
 - no silent forced update.
 - rollback-safe download/install boundary.
 - disabled update behavior for offline firms.
+- signed manifest verifier.
+- tamper and unsigned manifest rejection.
+- explicit user approval requirement.
+- offline-safe update check result.
 
 Definition of done:
 
-- update manifest signature validation.
-- unsigned update rejection.
-- offline app continuation when update server is unavailable.
+- `python tests\validate_update_channel.py`
+- `python tests\validate_security_scan.py`
+- `python main.py --selftest`
 
 ## F32 - Admin, License Sync, And Payment Entitlement Backend Boundary
 

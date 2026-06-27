@@ -45,6 +45,7 @@ python tests\validate_frozen_build.py
 python tests\validate_release_bundle.py
 python tests\validate_portable_install.py
 python tests\validate_installer_publishing.py
+python tests\validate_update_channel.py
 python main.py --selftest
 ruff check .
 ```

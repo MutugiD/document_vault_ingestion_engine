@@ -99,6 +99,9 @@ jobs:
       - name: Validate installer publishing metadata
         run: python tests\validate_installer_publishing.py
 
+      - name: Validate automatic update channel
+        run: python tests\validate_update_channel.py
+
       - name: Run application selftest
         run: python main.py --selftest
 
