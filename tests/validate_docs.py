@@ -26,6 +26,7 @@ REQUIRED_DOCS = [
     "documentation/13-implementation-plan.md",
     "documentation/14-three-products-rag-strategy.md",
     "documentation/15-end-to-end-verification.md",
+    "documentation/16-end-to-end-testing-guide.md",
 ]
 
 
