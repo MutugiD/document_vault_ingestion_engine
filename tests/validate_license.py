@@ -16,6 +16,8 @@ sys.path.insert(0, str(ROOT))
 
 from licensing import (  # noqa: E402
     ACTIVE_STATUS,
+    ADMIN_OVERRIDE_FORCE_DISABLED,
+    ADMIN_OVERRIDE_FORCE_ENABLED,
     BAD_SIGNATURE_STATUS,
     DISABLED_STATUS,
     EXPIRED_STATUS,
@@ -23,6 +25,9 @@ from licensing import (  # noqa: E402
     PAID_ACTIVE_STATE,
     PAID_DISABLED_STATE,
     PAID_SUSPENDED_STATE,
+    PAYMENT_ACTIVE_STATUS,
+    PAYMENT_EXPIRED_STATUS,
+    PAYMENT_SUSPENDED_STATUS,
     SYNC_ACTIVE_STATUS,
     SYNC_DISABLED_STATUS,
     SYNC_GRACE_EXPIRED_STATUS,
@@ -32,11 +37,15 @@ from licensing import (  # noqa: E402
     LicenseSyncError,
     LicenseSyncResponse,
     LicenseValidationResult,
+    PaymentEntitlement,
+    PaymentEntitlementError,
     assert_payload_privacy,
+    assert_payment_entitlement_privacy,
     build_license_check_in_payload,
     canonical_license_bytes,
     ensure_installation_identity,
     evaluate_effective_entitlements,
+    evaluate_payment_entitlements,
     read_license_file,
     record_license_sync_success,
     sync_grace_expiry,
@@ -146,6 +155,7 @@ def main() -> None:
             identity.installation_id,
             active_result,
         )
+        _validate_payment_entitlements(active_result)
 
     print("LICENSE VALIDATION PASS")
 
@@ -257,6 +267,83 @@ def _validate_admin_license_sync_boundary(
     )
     assert no_local_data_effective.paid_entitlement_state == PAID_DISABLED_STATE
     assert not no_local_data_effective.allows_local_data_access
+
+
+def _validate_payment_entitlements(active_result: LicenseValidationResult) -> None:
+    active_entitlement = PaymentEntitlement(
+        plan="solo",
+        status=PAYMENT_ACTIVE_STATUS,
+        enabled_features=frozenset({"document_intake", "cloud_backup", "matter_rag"}),
+        synced_at=datetime(2026, 6, 25, 12, 30, tzinfo=UTC),
+    )
+    active_effective = evaluate_payment_entitlements(active_result, active_entitlement)
+    assert active_effective.paid_features_enabled
+    assert active_effective.feature_enabled("document_intake")
+    assert active_effective.feature_enabled("cloud_backup")
+    assert active_effective.feature_enabled("matter_rag")
+    assert not active_effective.feature_enabled("managed_restore")
+    assert active_effective.allows_local_data_access
+
+    suspended_effective = evaluate_payment_entitlements(
+        active_result,
+        PaymentEntitlement(
+            plan="solo",
+            status=PAYMENT_SUSPENDED_STATUS,
+            enabled_features=frozenset({"document_intake", "cloud_backup", "matter_rag"}),
+            reason="payment failed",
+        ),
+    )
+    assert suspended_effective.status == PAYMENT_SUSPENDED_STATUS
+    assert suspended_effective.allows_local_data_access
+    assert not suspended_effective.paid_features_enabled
+    assert not suspended_effective.online_feature_enabled("cloud_backup")
+    assert not suspended_effective.feature_enabled("matter_rag")
+
+    expired_effective = evaluate_payment_entitlements(
+        active_result,
+        PaymentEntitlement(
+            plan="firm",
+            status=PAYMENT_EXPIRED_STATUS,
+            enabled_features=frozenset({"document_intake", "cloud_backup", "matter_rag"}),
+        ),
+    )
+    assert expired_effective.allows_local_data_access
+    assert not expired_effective.paid_features_enabled
+
+    admin_disabled_effective = evaluate_payment_entitlements(
+        active_result,
+        PaymentEntitlement(
+            plan="firm",
+            status=PAYMENT_ACTIVE_STATUS,
+            enabled_features=frozenset({"document_intake", "cloud_backup", "matter_rag"}),
+            admin_override=ADMIN_OVERRIDE_FORCE_DISABLED,
+            reason="manual admin block",
+        ),
+    )
+    assert admin_disabled_effective.allows_local_data_access
+    assert not admin_disabled_effective.paid_features_enabled
+    assert not admin_disabled_effective.feature_enabled("matter_rag")
+
+    admin_enabled_effective = evaluate_payment_entitlements(
+        active_result,
+        PaymentEntitlement(
+            plan="solo",
+            status=PAYMENT_SUSPENDED_STATUS,
+            enabled_features=frozenset(),
+            admin_override=ADMIN_OVERRIDE_FORCE_ENABLED,
+            reason="temporary support override",
+        ),
+    )
+    assert admin_enabled_effective.allows_local_data_access
+    assert admin_enabled_effective.paid_features_enabled
+    assert admin_enabled_effective.feature_enabled("cloud_backup")
+
+    try:
+        assert_payment_entitlement_privacy({"client_name": "not allowed"})
+    except PaymentEntitlementError:
+        pass
+    else:
+        raise AssertionError("client data was allowed in payment entitlement payload")
 
 
 def _signed_license(

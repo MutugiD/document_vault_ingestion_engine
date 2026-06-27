@@ -10,6 +10,9 @@
 | admin/license sync payload boundary | `tests/validate_license.py` |
 | admin disablement local-access rule | `tests/validate_license.py` |
 | sync grace behavior | `tests/validate_license.py` |
+| payment plan entitlement model | `tests/validate_license.py` |
+| suspended/expired paid feature behavior | `tests/validate_license.py` |
+| admin payment override state | `tests/validate_license.py` |
 | encrypted object store | `tests/validate_vault.py` |
 | recovery-key unlock | `tests/validate_vault.py` |
 | wrong recovery key failure | `tests/validate_vault.py`, `tests/validate_backup.py` |
@@ -47,7 +50,6 @@
 
 | Feature | Validator Needed |
 | --- | --- |
-| payment entitlements | entitlement validator |
 | installer wrapper | installer validator |
 | code signing | signed artifact validator |
 | automatic update channel | signed update manifest validator |
