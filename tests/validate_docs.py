@@ -27,6 +27,19 @@ REQUIRED_DOCS = [
     "documentation/14-three-products-rag-strategy.md",
     "documentation/15-end-to-end-verification.md",
     "documentation/16-end-to-end-testing-guide.md",
+    "documentation/products/README.md",
+    "documentation/products/windows-legal-document-vault/architecture.md",
+    "documentation/products/windows-legal-document-vault/features-breakdown.md",
+    "documentation/products/windows-legal-document-vault/gap-analysis.md",
+    "documentation/products/windows-legal-document-vault/implementation.md",
+    "documentation/products/document-intake-engine/architecture.md",
+    "documentation/products/document-intake-engine/features-breakdown.md",
+    "documentation/products/document-intake-engine/gap-analysis.md",
+    "documentation/products/document-intake-engine/implementation.md",
+    "documentation/products/local-matter-rag-connector/architecture.md",
+    "documentation/products/local-matter-rag-connector/features-breakdown.md",
+    "documentation/products/local-matter-rag-connector/gap-analysis.md",
+    "documentation/products/local-matter-rag-connector/implementation.md",
 ]
 
 

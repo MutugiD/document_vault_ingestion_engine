@@ -563,3 +563,296 @@ Definition of done:
 - `python tests\validate_portable_install.py`
 - `python main.py --selftest`
 - `ruff check .`
+
+## F18 - End To End Testing Guide
+
+Status: Complete.
+
+Add a Windows guide for developer, release, real-world RAG, frozen build, release ZIP, portable install, and clean-machine testing.
+
+Deliver:
+
+- `documentation/16-end-to-end-testing-guide.md`.
+- Root README link.
+- Documentation README link.
+- Docs validator enforcement.
+
+Definition of done:
+
+- `python tests\validate_docs.py`
+- `python tests\validate_skeleton.py`
+- `ruff check .`
+
+## F19 - Product Documentation Pack
+
+Status: Complete.
+
+Add product-specific architecture, feature breakdown, gap analysis, and implementation docs for all three products.
+
+Deliver:
+
+- `documentation/products/README.md`.
+- Windows Legal Document Vault product docs.
+- Document Intake Engine product docs.
+- Local Matter RAG Connector product docs.
+- Product catalog documentation links.
+- Docs validator enforcement.
+
+Definition of done:
+
+- `python tests\validate_docs.py`
+- `python tests\validate_products.py`
+- `ruff check .`
+
+## F20 - OCR Execution And Tesseract Bundling
+
+Status: Planned.
+
+Complete OCR beyond the current runtime manifest contract.
+
+Deliver:
+
+- Tesseract runtime discovery.
+- Tesseract execution adapter.
+- Image OCR for PNG/JPEG/TIFF.
+- Scanned/image-only PDF OCR fallback.
+- OCR quality warnings.
+- Local-only OCR text storage.
+- PyInstaller inclusion rules for Tesseract files.
+- Release validation that OCR runtime files are present when enabled.
+
+Definition of done:
+
+- `python tests\validate_extraction.py`
+- `python tests\validate_ocr_runtime.py`
+- `python tests\validate_real_world_rag_e2e.py`
+- `python tests\validate_frozen_build.py`
+- `python tests\validate_release_bundle.py`
+
+## F21 - Manual Private Document Test Runner
+
+Status: Planned.
+
+Add a local-only test runner for private documents outside the repo.
+
+Deliver:
+
+- `scripts/manual_ingest_smoke.py`.
+- Input folder argument.
+- PDF, DOCX, scanned PDF, duplicate, unsupported `.doc`, intake, vault, search, RAG, backup, restore checks.
+- Redacted console output.
+- No raw document text in logs.
+
+Definition of done:
+
+- manual smoke validator
+- `python tests\validate_security_scan.py`
+- `python tests\validate_real_world_rag_e2e.py`
+
+## F22 - Admin And License Sync Backend Boundary
+
+Status: Planned.
+
+Implement commercial licensing/admin sync boundary.
+
+Deliver:
+
+- installation check-in payload.
+- license status sync.
+- enabled/disabled feature flags.
+- paid entitlement state.
+- coarse backup health.
+- privacy validator proving no matter/client/file/OCR/hash/recovery-key fields.
+- local grace behavior.
+- paid/online feature disablement without blocking local document recovery.
+
+Definition of done:
+
+- `python tests\validate_license.py`
+- `python tests\validate_security_scan.py`
+- admin payload privacy validator
+
+## F23 - Managed Cloud Grant Backend
+
+Status: Planned.
+
+Implement backend-facing grant client boundary for AWS S3, Azure Blob, and Google Cloud Storage.
+
+Deliver:
+
+- short-lived upload grants.
+- short-lived download grants.
+- encrypted-package-only upload path.
+- allowlisted cloud metadata.
+- no long-lived cloud credentials on the PC.
+
+Definition of done:
+
+- `python tests\validate_cloud_boundary.py`
+- `python tests\validate_backup.py`
+- `python tests\validate_real_world_rag_e2e.py`
+
+## F24 - Payment Entitlements
+
+Status: Planned.
+
+Add payment entitlement model without exposing documents.
+
+Deliver:
+
+- plans.
+- feature entitlements.
+- entitlement sync result.
+- suspended/expired/active behavior.
+- local export/recovery allowed when paid features stop.
+- admin override state.
+- disabled cloud/RAG tests without local data lockout.
+
+Definition of done:
+
+- `python tests\validate_license.py`
+- `python tests\validate_security_scan.py`
+- `python tests\validate_e2e.py`
+
+## F25 - Production Windows UI
+
+Status: Planned.
+
+Build the usable PySide6 application.
+
+Deliver:
+
+- first-run setup.
+- license activation.
+- vault initialization.
+- recovery key confirmation.
+- matter list.
+- document import/review queue.
+- OCR status.
+- duplicate warning.
+- matter search.
+- RAG question panel.
+- backup status.
+- restore drill.
+- admin/license status display.
+- about/release info.
+
+Definition of done:
+
+- `python tests\validate_ui.py`
+- `python tests\validate_e2e.py`
+- `python tests\validate_real_world_rag_e2e.py`
+
+## F26 - PyInstaller Bundling And Release Packaging
+
+Status: Planned.
+
+Make Windows distribution production-ready.
+
+Deliver:
+
+- final `main.spec`.
+- Tesseract bundle inclusion.
+- product catalog inclusion.
+- license public key inclusion.
+- no private keys.
+- no `.env`.
+- no credentials.
+- no sample client documents.
+- release ZIP manifest.
+- portable install smoke.
+- Windows clean-machine checklist.
+
+Definition of done:
+
+- `python tests\validate_frozen_build.py`
+- `python tests\validate_release_bundle.py`
+- `python tests\validate_portable_install.py`
+- `python tests\validate_security_scan.py`
+
+## F27 - Installer, Code Signing, And Publishing
+
+Status: Planned.
+
+Add commercial distribution packaging.
+
+Deliver:
+
+- installer wrapper.
+- install/uninstall path.
+- desktop/start menu shortcuts.
+- versioned release artifacts.
+- code-signing guide.
+- signed artifact verification.
+- clean Windows VM test report template.
+- publishing checklist.
+
+Definition of done:
+
+- `python tests\validate_package.py`
+- `python tests\validate_frozen_build.py`
+- `python tests\validate_release_bundle.py`
+- `python tests\validate_portable_install.py`
+
+## F28 - Automatic Update Channel
+
+Status: Planned.
+
+Add signed update planning and first implementation boundary.
+
+Deliver:
+
+- signed update manifest.
+- current version check.
+- update availability check.
+- no silent forced update.
+- rollback-safe download/install boundary.
+- disabled update behavior for offline firms.
+
+Definition of done:
+
+- update manifest signature validation.
+- unsigned update rejection.
+- offline app continuation when update server is unavailable.
+
+## F29 - Wakili-Mkononi Integration
+
+Status: Planned.
+
+Implement the user-approved integration boundary.
+
+Deliver:
+
+- matter export packet.
+- citation packet handoff.
+- no raw uncontrolled upload.
+- user-approved sync only.
+- audit event for every handoff.
+- feature entitlement check.
+
+Definition of done:
+
+- integration payload privacy validator.
+- RAG citation packet preservation.
+- disabled entitlement blocks sync but not local vault access.
+
+## F30 - Hosted AI/LLM Boundary
+
+Status: Planned.
+
+Add hosted AI only after local RAG is reliable.
+
+Deliver:
+
+- local citation packet as only prompt context.
+- no model-memory-only answer path.
+- redaction boundary.
+- tenant/license entitlement check.
+- audit event.
+- offline fallback to local RAG packet only.
+
+Definition of done:
+
+- no local context means no answer.
+- prompts exclude recovery keys and cloud credentials.
+- citations required in every generated answer.

@@ -32,7 +32,11 @@
         "documentation/07-search-indexing.md",
         "documentation/08-licensing-security.md",
         "documentation/09-backup-restore-cloud.md",
-        "documentation/11-packaging-distribution.md"
+        "documentation/11-packaging-distribution.md",
+        "documentation/products/windows-legal-document-vault/architecture.md",
+        "documentation/products/windows-legal-document-vault/features-breakdown.md",
+        "documentation/products/windows-legal-document-vault/gap-analysis.md",
+        "documentation/products/windows-legal-document-vault/implementation.md"
       ],
       "release_artifacts": [
         "dist/DocumentVaultIngestionEngine/DocumentVaultIngestionEngine.exe",
@@ -66,7 +70,11 @@
         "documentation/04-document-intake-validation.md",
         "documentation/05-text-extraction-ocr.md",
         "documentation/10-ui-threading-workflows.md",
-        "documentation/15-end-to-end-verification.md"
+        "documentation/15-end-to-end-verification.md",
+        "documentation/products/document-intake-engine/architecture.md",
+        "documentation/products/document-intake-engine/features-breakdown.md",
+        "documentation/products/document-intake-engine/gap-analysis.md",
+        "documentation/products/document-intake-engine/implementation.md"
       ],
       "release_artifacts": [
         "dist/DocumentVaultIngestionEngine/DocumentVaultIngestionEngine.exe"
@@ -97,7 +105,11 @@
       "documentation": [
         "documentation/14-three-products-rag-strategy.md",
         "documentation/15-end-to-end-verification.md",
-        "documentation/08-licensing-security.md"
+        "documentation/08-licensing-security.md",
+        "documentation/products/local-matter-rag-connector/architecture.md",
+        "documentation/products/local-matter-rag-connector/features-breakdown.md",
+        "documentation/products/local-matter-rag-connector/gap-analysis.md",
+        "documentation/products/local-matter-rag-connector/implementation.md"
       ],
       "release_artifacts": [
         "dist/DocumentVaultIngestionEngine/DocumentVaultIngestionEngine.exe"
