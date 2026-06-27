@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F26 PyInstaller bundling and release packaging.
+F27 Enterprise documentation masterpack.
 
 ## Accepted Decisions
 
@@ -22,7 +22,7 @@ F26 PyInstaller bundling and release packaging.
 | --- | --- | --- |
 | OD1 | Exact OCR binary distribution for Windows. | Bundle Tesseract 5.x with recorded provenance and checksum. |
 | OD2 | Exact managed cloud provider priority. | Implement provider-neutral grant interface first. |
-| OD3 | Installer wrapper after PyInstaller one-folder build. | Defer until frozen `--selftest` passes. |
+| OD3 | Installer wrapper after PyInstaller one-folder build. | Implement after the F27 enterprise roadmap is merged. |
 
 ## Progress
 
@@ -55,9 +55,10 @@ F26 PyInstaller bundling and release packaging.
 | F24 payment entitlements | Complete | Plan features, active/suspended/expired behavior, admin override, cloud/RAG disablement without local lockout |
 | F25 production Windows UI | Complete | PySide6 workflow tabs for setup, license, vault, matters, import/OCR, search/RAG, backup/restore, admin status, and release info |
 | F26 PyInstaller bundling and release packaging | Complete | Release ZIP includes product catalog, license public key, public Kenyan doc manifest, provider-key status, public Kenyan E2E command, and checklist |
+| F27 enterprise documentation masterpack | Active | Enterprise architecture, roadmap, CI/CD release gate, security, Windows distribution, E2E validation, and commercial operations docs |
 
 ## Next Actions
 
-1. Merge F26 only after CI is green.
-2. Start F27 installer, code signing, and publishing.
-3. Continue through F28-F30 until update channel, Wakili-Mkononi integration, and hosted AI boundary are complete.
+1. Merge F27 only after docs validation, product validation, security scan, and Ruff pass.
+2. Start F28 native app end-to-end workflow hardening.
+3. Continue through F29-F35 one PR at a time until Kenyan corpus E2E, installer/signing, update channel, admin/payment, managed cloud, Wakili-Mkononi, and hosted AI boundaries are complete.
