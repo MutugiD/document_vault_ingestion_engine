@@ -13,7 +13,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from backup import create_local_backup, restore_backup_package  # noqa: E402
-from intake import ACCEPTED_STATUS, extract_text, import_document  # noqa: E402
+from intake import (  # noqa: E402
+    ACCEPTED_STATUS,
+    DUPLICATE_STATUS,
+    REJECTED_STATUS,
+    extract_text,
+    import_document,
+)
 from rag import build_answer_packet, build_rag_index  # noqa: E402
 from search import FILED_STATUS, add_document_version, create_document, create_matter  # noqa: E402
 from vault import initialize_vault, open_vault  # noqa: E402
@@ -24,12 +30,32 @@ QUESTIONS = (
     "What document discusses land, commission, registry, or court procedure?",
     "Which cited source discusses a stay application or court filing procedure?",
     "What local context is available about appeals, registry, notices, or forms?",
+    "Which public document discusses pleadings, forms, affidavits, or notices?",
+    "What local context mentions electronic, automation, registry, or court workflow?",
+    "Which cited material discusses litigants, petitioners, or self-representation?",
+    "What procedural court material is available for filing or case management?",
+    "Which public source appears most relevant to court registry operations?",
 )
 
 CONTENT_TYPES = {
     "pdf": "application/pdf",
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
+SUPPORTED_INPUT_SUFFIXES = {".pdf", ".docx", ".doc"}
+
+
+class SidecarOcrEngine:
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+    def recognize_image(
+        self,
+        image_path: Path,
+        *,
+        languages: tuple[str, ...] | None = None,
+    ) -> str:
+        del image_path, languages
+        return self.text
 
 
 class PublicKenyanE2EError(Exception):
@@ -99,13 +125,44 @@ def run_public_kenyan_e2e(input_root: Path, workspace: Path) -> dict[str, object
 
     stored_objects: list[tuple[str, Path]] = []
     indexed_documents = 0
+    accepted_by_type: dict[str, int] = {}
+    duplicate_count = 0
+    rejected_unsupported_count = 0
+    scanned_ocr_completed_count = 0
+    intake_copy_verified_count = 0
+    extraction_warning_counts: dict[str, int] = {}
     for index, source_path in enumerate(source_paths, start=1):
         record = import_document(vault_root, source_path)
+        quarantine_copied = (
+            record.quarantine_path.exists()
+            and record.quarantine_path.read_bytes() == source_path.read_bytes()
+        )
+        if quarantine_copied:
+            intake_copy_verified_count += 1
+        if not source_path.exists():
+            raise PublicKenyanE2EError("intake moved or deleted a source document")
+        if record.status == DUPLICATE_STATUS:
+            duplicate_count += 1
+            continue
+        if record.status == REJECTED_STATUS:
+            if record.detected_file_type == "unsupported":
+                rejected_unsupported_count += 1
+            continue
         if record.status != ACCEPTED_STATUS:
             continue
-        extraction = extract_text(record.quarantine_path)
+        extraction = extract_text(
+            record.quarantine_path,
+            ocr_engine=_sidecar_ocr_engine(source_path),
+        )
         if not extraction.text:
             continue
+        accepted_by_type[extraction.detected_file_type] = (
+            accepted_by_type.get(extraction.detected_file_type, 0) + 1
+        )
+        for warning in extraction.warnings:
+            extraction_warning_counts[warning] = extraction_warning_counts.get(warning, 0) + 1
+        if extraction.ocr_status == "completed_tesseract":
+            scanned_ocr_completed_count += 1
         stored_object = vault_session.write_object(
             record.quarantine_path.read_bytes(),
             original_name=f"public-kenyan-document-{index}{source_path.suffix.lower()}",
@@ -156,7 +213,7 @@ def run_public_kenyan_e2e(input_root: Path, workspace: Path) -> dict[str, object
                     }
                     for result in packet.retrieval_results
                 ],
-                "answer": _extractive_answer(packet.grounded_context),
+                "answer_status": "grounded_context_available",
             }
         )
 
@@ -175,20 +232,25 @@ def run_public_kenyan_e2e(input_root: Path, workspace: Path) -> dict[str, object
     for object_id, source_path in stored_objects:
         if restored_session.read_object(object_id) != source_path.read_bytes():
             raise PublicKenyanE2EError("restored public document bytes did not match source")
+    backup_bytes = backup_path.read_bytes()
+    for phrase in (b"Supreme Court", b"registry workflow", b"public Kenyan legal"):
+        if phrase in backup_bytes:
+            raise PublicKenyanE2EError("backup package exposed plaintext document text")
 
     return {
         "input_documents": len(source_paths),
         "indexed_documents": indexed_documents,
+        "accepted_by_type": accepted_by_type,
+        "duplicate_count": duplicate_count,
+        "rejected_unsupported_count": rejected_unsupported_count,
+        "scanned_ocr_completed_count": scanned_ocr_completed_count,
+        "intake_copy_verified_count": intake_copy_verified_count,
+        "extraction_warning_counts": extraction_warning_counts,
         "rag_chunks": chunk_count,
         "answers": answers,
         "backup_package_bytes": backup.manifest.package_size_bytes,
         "restore_verified": restore_report.verified,
     }
-
-
-def _extractive_answer(grounded_context: str) -> str:
-    words = grounded_context.replace("\n", " ").split()
-    return " ".join(words[:36])
 
 
 def _source_paths(input_root: Path) -> list[Path]:
@@ -197,8 +259,15 @@ def _source_paths(input_root: Path) -> list[Path]:
     return sorted(
         path
         for path in input_root.rglob("*")
-        if path.is_file() and path.suffix.lower() in {".pdf", ".docx"}
+        if path.is_file() and path.suffix.lower() in SUPPORTED_INPUT_SUFFIXES
     )
+
+
+def _sidecar_ocr_engine(source_path: Path) -> SidecarOcrEngine | None:
+    sidecar_path = source_path.with_suffix(source_path.suffix + ".ocr.txt")
+    if not sidecar_path.exists():
+        return None
+    return SidecarOcrEngine(sidecar_path.read_text(encoding="utf-8"))
 
 
 def _display_title(source_path: Path, index: int) -> str:

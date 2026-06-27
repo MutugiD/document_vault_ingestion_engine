@@ -4,31 +4,82 @@
       "slug": "supreme-court-rules-forms-2020",
       "title": "Supreme Court Act Rules of 2020 forms",
       "source": "Supreme Court of Kenya",
+      "category": "court-rules-and-forms",
+      "expected_file_type": "pdf",
+      "expected_sha256": null,
       "url": "https://supremecourt.judiciary.go.ke/wp-content/uploads/2022/11/SupremeCourtActrules-of-2020.pdf"
     },
     {
       "slug": "geoffrey-asanyo-attorney-general-judgment",
       "title": "Geoffrey M. Asanyo & 3 others v Attorney General judgment",
       "source": "Supreme Court of Kenya",
+      "category": "judgment",
+      "expected_file_type": "pdf",
+      "expected_sha256": null,
       "url": "https://supremecourt.judiciary.go.ke/wp-content/uploads/2026/06/Geoffrey-M-Asanyo-3-others-Vs-the-Attorney-General-SC-Petition-7-of-2019-Judgment-10th-January-2020.pdf"
     },
     {
       "slug": "national-land-commission-ojienda-stay",
       "title": "National Land Commission v Prof. Ojienda stay application",
       "source": "Supreme Court of Kenya",
+      "category": "application",
+      "expected_file_type": "pdf",
+      "expected_sha256": null,
       "url": "https://supremecourt.judiciary.go.ke/wp-content/uploads/2024/04/Application-No.-E051-of-2023-National-Land-Commission-v-Prof-Ojienda-2-Others-Stay-application.pdf"
     },
     {
       "slug": "court-of-appeal-registry-manual",
       "title": "Court of Appeal Registry Manual",
       "source": "The Judiciary of Kenya",
+      "category": "registry-manual",
+      "expected_file_type": "pdf",
+      "expected_sha256": null,
       "url": "https://www.judiciary.go.ke/wp-content/uploads/2023/07/COA-REG-Manual.pdf"
     },
     {
       "slug": "supreme-court-act-2011",
       "title": "The Supreme Court Act No. 7 of 2011",
       "source": "Supreme Court of Kenya",
+      "category": "statute",
+      "expected_file_type": "pdf",
+      "expected_sha256": null,
       "url": "https://supremecourt.judiciary.go.ke/wp-content/uploads/2022/11/THE-SUPREME-COURT-ACT-No-7-of-2011.pdf"
+    },
+    {
+      "slug": "supreme-court-virtual-session-practice-directions-2023",
+      "title": "Supreme Court Virtual Session Practice Directions 2023",
+      "source": "Supreme Court of Kenya",
+      "category": "practice-directions",
+      "expected_file_type": "pdf",
+      "expected_sha256": null,
+      "url": "https://supremecourt.judiciary.go.ke/wp-content/uploads/2024/07/Supreme-Court-Virtual-Session-Practice-Directions-2023.pdf"
+    },
+    {
+      "slug": "supreme-court-general-practice-directions-2020",
+      "title": "Supreme Court General Practice Directions 2020",
+      "source": "Supreme Court of Kenya",
+      "category": "practice-directions",
+      "expected_file_type": "pdf",
+      "expected_sha256": null,
+      "url": "https://supremecourt.judiciary.go.ke/wp-content/uploads/2022/11/Supreme-Court-General-Practice-Directions-of-2020.pdf"
+    },
+    {
+      "slug": "supreme-court-self-representing-litigants-e-guide",
+      "title": "Supreme Court Self-Representing Litigants E-Guide",
+      "source": "Supreme Court of Kenya",
+      "category": "litigant-guide",
+      "expected_file_type": "pdf",
+      "expected_sha256": null,
+      "url": "https://supremecourt.judiciary.go.ke/wp-content/uploads/2025/06/SUPREME-COURT-OF-KENYA-SELF-REPRESENTING-LITIGANTS-E-GUIDE.pdf"
+    },
+    {
+      "slug": "court-of-appeal-automation-processes-guide",
+      "title": "Court of Appeal Automation Processes Guide",
+      "source": "The Judiciary of Kenya",
+      "category": "automation-guide",
+      "expected_file_type": "pdf",
+      "expected_sha256": null,
+      "url": "https://www.judiciary.go.ke/wp-content/uploads/2023/07/coa-guide-for-print-3.pdf"
     }
   ]
 }
