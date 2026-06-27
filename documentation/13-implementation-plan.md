@@ -606,7 +606,7 @@ Definition of done:
 
 ## F20 - OCR Execution And Tesseract Bundling
 
-Status: Planned.
+Status: Complete.
 
 Complete OCR beyond the current runtime manifest contract.
 

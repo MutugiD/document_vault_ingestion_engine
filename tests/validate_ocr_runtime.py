@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT))
 from intake import (  # noqa: E402
     OcrRuntimeError,
     create_tesseract_manifest,
+    discover_tesseract_runtime,
     validate_tesseract_runtime,
 )
 
@@ -33,6 +34,10 @@ def main() -> None:
         assert runtime.executable == bundle_root.resolve() / "tesseract.exe"
         assert runtime.languages == ("eng",)
         assert runtime.version == "5.5.0-test"
+
+        discovered = discover_tesseract_runtime((bundle_root,))
+        assert discovered is not None
+        assert discovered.executable == runtime.executable
 
         tampered = dict(manifest_payload)
         tampered["files"] = [dict(item) for item in manifest_payload["files"]]  # type: ignore[index]

@@ -2,6 +2,7 @@
 # PyInstaller one-folder spec. Build with: pyinstaller main.spec
 
 from PyInstaller.utils.hooks import collect_submodules
+from pathlib import Path
 
 hiddenimports = []
 for package_name in (
@@ -18,6 +19,9 @@ for package_name in (
     hiddenimports += collect_submodules(package_name)
 
 datas = [("products/product_catalog.json", "products")]
+tesseract_runtime = Path("runtime") / "tesseract"
+if tesseract_runtime.exists():
+    datas.append((str(tesseract_runtime), "runtime/tesseract"))
 
 a = Analysis(
     ["main.py"],

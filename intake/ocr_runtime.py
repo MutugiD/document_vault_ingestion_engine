@@ -4,8 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+TESSERACT_MANIFEST_NAME = "tesseract-runtime.json"
+DEFAULT_OCR_TIMEOUT_SECONDS = 120
 
 
 class OcrRuntimeError(Exception):
@@ -35,6 +41,69 @@ class TesseractRuntime:
     executable: Path
     languages: tuple[str, ...]
     version: str
+
+
+class TesseractOcrEngine:
+    """Subprocess-backed OCR adapter for a validated Tesseract runtime."""
+
+    def __init__(self, runtime: TesseractRuntime) -> None:
+        self.runtime = runtime
+
+    def recognize_image(
+        self,
+        image_path: Path,
+        *,
+        languages: tuple[str, ...] | None = None,
+    ) -> str:
+        language_arg = "+".join(languages or self.runtime.languages)
+        environment = os.environ.copy()
+        environment["TESSDATA_PREFIX"] = str(self.runtime.root / "tessdata")
+        try:
+            result = subprocess.run(
+                [
+                    str(self.runtime.executable),
+                    str(image_path),
+                    "stdout",
+                    "-l",
+                    language_arg,
+                    "--psm",
+                    "6",
+                ],
+                cwd=self.runtime.root,
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=DEFAULT_OCR_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise OcrRuntimeError("Tesseract OCR timed out") from exc
+        if result.returncode != 0:
+            raise OcrRuntimeError(result.stderr.strip() or "Tesseract OCR failed")
+        return result.stdout.strip()
+
+
+def discover_tesseract_runtime(
+    search_roots: tuple[Path, ...] | None = None,
+) -> TesseractRuntime | None:
+    """Find and validate a Tesseract runtime from configured local bundle locations."""
+
+    candidates: list[Path] = []
+    configured_root = os.environ.get("DOCUMENT_VAULT_TESSERACT_ROOT")
+    if configured_root:
+        candidates.append(Path(configured_root))
+    if search_roots:
+        candidates.extend(search_roots)
+    bundled_root = getattr(sys, "_MEIPASS", None)
+    if bundled_root:
+        candidates.append(Path(str(bundled_root)) / "tesseract")
+    candidates.append(Path(__file__).resolve().parents[1] / "runtime" / "tesseract")
+
+    for root in candidates:
+        manifest_path = root / TESSERACT_MANIFEST_NAME
+        if manifest_path.exists():
+            return validate_tesseract_runtime(root, manifest_path)
+    return None
 
 
 def load_tesseract_manifest(manifest_path: Path) -> TesseractRuntimeManifest:

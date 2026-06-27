@@ -8,7 +8,7 @@ Make intake reliable for real scanned and drafted legal documents before commerc
 
 | Feature | Branch | Scope |
 | --- | --- | --- |
-| F20 | `feature/f20-ocr-execution-v1` | Tesseract discovery, execution adapter, image OCR, scanned PDF fallback |
+| F20 | `feature/f20-ocr-execution-v1` | Complete: Tesseract discovery, execution adapter, image OCR, scanned PDF fallback |
 | F21 | `feature/f21-manual-private-document-test-runner-v1` | local-only private file smoke runner |
 | F25 | `feature/f25-production-windows-ui-v1` | import queue, duplicate warning, OCR status, review handoff |
 | F26 | `feature/f26-pyinstaller-release-packaging-v1` | Tesseract files in PyInstaller and release validation |
