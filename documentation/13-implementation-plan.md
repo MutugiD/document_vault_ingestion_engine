@@ -695,7 +695,7 @@ Definition of done:
 
 ## F24 - Payment Entitlements
 
-Status: Planned.
+Status: Complete.
 
 Add payment entitlement model without exposing documents.
 
