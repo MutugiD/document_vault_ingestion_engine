@@ -61,7 +61,7 @@ Definition of done:
 
 Branch: `feature/f29-kenyan-public-corpus-e2e-v1`
 
-Status: Active.
+Status: Complete.
 
 Deliver:
 
@@ -85,11 +85,14 @@ Definition of done:
 
 Branch: `feature/f30-installer-code-signing-publishing-v1`
 
+Status: Active.
+
 Deliver:
 
 - Installer wrapper, install/uninstall behavior, shortcuts, checksums, signing
   guide, signed artifact verification, clean Windows checklist, and publishing
   checklist.
+- Installer publishing manifest and signature verification script.
 
 Definition of done:
 
@@ -97,6 +100,7 @@ Definition of done:
 - `python tests\validate_frozen_build.py`
 - `python tests\validate_release_bundle.py`
 - `python tests\validate_portable_install.py`
+- `python tests\validate_installer_publishing.py`
 - `python tests\validate_security_scan.py`
 
 ## F31 - Automatic Update Channel

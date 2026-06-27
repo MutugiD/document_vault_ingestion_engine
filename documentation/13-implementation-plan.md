@@ -827,7 +827,7 @@ Definition of done:
 
 ## F29 - Kenyan Public Document Corpus E2E Expansion
 
-Status: Active.
+Status: Complete.
 
 Expand the public Kenyan legal document test set and make it repeatable.
 
@@ -852,7 +852,7 @@ Definition of done:
 
 ## F30 - Installer, Code Signing, And Publishing
 
-Status: Planned.
+Status: Active.
 
 Add commercial distribution packaging.
 
@@ -866,6 +866,8 @@ Deliver:
 - signed artifact verification.
 - clean Windows VM test report template.
 - publishing checklist.
+- installer publishing manifest.
+- signature verification script.
 
 Definition of done:
 
@@ -873,6 +875,7 @@ Definition of done:
 - `python tests\validate_frozen_build.py`
 - `python tests\validate_release_bundle.py`
 - `python tests\validate_portable_install.py`
+- `python tests\validate_installer_publishing.py`
 
 ## F31 - Automatic Update Channel
 

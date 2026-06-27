@@ -96,6 +96,9 @@ jobs:
       - name: Validate portable install smoke
         run: python tests\validate_portable_install.py
 
+      - name: Validate installer publishing metadata
+        run: python tests\validate_installer_publishing.py
+
       - name: Run application selftest
         run: python main.py --selftest
 
