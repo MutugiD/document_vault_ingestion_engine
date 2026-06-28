@@ -231,10 +231,11 @@ class ManualAppSession:
                 break
         wrong_key_failed = False
         try:
+            intentionally_wrong_passphrase = "intentionally wrong manual passphrase"
             restore_backup_package(
                 self.backup_path,
                 self.workspace / "wrong-key-restore",
-                recovery_key="intentionally wrong manual passphrase",
+                recovery_key=intentionally_wrong_passphrase,
             )
         except InvalidBackupKeyError:
             wrong_key_failed = True
