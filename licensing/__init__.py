@@ -1,5 +1,12 @@
 """Licensing package for offline licenses and entitlement sync."""
 
+from licensing.admin import (
+    AdminBoundaryDecision,
+    AdminLicensePaymentResponse,
+    evaluate_admin_license_payment_boundary,
+    load_admin_license_payment_state,
+    sync_admin_license_payment_boundary,
+)
 from licensing.core import (
     ACTIVE_STATUS,
     BAD_SIGNATURE_STATUS,
@@ -27,7 +34,9 @@ from licensing.entitlements import (
     PaymentEntitlementError,
     assert_payment_entitlement_privacy,
     evaluate_payment_entitlements,
+    load_payment_entitlement,
     plan_features,
+    write_payment_entitlement,
 )
 from licensing.installation import InstallationIdentity, ensure_installation_identity
 from licensing.sync import (
@@ -67,6 +76,8 @@ __all__ = [
     "ADMIN_OVERRIDE_FORCE_DISABLED",
     "ADMIN_OVERRIDE_FORCE_ENABLED",
     "ADMIN_OVERRIDE_NONE",
+    "AdminBoundaryDecision",
+    "AdminLicensePaymentResponse",
     "PAYMENT_ACTIVE_STATUS",
     "PAYMENT_DISABLED_STATUS",
     "PAYMENT_EXPIRED_STATUS",
@@ -99,14 +110,19 @@ __all__ = [
     "build_license_check_in_payload",
     "canonical_license_bytes",
     "ensure_installation_identity",
+    "evaluate_admin_license_payment_boundary",
     "evaluate_effective_entitlements",
     "evaluate_payment_entitlements",
+    "load_admin_license_payment_state",
     "load_license_sync_state",
+    "load_payment_entitlement",
     "read_license_file",
     "record_license_sync_success",
     "plan_features",
+    "sync_admin_license_payment_boundary",
     "sync_grace_expiry",
     "verify_license_document",
     "write_license_file",
     "write_license_sync_state",
+    "write_payment_entitlement",
 ]

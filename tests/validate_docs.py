@@ -31,6 +31,7 @@ REQUIRED_DOCS = [
     "documentation/18-installer-code-signing-publishing.md",
     "documentation/19-automatic-update-channel.md",
     "documentation/20-manual-windows-app-e2e-handover.md",
+    "documentation/21-admin-license-payment-boundary.md",
     "documentation/enterprise/README.md",
     "documentation/enterprise/architecture.md",
     "documentation/enterprise/product-roadmap.md",

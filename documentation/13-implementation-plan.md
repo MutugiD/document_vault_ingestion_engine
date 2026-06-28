@@ -904,7 +904,7 @@ Definition of done:
 
 ## F32 - Manual Windows App E2E Verification
 
-Status: Active.
+Status: Complete.
 
 Test the packaged Windows app as a user-facing product, not only through unit validators.
 
@@ -928,7 +928,7 @@ Definition of done:
 
 ## F33 - Admin, License Sync, And Payment Entitlement Backend Boundary
 
-Status: Planned.
+Status: Active.
 
 Complete the enterprise commercial boundary without exposing documents.
 
@@ -942,9 +942,13 @@ Deliver:
 - local export and recovery always allowed.
 - paid cloud/RAG/hosted features disabled when entitlement is invalid.
 - privacy validator for admin payload fields.
+- persisted safe sync and payment state.
+- UI Admin tab status check.
+- packaged-app CLI smoke command.
 
 Definition of done:
 
+- `python tests\validate_admin_license_payment_boundary.py`
 - `python tests\validate_license.py`
 - `python tests\validate_security_scan.py`
 - `python tests\validate_e2e.py`

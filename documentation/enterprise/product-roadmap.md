@@ -126,7 +126,7 @@ Definition of done:
 
 Branch: `feature/f32-manual-windows-app-e2e-v1`
 
-Status: Active.
+Status: Complete.
 
 Deliver:
 
@@ -150,14 +150,18 @@ Definition of done:
 
 Branch: `feature/f33-admin-license-payment-boundary-v1`
 
+Status: Active.
+
 Deliver:
 
 - Installation check-in payload, admin enable/disable state, license sync result,
   payment plan state, active/suspended/expired behavior, local recovery guarantee,
-  and privacy validator.
+  privacy validator, persisted safe state, UI Admin tab status check, and
+  packaged-app CLI smoke command.
 
 Definition of done:
 
+- `python tests\validate_admin_license_payment_boundary.py`
 - `python tests\validate_license.py`
 - `python tests\validate_security_scan.py`
 - `python tests\validate_e2e.py`

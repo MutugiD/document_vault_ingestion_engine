@@ -59,6 +59,16 @@ def main() -> None:
     )
     assert frozen_providers.returncode == 0, frozen_providers.stdout + frozen_providers.stderr
 
+    frozen_admin = subprocess.run(
+        [str(FROZEN_EXE), "--admin-license-payment-e2e"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert frozen_admin.returncode == 0, frozen_admin.stdout + frozen_admin.stderr
+    assert "active_decision" in frozen_admin.stdout
+
     print("FROZEN BUILD VALIDATION PASS")
 
 

@@ -95,6 +95,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="run the native app workflow verification with redacted output",
     )
+    parser.add_argument(
+        "--admin-license-payment-e2e",
+        action="store_true",
+        help="run the admin/license/payment boundary verification with redacted output",
+    )
     return parser.parse_args(argv)
 
 
@@ -139,6 +144,11 @@ def main(argv: list[str] | None = None) -> int:
 
         report = run_native_app_workflow()
         print(json.dumps(report.to_mapping(), indent=2, sort_keys=True))
+        return 0
+    if args.admin_license_payment_e2e:
+        from scripts.admin_license_payment_e2e import run_admin_license_payment_e2e
+
+        print(json.dumps(run_admin_license_payment_e2e(), indent=2, sort_keys=True))
         return 0
     if args.products:
         from products import load_product_catalog

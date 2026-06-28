@@ -18,6 +18,7 @@
       ],
       "validators": [
         "tests/validate_license.py",
+        "tests/validate_admin_license_payment_boundary.py",
         "tests/validate_vault.py",
         "tests/validate_search.py",
         "tests/validate_backup.py",

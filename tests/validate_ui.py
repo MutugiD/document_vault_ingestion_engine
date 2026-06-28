@@ -79,6 +79,21 @@ def main() -> None:
     assert "sk-ui-secret" not in provider_status.text()
     assert openai_key.text() == ""
 
+    admin_sync = window.findChild(QPushButton, "adminSyncButton")
+    installation_status = window.findChild(QLabel, "installationStatusLabel")
+    entitlement_status = window.findChild(QLabel, "entitlementStatusLabel")
+    assert admin_sync is not None
+    assert installation_status is not None
+    assert entitlement_status is not None
+    admin_sync.click()
+    app.processEvents()
+    assert installation_status.text() == "active"
+    assert "paid=True" in entitlement_status.text()
+    assert "cloud=True" in entitlement_status.text()
+    assert "rag=True" in entitlement_status.text()
+    assert "hosted_ai=False" in entitlement_status.text()
+    assert "sk-ui-secret" not in entitlement_status.text()
+
     loop = QEventLoop()
     worker = BackgroundWorker(lambda: "worker-ok")
     result: dict[str, object] = {}
