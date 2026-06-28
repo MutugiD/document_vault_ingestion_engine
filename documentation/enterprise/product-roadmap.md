@@ -107,7 +107,7 @@ Definition of done:
 
 Branch: `feature/f31-automatic-update-channel-v1`
 
-Status: Active.
+Status: Complete.
 
 Deliver:
 
@@ -122,9 +122,33 @@ Definition of done:
 - `python tests\validate_security_scan.py`
 - `python main.py --selftest`
 
-## F32 - Admin, License Sync, And Payment Entitlement Backend Boundary
+## F32 - Manual Windows App E2E Verification
 
-Branch: `feature/f32-admin-license-payment-boundary-v1`
+Branch: `feature/f32-manual-windows-app-e2e-v1`
+
+Status: Active.
+
+Deliver:
+
+- Real UI-backed document import actions.
+- UI-backed RAG question action with confidence and citations.
+- UI-backed backup and restore drill action.
+- 50+ document manual-style app validator.
+- Packaged executable GUI smoke and workflow evidence.
+- `evidence.md`.
+- Manual install/build/test/handover documentation.
+
+Definition of done:
+
+- `python tests\validate_manual_windows_app_e2e.py`
+- packaged executable `--gui-smoke`
+- packaged executable `--native-workflow-e2e`
+- packaged executable public Kenyan document E2E
+- full local gate
+
+## F33 - Admin, License Sync, And Payment Entitlement Backend Boundary
+
+Branch: `feature/f33-admin-license-payment-boundary-v1`
 
 Deliver:
 
@@ -138,9 +162,9 @@ Definition of done:
 - `python tests\validate_security_scan.py`
 - `python tests\validate_e2e.py`
 
-## F33 - Managed Cloud Backup Backend Boundary
+## F34 - Managed Cloud Backup Backend Boundary
 
-Branch: `feature/f33-managed-cloud-backup-boundary-v1`
+Branch: `feature/f34-managed-cloud-backup-boundary-v1`
 
 Deliver:
 
@@ -155,9 +179,9 @@ Definition of done:
 - `python tests\validate_e2e.py`
 - `python tests\validate_security_scan.py`
 
-## F34 - Wakili-Mkononi Integration Boundary
+## F35 - Wakili-Mkononi Integration Boundary
 
-Branch: `feature/f34-wakili-mkononi-integration-v1`
+Branch: `feature/f35-wakili-mkononi-integration-v1`
 
 Deliver:
 
@@ -170,9 +194,9 @@ Definition of done:
 - `python tests\validate_rag.py`
 - `python tests\validate_security_scan.py`
 
-## F35 - Hosted AI/LLM Boundary
+## F36 - Hosted AI/LLM Boundary
 
-Branch: `feature/f35-hosted-ai-llm-boundary-v1`
+Branch: `feature/f36-hosted-ai-llm-boundary-v1`
 
 Deliver:
 

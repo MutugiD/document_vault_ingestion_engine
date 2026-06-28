@@ -9,10 +9,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal, Slot
+from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, Signal, Slot
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
+    QFileDialog,
     QFormLayout,
     QFrame,
     QGridLayout,
@@ -29,6 +30,7 @@ from PySide6.QtWidgets import (
 )
 
 from ai import configured_provider_statuses, provider_env_var, supported_providers
+from core import ManualAppSession
 
 
 @dataclass(frozen=True)
@@ -72,7 +74,12 @@ class BackgroundWorker(QRunnable):
 class MainWindow(QMainWindow):
     """Production-oriented V1 desktop workbench."""
 
-    def __init__(self, modules: tuple[ModuleStatus, ...] = DEFAULT_MODULES) -> None:
+    def __init__(
+        self,
+        modules: tuple[ModuleStatus, ...] = DEFAULT_MODULES,
+        *,
+        workspace: Path | None = None,
+    ) -> None:
         super().__init__()
         self.setWindowTitle("Document Vault Ingestion Engine")
         self.setMinimumSize(920, 620)
@@ -127,6 +134,9 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
         self.thread_pool = QThreadPool.globalInstance()
         self.provider_environment = _provider_environment_from_os()
+        self.manual_session = ManualAppSession(
+            workspace or Path(tempfile.gettempdir()) / "document-vault-manual-app-session"
+        )
         self._connect_workflow_controls()
 
     @Slot()
@@ -189,11 +199,7 @@ class MainWindow(QMainWindow):
             "activateLicenseButton": "License activation checked",
             "initializeVaultButton": "Vault initialization checked",
             "newMatterButton": "Matter workflow checked",
-            "addFilesButton": "Import workflow checked",
             "runOcrButton": "OCR workflow checked",
-            "askRagButton": "RAG workflow checked",
-            "createBackupButton": "Backup workflow checked",
-            "restoreDrillButton": "Restore workflow checked",
             "adminSyncButton": "Admin status checked",
         }
         for object_name, message in button_actions.items():
@@ -206,6 +212,84 @@ class MainWindow(QMainWindow):
         save_provider_button = self.findChild(QPushButton, "saveProviderSettingsButton")
         if save_provider_button is not None:
             save_provider_button.clicked.connect(self._save_provider_settings)
+
+        add_files_button = self.findChild(QPushButton, "addFilesButton")
+        if add_files_button is not None:
+            add_files_button.clicked.connect(self.choose_and_import_files)
+        ask_button = self.findChild(QPushButton, "askRagButton")
+        if ask_button is not None:
+            ask_button.clicked.connect(self.ask_current_question)
+        backup_button = self.findChild(QPushButton, "createBackupButton")
+        if backup_button is not None:
+            backup_button.clicked.connect(self.create_backup_and_restore)
+        restore_button = self.findChild(QPushButton, "restoreDrillButton")
+        if restore_button is not None:
+            restore_button.clicked.connect(self.create_backup_and_restore)
+
+    @Slot()
+    def choose_and_import_files(self) -> None:
+        selected, _ = QFileDialog.getOpenFileNames(
+            self,
+            "Add legal documents",
+            "",
+            "Legal documents (*.pdf *.docx *.doc *.png *.jpg *.jpeg *.tif *.tiff);;All files (*)",
+        )
+        self.import_files([Path(item) for item in selected])
+
+    def import_files(self, paths: list[Path]) -> None:
+        queue = self.findChild(QListWidget, "documentReviewQueue")
+        duplicate_status = self.findChild(QLabel, "duplicateStatusLabel")
+        ocr_status = self.findChild(QLabel, "ocrStatusLabel")
+        if queue is not None and queue.count() == 1 and queue.item(0).text() == "Queue empty":
+            queue.clear()
+        duplicate_count = 0
+        latest_ocr_status = "idle"
+        for path in paths:
+            result = self.manual_session.import_file(path)
+            duplicate_count += 1 if result.status == "duplicate" else 0
+            latest_ocr_status = result.extraction_status
+            if queue is not None:
+                queue.addItem(result.summary())
+        if duplicate_status is not None:
+            duplicate_status.setText(f"Duplicates: {duplicate_count}")
+        if ocr_status is not None:
+            ocr_status.setText(f"OCR: {latest_ocr_status}")
+        self.status_label.setText(f"Imported {len(paths)} file(s)")
+
+    @Slot()
+    def ask_current_question(self) -> None:
+        ask_box = self.findChild(QTextEdit, "ragQuestionInput")
+        output = self.findChild(QTextEdit, "ragCitationPacketOutput")
+        question = ask_box.toPlainText().strip() if ask_box is not None else ""
+        if not question:
+            question = "What public legal context is available in this matter?"
+        result = self.manual_session.ask(question)
+        if output is not None:
+            titles = "; ".join(result.citation_titles) if result.citation_titles else "none"
+            output.setPlainText(
+                f"Question: {question}\n"
+                f"Confidence: {result.confidence}\n"
+                f"Citations: {result.citation_count}\n"
+                f"Titles: {titles}\n"
+                f"Elapsed ms: {result.elapsed_ms}"
+            )
+        self.status_label.setText(
+            f"RAG checked: citations={result.citation_count}, confidence={result.confidence}"
+        )
+
+    @Slot()
+    def create_backup_and_restore(self) -> None:
+        result = self.manual_session.backup_and_restore()
+        backup_status = self.findChild(QLabel, "backupStatusLabel")
+        restore_status = self.findChild(QLabel, "restoreStatusLabel")
+        if backup_status is not None:
+            backup_status.setText(f"Backup bytes: {result.package_size_bytes}")
+        if restore_status is not None:
+            restore_status.setText(
+                "Restore verified: "
+                f"{result.restore_verified}; wrong key failed: {result.wrong_key_failed}"
+            )
+        self.status_label.setText("Backup and restore drill complete")
 
     @Slot(object)
     def _on_worker_completed(self, result: object) -> None:
@@ -249,10 +333,12 @@ def create_app(argv: list[str] | None = None) -> QApplication:
     return QApplication(list(sys.argv if argv is None else argv))
 
 
-def run_gui(argv: list[str] | None = None) -> int:
+def run_gui(argv: list[str] | None = None, *, smoke_ms: int | None = None) -> int:
     app = create_app(argv)
     window = MainWindow()
     window.show()
+    if smoke_ms is not None:
+        QTimer.singleShot(smoke_ms, app.quit)
     return app.exec()
 
 

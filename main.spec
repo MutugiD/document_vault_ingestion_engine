@@ -13,6 +13,7 @@ for package_name in (
     "licensing",
     "products",
     "rag",
+    "scripts",
     "search",
     "ui",
     "vault",

@@ -30,6 +30,7 @@ REQUIRED_DOCS = [
     "documentation/17-windows-distribution-release-checklist.md",
     "documentation/18-installer-code-signing-publishing.md",
     "documentation/19-automatic-update-channel.md",
+    "documentation/20-manual-windows-app-e2e-handover.md",
     "documentation/enterprise/README.md",
     "documentation/enterprise/architecture.md",
     "documentation/enterprise/product-roadmap.md",
