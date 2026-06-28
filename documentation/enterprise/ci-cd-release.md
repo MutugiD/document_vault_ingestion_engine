@@ -25,6 +25,7 @@ python tests\validate_skeleton.py
 python tests\validate_products.py
 python tests\validate_security_scan.py
 python tests\validate_license.py
+python tests\validate_admin_license_payment_boundary.py
 python tests\validate_vault.py
 python tests\validate_intake.py
 python tests\validate_extraction.py

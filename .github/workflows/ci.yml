@@ -39,6 +39,9 @@ jobs:
       - name: Validate licensing
         run: python tests\validate_license.py
 
+      - name: Validate admin license payment boundary
+        run: python tests\validate_admin_license_payment_boundary.py
+
       - name: Validate AI provider key settings
         run: python tests\validate_ai_providers.py
 

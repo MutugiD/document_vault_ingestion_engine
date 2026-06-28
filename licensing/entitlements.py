@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from licensing.core import ACTIVE_STATUS, LicenseValidationResult
@@ -42,6 +44,7 @@ class PaymentEntitlement:
 
     @classmethod
     def from_mapping(cls, value: dict[str, Any]) -> PaymentEntitlement:
+        assert_payment_entitlement_privacy(value)
         return cls(
             plan=str(value["plan"]),
             status=str(value["status"]),
@@ -145,6 +148,20 @@ def plan_features(plan: str) -> frozenset[str]:
         raise PaymentEntitlementError(f"unknown payment plan: {plan}") from exc
 
 
+def load_payment_entitlement(path: Path) -> PaymentEntitlement | None:
+    if not path.exists():
+        return None
+    return PaymentEntitlement.from_mapping(json.loads(path.read_text(encoding="utf-8")))
+
+
+def write_payment_entitlement(path: Path, entitlement: PaymentEntitlement) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(entitlement.to_mapping(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def assert_payment_entitlement_privacy(payload: dict[str, object]) -> None:
     forbidden_markers = (
         "matter",
@@ -157,10 +174,10 @@ def assert_payment_entitlement_privacy(payload: dict[str, object]) -> None:
         "recovery",
         "credential",
     )
-    for key in payload:
-        lowered = key.lower()
+    for key_path, _value in _walk_mapping(payload):
+        lowered = key_path.lower()
         if any(marker in lowered for marker in forbidden_markers):
-            raise PaymentEntitlementError(f"forbidden entitlement field: {key}")
+            raise PaymentEntitlementError(f"forbidden entitlement field: {key_path}")
 
 
 def _disabled_decision(
@@ -222,3 +239,16 @@ def _parse_datetime(value: str) -> datetime:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=UTC)
     return parsed.astimezone(UTC)
+
+
+def _walk_mapping(value: object, *, prefix: str = "") -> tuple[tuple[str, object], ...]:
+    items: list[tuple[str, object]] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            key_path = f"{prefix}.{key}" if prefix else str(key)
+            items.append((key_path, child))
+            items.extend(_walk_mapping(child, prefix=key_path))
+    elif isinstance(value, list | tuple):
+        for index, child in enumerate(value):
+            items.extend(_walk_mapping(child, prefix=f"{prefix}[{index}]"))
+    return tuple(items)

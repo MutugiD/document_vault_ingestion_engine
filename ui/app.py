@@ -200,7 +200,6 @@ class MainWindow(QMainWindow):
             "initializeVaultButton": "Vault initialization checked",
             "newMatterButton": "Matter workflow checked",
             "runOcrButton": "OCR workflow checked",
-            "adminSyncButton": "Admin status checked",
         }
         for object_name, message in button_actions.items():
             button = self.findChild(QPushButton, object_name)
@@ -225,6 +224,9 @@ class MainWindow(QMainWindow):
         restore_button = self.findChild(QPushButton, "restoreDrillButton")
         if restore_button is not None:
             restore_button.clicked.connect(self.create_backup_and_restore)
+        admin_sync_button = self.findChild(QPushButton, "adminSyncButton")
+        if admin_sync_button is not None:
+            admin_sync_button.clicked.connect(self.check_admin_license_payment_status)
 
     @Slot()
     def choose_and_import_files(self) -> None:
@@ -290,6 +292,27 @@ class MainWindow(QMainWindow):
                 f"{result.restore_verified}; wrong key failed: {result.wrong_key_failed}"
             )
         self.status_label.setText("Backup and restore drill complete")
+
+    @Slot()
+    def check_admin_license_payment_status(self) -> None:
+        from scripts.admin_license_payment_e2e import run_admin_license_payment_e2e
+
+        report = run_admin_license_payment_e2e()
+        active_decision = report["active_decision"]
+        installation_status = self.findChild(QLabel, "installationStatusLabel")
+        entitlement_status = self.findChild(QLabel, "entitlementStatusLabel")
+        if isinstance(active_decision, dict):
+            if installation_status is not None:
+                installation_status.setText(str(active_decision["installation_status"]))
+            if entitlement_status is not None:
+                entitlement_status.setText(
+                    "paid="
+                    f"{active_decision['paid_features_enabled']}; "
+                    f"cloud={active_decision['cloud_backup_enabled']}; "
+                    f"rag={active_decision['matter_rag_enabled']}; "
+                    f"hosted_ai={active_decision['hosted_ai_enabled']}"
+                )
+        self.status_label.setText("Admin/license/payment boundary checked")
 
     @Slot(object)
     def _on_worker_completed(self, result: object) -> None:
