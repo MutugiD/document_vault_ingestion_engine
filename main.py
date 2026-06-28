@@ -62,6 +62,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--selftest", action="store_true", help="run packaged-app smoke checks")
     parser.add_argument("--gui", action="store_true", help="launch the Windows desktop shell")
     parser.add_argument(
+        "--gui-smoke",
+        type=int,
+        default=None,
+        metavar="MILLISECONDS",
+        help="launch the Windows desktop shell and close automatically after the interval",
+    )
+    parser.add_argument(
         "--providers",
         action="store_true",
         help="print redacted AI provider API-key configuration status",
@@ -71,6 +78,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         type=Path,
         default=None,
         help="run public Kenyan document vault/RAG verification for an input folder",
+    )
+    parser.add_argument(
+        "--manual-windows-app-e2e",
+        type=Path,
+        default=None,
+        help="run the packaged Windows app UI/session E2E verification for an input folder",
     )
     parser.add_argument(
         "--products",
@@ -93,6 +106,10 @@ def main(argv: list[str] | None = None) -> int:
         from ui import run_gui
 
         return run_gui(sys.argv[:1])
+    if args.gui_smoke is not None:
+        from ui import run_gui
+
+        return run_gui(sys.argv[:1], smoke_ms=args.gui_smoke)
     if args.providers:
         from ai import configured_provider_statuses
 
@@ -109,6 +126,12 @@ def main(argv: list[str] | None = None) -> int:
 
         with tempfile.TemporaryDirectory(prefix="dv-public-ke-app-") as temporary_dir:
             report = run_public_kenyan_e2e(args.public_kenya_e2e, Path(temporary_dir))
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
+    if args.manual_windows_app_e2e is not None:
+        from scripts.manual_windows_app_e2e import run_manual_windows_app_e2e
+
+        report = run_manual_windows_app_e2e(args.manual_windows_app_e2e)
         print(json.dumps(report, indent=2, sort_keys=True))
         return 0
     if args.native_workflow_e2e:

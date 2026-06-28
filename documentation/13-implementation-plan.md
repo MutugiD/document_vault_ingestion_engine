@@ -879,7 +879,7 @@ Definition of done:
 
 ## F31 - Automatic Update Channel
 
-Status: Active.
+Status: Complete.
 
 Add signed update planning and first implementation boundary.
 
@@ -902,7 +902,31 @@ Definition of done:
 - `python tests\validate_security_scan.py`
 - `python main.py --selftest`
 
-## F32 - Admin, License Sync, And Payment Entitlement Backend Boundary
+## F32 - Manual Windows App E2E Verification
+
+Status: Active.
+
+Test the packaged Windows app as a user-facing product, not only through unit validators.
+
+Deliver:
+
+- real UI-backed document import actions.
+- UI-backed RAG question action with confidence and citations.
+- UI-backed backup and restore drill action.
+- 50+ document manual-style app validator.
+- packaged executable GUI smoke and workflow evidence.
+- `evidence.md`.
+- manual install/build/test/handover documentation.
+
+Definition of done:
+
+- `python tests\validate_manual_windows_app_e2e.py`
+- packaged executable `--gui-smoke`
+- packaged executable `--native-workflow-e2e`
+- packaged executable public Kenyan document E2E
+- full local gate
+
+## F33 - Admin, License Sync, And Payment Entitlement Backend Boundary
 
 Status: Planned.
 
@@ -925,7 +949,7 @@ Definition of done:
 - `python tests\validate_security_scan.py`
 - `python tests\validate_e2e.py`
 
-## F33 - Managed Cloud Backup Backend Boundary
+## F34 - Managed Cloud Backup Backend Boundary
 
 Status: Planned.
 
@@ -949,7 +973,7 @@ Definition of done:
 - `python tests\validate_e2e.py`
 - `python tests\validate_security_scan.py`
 
-## F34 - Wakili-Mkononi Integration
+## F35 - Wakili-Mkononi Integration
 
 Status: Planned.
 
@@ -970,7 +994,7 @@ Definition of done:
 - RAG citation packet preservation.
 - disabled entitlement blocks sync but not local vault access.
 
-## F35 - Hosted AI/LLM Boundary
+## F36 - Hosted AI/LLM Boundary
 
 Status: Planned.
 

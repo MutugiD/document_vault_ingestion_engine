@@ -17,6 +17,7 @@ from intake import (  # noqa: E402
     ACCEPTED_STATUS,
     DUPLICATE_STATUS,
     REJECTED_STATUS,
+    ExtractionError,
     extract_text,
     import_document,
 )
@@ -130,6 +131,7 @@ def run_public_kenyan_e2e(input_root: Path, workspace: Path) -> dict[str, object
     rejected_unsupported_count = 0
     scanned_ocr_completed_count = 0
     intake_copy_verified_count = 0
+    extraction_failed_count = 0
     extraction_warning_counts: dict[str, int] = {}
     for index, source_path in enumerate(source_paths, start=1):
         record = import_document(vault_root, source_path)
@@ -150,10 +152,14 @@ def run_public_kenyan_e2e(input_root: Path, workspace: Path) -> dict[str, object
             continue
         if record.status != ACCEPTED_STATUS:
             continue
-        extraction = extract_text(
-            record.quarantine_path,
-            ocr_engine=_sidecar_ocr_engine(source_path),
-        )
+        try:
+            extraction = extract_text(
+                record.quarantine_path,
+                ocr_engine=_sidecar_ocr_engine(source_path),
+            )
+        except ExtractionError:
+            extraction_failed_count += 1
+            continue
         if not extraction.text:
             continue
         accepted_by_type[extraction.detected_file_type] = (
@@ -244,6 +250,7 @@ def run_public_kenyan_e2e(input_root: Path, workspace: Path) -> dict[str, object
         "duplicate_count": duplicate_count,
         "rejected_unsupported_count": rejected_unsupported_count,
         "scanned_ocr_completed_count": scanned_ocr_completed_count,
+        "extraction_failed_count": extraction_failed_count,
         "intake_copy_verified_count": intake_copy_verified_count,
         "extraction_warning_counts": extraction_warning_counts,
         "rag_chunks": chunk_count,
