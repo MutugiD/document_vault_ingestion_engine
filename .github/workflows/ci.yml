@@ -48,6 +48,9 @@ jobs:
       - name: Validate hosted AI boundary
         run: python tests\validate_hosted_ai_boundary.py
 
+      - name: Validate hosted AI UI workflow
+        run: python tests\validate_hosted_ai_ui_workflow.py
+
       - name: Validate encrypted vault
         run: python tests\validate_vault.py
 

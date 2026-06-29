@@ -218,6 +218,9 @@ class MainWindow(QMainWindow):
         ask_button = self.findChild(QPushButton, "askRagButton")
         if ask_button is not None:
             ask_button.clicked.connect(self.ask_current_question)
+        hosted_button = self.findChild(QPushButton, "askHostedAiButton")
+        if hosted_button is not None:
+            hosted_button.clicked.connect(self.ask_hosted_ai_question)
         backup_button = self.findChild(QPushButton, "createBackupButton")
         if backup_button is not None:
             backup_button.clicked.connect(self.create_backup_and_restore)
@@ -277,6 +280,31 @@ class MainWindow(QMainWindow):
             )
         self.status_label.setText(
             f"RAG checked: citations={result.citation_count}, confidence={result.confidence}"
+        )
+
+    @Slot()
+    def ask_hosted_ai_question(self) -> None:
+        ask_box = self.findChild(QTextEdit, "ragQuestionInput")
+        output = self.findChild(QTextEdit, "ragCitationPacketOutput")
+        question = ask_box.toPlainText().strip() if ask_box is not None else ""
+        if not question:
+            question = "What public legal context is available in this matter?"
+        result = self.manual_session.hosted_ai_answer(
+            question,
+            provider_environment=self.provider_environment,
+        )
+        if output is not None:
+            output.setPlainText(
+                f"Hosted status: {result.status}\n"
+                f"Provider: {result.provider}\n"
+                f"Confidence: {result.confidence}\n"
+                f"Citations: {result.citation_count}\n"
+                f"Fallback: {result.fallback_reason or 'none'}\n"
+                f"Answer: {result.answer or 'local RAG fallback only'}\n"
+                f"Elapsed ms: {result.elapsed_ms}"
+            )
+        self.status_label.setText(
+            f"Hosted AI checked: status={result.status}, citations={result.citation_count}"
         )
 
     @Slot()
@@ -489,9 +517,12 @@ def _search_rag_page() -> QWidget:
     answer_box.setReadOnly(True)
     ask_button = QPushButton("Ask")
     ask_button.setObjectName("askRagButton")
+    hosted_button = QPushButton("Hosted answer")
+    hosted_button.setObjectName("askHostedAiButton")
     layout.addWidget(search_box)
     layout.addWidget(ask_box)
     layout.addWidget(ask_button)
+    layout.addWidget(hosted_button)
     layout.addWidget(answer_box)
     return page
 

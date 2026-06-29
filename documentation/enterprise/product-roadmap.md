@@ -211,7 +211,7 @@ Definition of done:
 
 Branch: `feature/f36-hosted-ai-llm-boundary-v1`
 
-Status: Active.
+Status: Complete.
 
 Deliver:
 
@@ -227,3 +227,24 @@ Definition of done:
 - `python tests\validate_real_world_rag_e2e.py`
 - `python tests\validate_security_scan.py`
 - `python main.py --hosted-ai-e2e`
+
+## F37 - Hosted AI UI Workflow
+
+Branch: `feature/f37-hosted-ai-ui-workflow-v1`
+
+Status: Active.
+
+Deliver:
+
+- Desktop hosted answer action in the Search and RAG tab.
+- Manual app session hosted answer path using the same hosted AI boundary.
+- Provider-key redaction in UI output.
+- Local fallback display when hosted context is unavailable.
+
+Definition of done:
+
+- `python tests\validate_hosted_ai_ui_workflow.py`
+- `python tests\validate_ui.py`
+- `python tests\validate_hosted_ai_boundary.py`
+- `python tests\validate_ai_providers.py`
+- `python tests\validate_security_scan.py`

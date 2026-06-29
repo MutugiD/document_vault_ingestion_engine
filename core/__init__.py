@@ -4,6 +4,7 @@ from core.manual_app import (
     ManualAppSession,
     ManualAppSessionError,
     ManualBackupResult,
+    ManualHostedAiResult,
     ManualImportResult,
     ManualRagResult,
 )
@@ -13,6 +14,7 @@ __all__ = [
     "ManualAppSession",
     "ManualAppSessionError",
     "ManualBackupResult",
+    "ManualHostedAiResult",
     "ManualImportResult",
     "ManualRagResult",
     "NativeWorkflowError",

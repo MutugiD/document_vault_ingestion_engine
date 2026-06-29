@@ -46,6 +46,7 @@ def main() -> None:
         "matterSearchInput",
         "ragQuestionInput",
         "ragCitationPacketOutput",
+        "askHostedAiButton",
         "providerKeysPage",
         "openaiApiKeyInput",
         "anthropicApiKeyInput",
@@ -131,6 +132,13 @@ def main() -> None:
     assert "sk-ui-secret" not in status_label.text()
     assert "sk-ui-secret" not in rag_output.toPlainText()
     assert "invoice default evidence" not in rag_output.toPlainText()
+
+    hosted_button = window.findChild(QPushButton, "askHostedAiButton")
+    assert hosted_button is not None
+    hosted_button.click()
+    app.processEvents()
+    assert "Hosted AI checked:" in status_label.text()
+    assert "sk-ui-secret" not in rag_output.toPlainText()
 
     window.close()
     app.processEvents()

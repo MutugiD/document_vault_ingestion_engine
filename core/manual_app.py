@@ -7,6 +7,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
+from ai import (
+    HostedAIDecision,
+    HostedAIError,
+    HostedAIRequest,
+    HostedAITransportResponse,
+    generate_hosted_ai_answer,
+    local_rag_fallback,
+)
 from backup import InvalidBackupKeyError, create_local_backup, restore_backup_package
 from intake import (
     ACCEPTED_STATUS,
@@ -71,6 +79,24 @@ class ManualRagResult:
 
 
 @dataclass(frozen=True)
+class ManualHostedAiResult:
+    question: str
+    status: str
+    provider: str
+    answer: str
+    confidence: float
+    citation_count: int
+    fallback_reason: str
+    elapsed_ms: int
+
+    def summary(self) -> str:
+        return (
+            f"status={self.status} provider={self.provider} confidence={self.confidence} "
+            f"citations={self.citation_count} fallback={self.fallback_reason or 'none'}"
+        )
+
+
+@dataclass(frozen=True)
 class ManualBackupResult:
     backup_path: Path
     package_size_bytes: int
@@ -115,6 +141,7 @@ class ManualAppSession:
         )
         self.import_results: list[ManualImportResult] = []
         self.rag_results: list[ManualRagResult] = []
+        self.hosted_ai_results: list[ManualHostedAiResult] = []
         self.stored_object_ids: list[str] = []
 
     def import_file(self, source_path: Path) -> ManualImportResult:
@@ -210,6 +237,52 @@ class ManualAppSession:
         self.rag_results.append(result)
         return result
 
+    def hosted_ai_answer(
+        self,
+        question: str,
+        *,
+        provider_environment: dict[str, str],
+        provider: str = "openai",
+    ) -> ManualHostedAiResult:
+        start = time.perf_counter()
+        build_rag_index(self.vault_root, matter_id=self.matter.matter_id)
+        packet = build_answer_packet(
+            self.vault_root,
+            question,
+            matter_id=self.matter.matter_id,
+            top_k=5,
+        )
+        try:
+            hosted = generate_hosted_ai_answer(
+                vault_session=self.vault_session,
+                answer_packet=packet,
+                provider=provider,
+                decision=HostedAIDecision(hosted_ai_enabled=True, user_approved=True),
+                transport=_manual_hosted_ai_transport,
+                environment=provider_environment,
+                actor="manual-app-session",
+            )
+        except HostedAIError as exc:
+            hosted = local_rag_fallback(
+                vault_session=self.vault_session,
+                answer_packet=packet,
+                provider=provider,
+                reason=str(exc),
+                actor="manual-app-session",
+            )
+        result = ManualHostedAiResult(
+            question=question,
+            status=hosted.status,
+            provider=hosted.provider,
+            answer=hosted.answer,
+            confidence=hosted.confidence,
+            citation_count=len(hosted.citations),
+            fallback_reason=hosted.fallback_reason,
+            elapsed_ms=_elapsed_ms(start),
+        )
+        self.hosted_ai_results.append(result)
+        return result
+
     def backup_and_restore(self) -> ManualBackupResult:
         start = time.perf_counter()
         backup = create_local_backup(
@@ -282,6 +355,14 @@ def _content_type(detected_file_type: str) -> str:
 def _display_title(source_path: Path) -> str:
     words = [word for word in source_path.stem.replace("_", "-").split("-") if word]
     return " ".join(word.capitalize() for word in words[:10]) or "Imported Document"
+
+
+def _manual_hosted_ai_transport(request: HostedAIRequest) -> HostedAITransportResponse:
+    first_citation = request.citation_ids[0]
+    return HostedAITransportResponse(
+        answer=f"The hosted boundary can answer only from local citations [{first_citation}].",
+        citation_ids=(first_citation,),
+    )
 
 
 def _elapsed_ms(start: float) -> int:

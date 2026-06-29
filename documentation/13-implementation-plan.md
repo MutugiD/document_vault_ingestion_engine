@@ -1009,7 +1009,7 @@ Definition of done:
 
 ## F36 - Hosted AI/LLM Boundary
 
-Status: Active.
+Status: Complete.
 
 Add hosted AI only after local RAG is reliable.
 
@@ -1032,3 +1032,25 @@ Definition of done:
 - `python tests\validate_real_world_rag_e2e.py`
 - `python tests\validate_security_scan.py`
 - `python main.py --hosted-ai-e2e`
+
+## F37 - Hosted AI UI Workflow
+
+Status: Active.
+
+Expose the hosted AI boundary in the desktop workflow while preserving local fallback and provider-key redaction.
+
+Deliver:
+
+- desktop `Hosted answer` action in the Search and RAG tab.
+- manual app session hosted answer method.
+- hosted answer status, provider, confidence, citations, fallback state, and answer display.
+- provider keys never displayed in UI output.
+- no-context UI path falls back locally.
+
+Definition of done:
+
+- `python tests\validate_hosted_ai_ui_workflow.py`
+- `python tests\validate_ui.py`
+- `python tests\validate_hosted_ai_boundary.py`
+- `python tests\validate_ai_providers.py`
+- `python tests\validate_security_scan.py`

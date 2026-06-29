@@ -6,7 +6,7 @@ This repository is being built documentation-first and feature by feature: clear
 
 ## Current Status
 
-F36 hosted AI/LLM boundary is in progress.
+F37 hosted AI UI workflow is in progress.
 
 Implemented so far:
 
@@ -27,6 +27,7 @@ Implemented so far:
 - Local Matter RAG Connector with citation packets and confidence.
 - Wakili-Mkononi user-approved citation handoff boundary.
 - Hosted AI boundary with local-citation-only prompts, entitlement checks, provider-key redaction, fallback, and audit events.
+- Desktop hosted answer workflow with provider-key redaction and local fallback display.
 - PySide6 shell and worker pattern.
 - PyInstaller package configuration validation.
 - Real Windows PyInstaller one-folder build and frozen executable selftest.
@@ -121,6 +122,7 @@ python tests\validate_search.py
 python tests\validate_rag.py
 python tests\validate_wakili_integration.py
 python tests\validate_hosted_ai_boundary.py
+python tests\validate_hosted_ai_ui_workflow.py
 python tests\validate_backup.py
 python tests\validate_cloud_boundary.py
 python tests\validate_ui.py

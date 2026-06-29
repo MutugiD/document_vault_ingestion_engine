@@ -45,6 +45,7 @@ python tests\validate_real_world_rag_e2e.py
 python tests\validate_public_kenyan_e2e.py
 python tests\validate_manual_ingest_smoke.py
 python tests\validate_ai_providers.py
+python tests\validate_hosted_ai_ui_workflow.py
 python tests\validate_frozen_build.py
 python tests\validate_release_bundle.py
 python tests\validate_portable_install.py
