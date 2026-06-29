@@ -9,6 +9,7 @@ for package_name in (
     "ai",
     "backup",
     "core",
+    "integrations",
     "intake",
     "licensing",
     "products",

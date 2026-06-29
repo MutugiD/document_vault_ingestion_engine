@@ -955,7 +955,7 @@ Definition of done:
 
 ## F34 - Managed Cloud Backup Backend Boundary
 
-Status: Active.
+Status: Complete.
 
 Make cloud backup enterprise-ready while keeping documents encrypted client-side.
 
@@ -984,7 +984,7 @@ Definition of done:
 
 ## F35 - Wakili-Mkononi Integration
 
-Status: Planned.
+Status: Active.
 
 Implement the user-approved integration boundary.
 
@@ -996,12 +996,16 @@ Deliver:
 - user-approved sync only.
 - audit event for every handoff.
 - feature entitlement check.
+- privacy validator for the handoff payload.
+- `main.py --wakili-mkononi-e2e` redacted smoke command.
 
 Definition of done:
 
-- integration payload privacy validator.
-- RAG citation packet preservation.
-- disabled entitlement blocks sync but not local vault access.
+- `python tests\validate_wakili_integration.py`
+- `python tests\validate_e2e.py`
+- `python tests\validate_rag.py`
+- `python tests\validate_security_scan.py`
+- `python main.py --wakili-mkononi-e2e`
 
 ## F36 - Hosted AI/LLM Boundary
 

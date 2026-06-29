@@ -231,6 +231,25 @@ class VaultSession:
             for row in rows
         ]
 
+    def record_audit_event(
+        self,
+        *,
+        event_type: str,
+        object_id: str | None = None,
+        actor: str = "system",
+        details: dict[str, object] | None = None,
+    ) -> None:
+        """Record a non-object workflow event in the local audit ledger."""
+
+        with _connect(self.paths.database) as connection:
+            _append_audit_event(
+                connection,
+                event_type=event_type,
+                object_id=object_id,
+                actor=actor,
+                details=details or {},
+            )
+
 
 def initialize_vault(root: Path, recovery_key: str) -> VaultSession:
     """Create or unlock a vault at the supplied root path."""

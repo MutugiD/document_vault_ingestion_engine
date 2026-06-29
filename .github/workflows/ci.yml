@@ -63,6 +63,9 @@ jobs:
       - name: Validate Local Matter RAG Connector
         run: python tests\validate_rag.py
 
+      - name: Validate Wakili-Mkononi integration boundary
+        run: python tests\validate_wakili_integration.py
+
       - name: Validate backup restore
         run: python tests\validate_backup.py
 
@@ -71,6 +74,9 @@ jobs:
 
       - name: Validate managed cloud backup CLI
         run: python main.py --managed-cloud-backup-e2e
+
+      - name: Validate Wakili-Mkononi integration CLI
+        run: python main.py --wakili-mkononi-e2e
 
       - name: Validate UI shell
         run: python tests\validate_ui.py

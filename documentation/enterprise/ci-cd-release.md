@@ -32,6 +32,7 @@ python tests\validate_extraction.py
 python tests\validate_ocr_runtime.py
 python tests\validate_search.py
 python tests\validate_rag.py
+python tests\validate_wakili_integration.py
 python tests\validate_backup.py
 python tests\validate_cloud_boundary.py
 python tests\validate_ui.py
@@ -50,6 +51,7 @@ python tests\validate_installer_publishing.py
 python tests\validate_update_channel.py
 python main.py --selftest
 python main.py --managed-cloud-backup-e2e
+python main.py --wakili-mkononi-e2e
 ruff check .
 ```
 

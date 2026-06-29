@@ -33,6 +33,7 @@ REQUIRED_DOCS = [
     "documentation/20-manual-windows-app-e2e-handover.md",
     "documentation/21-admin-license-payment-boundary.md",
     "documentation/22-managed-cloud-backup-boundary.md",
+    "documentation/23-wakili-mkononi-integration-boundary.md",
     "documentation/enterprise/README.md",
     "documentation/enterprise/architecture.md",
     "documentation/enterprise/product-roadmap.md",
