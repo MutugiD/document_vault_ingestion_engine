@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F33 admin, license sync, and payment entitlement backend boundary.
+F34 managed cloud backup backend boundary.
 
 ## Accepted Decisions
 
@@ -61,10 +61,11 @@ F33 admin, license sync, and payment entitlement backend boundary.
 | F30 installer, code signing, and publishing | Complete | Installer publishing manifest, signature verification script, publishing guide, and installer metadata validator |
 | F31 automatic update channel | Complete | Signed update manifest verifier, tamper rejection, user-approval requirement, version comparison, and offline-safe update result |
 | F32 manual Windows app E2E verification | Complete | Real UI import/RAG/backup actions, 50+ document app flow validator, evidence log, and handover guide |
-| F33 admin, license sync, and payment entitlement backend boundary | Active | Enterprise boundary client, persisted admin/payment state, UI status check, CLI smoke command, and dedicated validator |
+| F33 admin, license sync, and payment entitlement backend boundary | Complete | Enterprise boundary client, persisted admin/payment state, UI status check, CLI smoke command, and dedicated validator |
+| F34 managed cloud backup backend boundary | Active | AWS/Azure/GCP grant contracts, encrypted-package-only transfer, interrupted upload safety, and clean-machine restore drill |
 
 ## Next Actions
 
-1. Merge F33 only after the admin/license/payment validator, UI check, packaged-app CLI command, full gate, and CI are green.
-2. Start F34 managed cloud backup backend boundary.
-3. Continue through F35-F36 one PR at a time until Wakili-Mkononi and hosted AI boundaries are complete.
+1. Merge F34 only after cloud boundary, backup, security, frozen executable, full gate, and CI are green.
+2. Start F35 Wakili-Mkononi integration boundary.
+3. Continue through F36 hosted AI boundary after local/cloud behavior remains stable.

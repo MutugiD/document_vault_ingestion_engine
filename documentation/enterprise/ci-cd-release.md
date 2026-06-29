@@ -49,6 +49,7 @@ python tests\validate_portable_install.py
 python tests\validate_installer_publishing.py
 python tests\validate_update_channel.py
 python main.py --selftest
+python main.py --managed-cloud-backup-e2e
 ruff check .
 ```
 
