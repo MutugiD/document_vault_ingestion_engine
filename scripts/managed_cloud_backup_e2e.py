@@ -29,12 +29,12 @@ def run_managed_cloud_backup_e2e(workspace: Path | None = None) -> dict[str, obj
             return run_managed_cloud_backup_e2e(Path(temporary_dir))
 
     workspace.mkdir(parents=True, exist_ok=True)
-    recovery_key = "managed cloud backup e2e passphrase"
+    vault_passphrase = "managed cloud backup e2e passphrase"
     installation_id = "install-managed-cloud-backup-e2e"
     vault_root = workspace / "vault"
     backup_path = workspace / "snapshot.wakilibak"
 
-    vault_session = initialize_vault(vault_root, recovery_key)
+    vault_session = initialize_vault(vault_root, vault_passphrase)
     stored_object = vault_session.write_object(
         b"Managed cloud backup legal content must remain encrypted.",
         original_name="managed-cloud-affidavit.pdf",
@@ -43,7 +43,7 @@ def run_managed_cloud_backup_e2e(workspace: Path | None = None) -> dict[str, obj
     package = create_local_backup(
         vault_root,
         backup_path,
-        recovery_key=recovery_key,
+        recovery_key=vault_passphrase,
         installation_id=installation_id,
     )
     backend = InMemoryGrantBackend()
@@ -58,10 +58,10 @@ def run_managed_cloud_backup_e2e(workspace: Path | None = None) -> dict[str, obj
             create_download_grant(provider, installation_id, package.manifest.snapshot_id),
             workspace / f"{provider}-download.wakilibak",
             workspace / f"{provider}-restore",
-            recovery_key=recovery_key,
+            recovery_key=vault_passphrase,
             backend=backend,
         )
-        restored_session = open_vault(restore_result.restored_path, recovery_key)
+        restored_session = open_vault(restore_result.restored_path, vault_passphrase)
         assert (
             restored_session.read_object(stored_object.object_id)
             == b"Managed cloud backup legal content must remain encrypted."
@@ -79,7 +79,7 @@ def run_managed_cloud_backup_e2e(workspace: Path | None = None) -> dict[str, obj
     interrupted_package = create_local_backup(
         vault_root,
         interrupted_backup_path,
-        recovery_key=recovery_key,
+        recovery_key=vault_passphrase,
         installation_id=installation_id,
     )
     try:
