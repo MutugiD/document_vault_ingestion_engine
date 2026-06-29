@@ -17,15 +17,18 @@ from backup import (  # noqa: E402
     InMemoryGrantBackend,
     assert_cloud_metadata_safe,
     assert_no_long_lived_credentials,
+    assert_provider_grant_contract,
     create_download_grant,
     create_local_backup,
     create_upload_grant,
     delete_snapshot,
     download_encrypted_snapshot,
     list_snapshots,
+    restore_cloud_snapshot_drill,
     upload_encrypted_snapshot,
 )
-from vault import initialize_vault  # noqa: E402
+from scripts.managed_cloud_backup_e2e import run_managed_cloud_backup_e2e  # noqa: E402
+from vault import initialize_vault, open_vault  # noqa: E402
 
 
 def main() -> None:
@@ -38,7 +41,7 @@ def main() -> None:
         backup_path = workspace / "snapshot.wakilibak"
 
         vault_session = initialize_vault(vault_root, recovery_key)
-        vault_session.write_object(
+        stored_object = vault_session.write_object(
             b"Cloud boundary legal document content",
             original_name="cloud-affidavit.pdf",
             content_type="application/pdf",
@@ -64,6 +67,8 @@ def main() -> None:
                 installation_id,
                 package.manifest.snapshot_id,
             )
+            assert_provider_grant_contract(upload_grant)
+            assert upload_grant.to_mapping()["provider"] == provider
             upload_result = upload_encrypted_snapshot(
                 upload_grant,
                 backup_path,
@@ -93,6 +98,44 @@ def main() -> None:
         snapshots = list_snapshots(backend, installation_id)
         assert len(snapshots) == 3
 
+        clean_restore = restore_cloud_snapshot_drill(
+            create_download_grant("aws", installation_id, package.manifest.snapshot_id),
+            workspace / "clean-machine-download.wakilibak",
+            workspace / "clean-machine-restore",
+            recovery_key=recovery_key,
+            backend=backend,
+        )
+        assert clean_restore.verified
+        restored_session = open_vault(clean_restore.restored_path, recovery_key)
+        assert (
+            restored_session.read_object(stored_object.object_id)
+            == b"Cloud boundary legal document content"
+        )
+
+        second_backup_path = workspace / "second-snapshot.wakilibak"
+        second_package = create_local_backup(
+            vault_root,
+            second_backup_path,
+            recovery_key=recovery_key,
+            installation_id=installation_id,
+        )
+        try:
+            upload_encrypted_snapshot(
+                create_upload_grant("aws", installation_id, second_package.manifest.snapshot_id),
+                second_backup_path,
+                backend=backend,
+                simulate_interruption_after_bytes=32,
+            )
+        except CloudBoundaryError:
+            pass
+        else:
+            raise AssertionError("interrupted upload unexpectedly committed")
+        assert all(
+            snapshot.metadata["snapshot_id"] != second_package.manifest.snapshot_id
+            for snapshot in list_snapshots(backend, installation_id)
+        )
+        assert len(list_snapshots(backend, installation_id)) == 3
+
         try:
             assert_cloud_metadata_safe(upload_result.metadata | {"client_name": "Forbidden"})
         except CloudBoundaryError:
@@ -101,7 +144,9 @@ def main() -> None:
             raise AssertionError("forbidden client metadata was accepted")
 
         try:
-            assert_no_long_lived_credentials({"aws_secret_access_key": "do-not-store"})
+            assert_no_long_lived_credentials(
+                {"grant": {"aws_secret_access_key": "do-not-store"}}
+            )
         except CloudBoundaryError:
             pass
         else:
@@ -137,6 +182,12 @@ def main() -> None:
 
         delete_snapshot(backend, installation_id, package.manifest.snapshot_id)
         assert list_snapshots(backend, installation_id) == []
+
+        managed_report = run_managed_cloud_backup_e2e(workspace / "managed-e2e")
+        assert managed_report["snapshot_count"] == 3
+        assert managed_report["original_snapshot_id_present"]
+        assert not managed_report["interrupted_snapshot_id_present"]
+        assert managed_report["interrupted_upload_blocked"]
 
     print("CLOUD BOUNDARY VALIDATION PASS")
 

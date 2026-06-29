@@ -928,7 +928,7 @@ Definition of done:
 
 ## F33 - Admin, License Sync, And Payment Entitlement Backend Boundary
 
-Status: Active.
+Status: Complete.
 
 Complete the enterprise commercial boundary without exposing documents.
 
@@ -955,7 +955,7 @@ Definition of done:
 
 ## F34 - Managed Cloud Backup Backend Boundary
 
-Status: Planned.
+Status: Active.
 
 Make cloud backup enterprise-ready while keeping documents encrypted client-side.
 
@@ -969,6 +969,10 @@ Deliver:
 - interrupted upload safety.
 - restore from clean machine with license plus recovery key.
 - no long-lived cloud credentials on the PC.
+- provider-specific grant contract validation.
+- interrupted upload safety.
+- clean-machine restore drill from downloaded encrypted package.
+- packaged-app CLI smoke command.
 
 Definition of done:
 
@@ -976,6 +980,7 @@ Definition of done:
 - `python tests\validate_backup.py`
 - `python tests\validate_e2e.py`
 - `python tests\validate_security_scan.py`
+- `python main.py --managed-cloud-backup-e2e`
 
 ## F35 - Wakili-Mkononi Integration
 

@@ -69,6 +69,9 @@ jobs:
       - name: Validate managed cloud boundary
         run: python tests\validate_cloud_boundary.py
 
+      - name: Validate managed cloud backup CLI
+        run: python main.py --managed-cloud-backup-e2e
+
       - name: Validate UI shell
         run: python tests\validate_ui.py
 

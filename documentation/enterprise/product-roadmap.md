@@ -150,7 +150,7 @@ Definition of done:
 
 Branch: `feature/f33-admin-license-payment-boundary-v1`
 
-Status: Active.
+Status: Complete.
 
 Deliver:
 
@@ -170,11 +170,14 @@ Definition of done:
 
 Branch: `feature/f34-managed-cloud-backup-boundary-v1`
 
+Status: Active.
+
 Deliver:
 
 - AWS S3, Azure Blob, and Google Cloud Storage grant contracts, encrypted-only
   upload, allowlisted metadata, interrupted upload safety, clean-machine restore,
-  and no long-lived provider credentials on the PC.
+  no long-lived provider credentials on the PC, and packaged-app CLI smoke
+  command.
 
 Definition of done:
 
@@ -182,6 +185,7 @@ Definition of done:
 - `python tests\validate_backup.py`
 - `python tests\validate_e2e.py`
 - `python tests\validate_security_scan.py`
+- `python main.py --managed-cloud-backup-e2e`
 
 ## F35 - Wakili-Mkononi Integration Boundary
 

@@ -69,6 +69,16 @@ def main() -> None:
     assert frozen_admin.returncode == 0, frozen_admin.stdout + frozen_admin.stderr
     assert "active_decision" in frozen_admin.stdout
 
+    frozen_cloud = subprocess.run(
+        [str(FROZEN_EXE), "--managed-cloud-backup-e2e"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert frozen_cloud.returncode == 0, frozen_cloud.stdout + frozen_cloud.stderr
+    assert "interrupted_upload_blocked" in frozen_cloud.stdout
+
     print("FROZEN BUILD VALIDATION PASS")
 
 
