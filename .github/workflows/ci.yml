@@ -45,6 +45,9 @@ jobs:
       - name: Validate AI provider key settings
         run: python tests\validate_ai_providers.py
 
+      - name: Validate hosted AI boundary
+        run: python tests\validate_hosted_ai_boundary.py
+
       - name: Validate encrypted vault
         run: python tests\validate_vault.py
 
@@ -77,6 +80,9 @@ jobs:
 
       - name: Validate Wakili-Mkononi integration CLI
         run: python main.py --wakili-mkononi-e2e
+
+      - name: Validate hosted AI CLI
+        run: python main.py --hosted-ai-e2e
 
       - name: Validate UI shell
         run: python tests\validate_ui.py

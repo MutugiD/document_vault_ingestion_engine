@@ -94,9 +94,11 @@
       "name": "Local Matter RAG Connector",
       "summary": "Local citation-first RAG retrieval over matter document versions, using matter-scoped chunks, hybrid retrieval, reranking, and grounded context packets.",
       "license_features": [
-        "matter_rag"
+        "matter_rag",
+        "hosted_ai"
       ],
       "modules": [
+        "ai",
         "integrations",
         "rag",
         "search",
@@ -105,6 +107,7 @@
       "validators": [
         "tests/validate_rag.py",
         "tests/validate_wakili_integration.py",
+        "tests/validate_hosted_ai_boundary.py",
         "tests/validate_e2e.py",
         "tests/validate_manual_ingest_smoke.py",
         "tests/validate_public_kenyan_e2e.py",
@@ -114,6 +117,7 @@
         "documentation/14-three-products-rag-strategy.md",
         "documentation/15-end-to-end-verification.md",
         "documentation/23-wakili-mkononi-integration-boundary.md",
+        "documentation/24-hosted-ai-llm-boundary.md",
         "documentation/08-licensing-security.md",
         "documentation/products/local-matter-rag-connector/architecture.md",
         "documentation/products/local-matter-rag-connector/features-breakdown.md",
@@ -124,7 +128,7 @@
         "dist/DocumentVaultIngestionEngine/DocumentVaultIngestionEngine.exe"
       ],
       "deferred": [
-        "hosted LLM generation",
+        "live hosted provider transport",
         "hosted embeddings",
         "live Wakili-Mkononi transport"
       ]

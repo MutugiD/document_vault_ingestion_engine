@@ -30,6 +30,7 @@ class FeatureEntitlements:
     cloud_backup: bool
     managed_restore: bool
     matter_rag: bool = False
+    hosted_ai: bool = False
 
     @classmethod
     def from_mapping(cls, value: dict[str, Any]) -> FeatureEntitlements:
@@ -38,6 +39,7 @@ class FeatureEntitlements:
             cloud_backup=bool(value.get("cloud_backup", False)),
             managed_restore=bool(value.get("managed_restore", False)),
             matter_rag=bool(value.get("matter_rag", False)),
+            hosted_ai=bool(value.get("hosted_ai", False)),
         )
 
     def enabled(self, feature_name: str) -> bool:
@@ -81,6 +83,7 @@ class LicenseDocument:
                 "cloud_backup": self.features.cloud_backup,
                 "managed_restore": self.features.managed_restore,
                 "matter_rag": self.features.matter_rag,
+                "hosted_ai": self.features.hosted_ai,
             },
             "expiry": self.expiry.isoformat(),
             "issued_at": self.issued_at.astimezone(UTC).isoformat().replace("+00:00", "Z"),

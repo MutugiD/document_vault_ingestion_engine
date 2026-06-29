@@ -21,6 +21,7 @@ class PortableInstallResult:
     products_stdout: str
     managed_cloud_stdout: str
     wakili_mkononi_stdout: str
+    hosted_ai_stdout: str
 
 
 def run_portable_install_smoke(zip_path: Path, install_root: Path) -> PortableInstallResult:
@@ -46,6 +47,7 @@ def run_portable_install_smoke(zip_path: Path, install_root: Path) -> PortableIn
     products = _run_executable(executable, "--products", install_dir)
     managed_cloud = _run_executable(executable, "--managed-cloud-backup-e2e", install_dir)
     wakili_mkononi = _run_executable(executable, "--wakili-mkononi-e2e", install_dir)
+    hosted_ai = _run_executable(executable, "--hosted-ai-e2e", install_dir)
     product_payload = json.loads(products.stdout)
     product_slugs = {str(item["slug"]) for item in product_payload["products"]}
     expected_products = {
@@ -59,6 +61,8 @@ def run_portable_install_smoke(zip_path: Path, install_root: Path) -> PortableIn
         raise ReleaseBundleError("managed cloud backup smoke output is incomplete")
     if "audit_event_recorded" not in wakili_mkononi.stdout:
         raise ReleaseBundleError("Wakili-Mkononi integration smoke output is incomplete")
+    if "hosted_audit_recorded" not in hosted_ai.stdout:
+        raise ReleaseBundleError("hosted AI smoke output is incomplete")
 
     return PortableInstallResult(
         install_dir=install_dir,
@@ -67,6 +71,7 @@ def run_portable_install_smoke(zip_path: Path, install_root: Path) -> PortableIn
         products_stdout=products.stdout,
         managed_cloud_stdout=managed_cloud.stdout,
         wakili_mkononi_stdout=wakili_mkononi.stdout,
+        hosted_ai_stdout=hosted_ai.stdout,
     )
 
 

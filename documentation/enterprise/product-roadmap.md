@@ -191,7 +191,7 @@ Definition of done:
 
 Branch: `feature/f35-wakili-mkononi-integration-v1`
 
-Status: Active.
+Status: Complete.
 
 Deliver:
 
@@ -211,15 +211,19 @@ Definition of done:
 
 Branch: `feature/f36-hosted-ai-llm-boundary-v1`
 
+Status: Active.
+
 Deliver:
 
 - User-set provider API keys, provider health checks, local citation packet as
   prompt context, citations in every answer, confidence display, redaction
-  boundary, and offline local-RAG fallback.
+  boundary, entitlement check, local audit event, and offline local-RAG fallback.
 
 Definition of done:
 
+- `python tests\validate_hosted_ai_boundary.py`
 - `python tests\validate_ai_providers.py`
 - `python tests\validate_rag.py`
 - `python tests\validate_real_world_rag_e2e.py`
 - `python tests\validate_security_scan.py`
+- `python main.py --hosted-ai-e2e`

@@ -89,6 +89,16 @@ def main() -> None:
     assert frozen_wakili.returncode == 0, frozen_wakili.stdout + frozen_wakili.stderr
     assert "audit_event_recorded" in frozen_wakili.stdout
 
+    frozen_hosted_ai = subprocess.run(
+        [str(FROZEN_EXE), "--hosted-ai-e2e"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert frozen_hosted_ai.returncode == 0, frozen_hosted_ai.stdout + frozen_hosted_ai.stderr
+    assert "hosted_audit_recorded" in frozen_hosted_ai.stdout
+
     print("FROZEN BUILD VALIDATION PASS")
 
 

@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F35 Wakili-Mkononi integration boundary.
+F36 hosted AI/LLM boundary.
 
 ## Accepted Decisions
 
@@ -63,10 +63,11 @@ F35 Wakili-Mkononi integration boundary.
 | F32 manual Windows app E2E verification | Complete | Real UI import/RAG/backup actions, 50+ document app flow validator, evidence log, and handover guide |
 | F33 admin, license sync, and payment entitlement backend boundary | Complete | Enterprise boundary client, persisted admin/payment state, UI status check, CLI smoke command, and dedicated validator |
 | F34 managed cloud backup backend boundary | Complete | AWS/Azure/GCP grant contracts, encrypted-package-only transfer, interrupted upload safety, clean-machine restore drill, `tests/validate_cloud_boundary.py`, and `main.py --managed-cloud-backup-e2e` |
-| F35 Wakili-Mkononi integration boundary | Active | User-approved matter export packet, citation packet handoff, entitlement gating, audit event, privacy validator, `tests/validate_wakili_integration.py`, and `main.py --wakili-mkononi-e2e` |
+| F35 Wakili-Mkononi integration boundary | Complete | User-approved matter export packet, citation packet handoff, entitlement gating, audit event, privacy validator, `tests/validate_wakili_integration.py`, and `main.py --wakili-mkononi-e2e` |
+| F36 hosted AI/LLM boundary | Active | Provider-key status, local-citation-only prompt boundary, entitlement gating, no-context blocking, local fallback, audit event, `tests/validate_hosted_ai_boundary.py`, and `main.py --hosted-ai-e2e` |
 
 ## Next Actions
 
-1. Merge F35 only after integration, RAG, security, frozen executable, full gate, and CI are green.
-2. Start F36 hosted AI boundary after local/cloud/integration behavior remains stable.
+1. Merge F36 after local hosted AI, provider, RAG, security, frozen executable, and release checks pass.
+2. Keep live hosted provider calls disabled until endpoint/provider transport review is complete.
 3. Keep Wakili-Mkononi transport disabled until the handoff endpoint contract is separately reviewed.
