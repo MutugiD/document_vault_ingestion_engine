@@ -111,6 +111,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="run the Wakili-Mkononi integration boundary verification with redacted output",
     )
+    parser.add_argument(
+        "--hosted-ai-e2e",
+        action="store_true",
+        help="run the hosted AI boundary verification with redacted output",
+    )
     return parser.parse_args(argv)
 
 
@@ -170,6 +175,11 @@ def main(argv: list[str] | None = None) -> int:
         from scripts.wakili_mkononi_e2e import run_wakili_mkononi_e2e
 
         print(json.dumps(run_wakili_mkononi_e2e(), indent=2, sort_keys=True))
+        return 0
+    if args.hosted_ai_e2e:
+        from scripts.hosted_ai_e2e import run_hosted_ai_e2e
+
+        print(json.dumps(run_hosted_ai_e2e(), indent=2, sort_keys=True))
         return 0
     if args.products:
         from products import load_product_catalog

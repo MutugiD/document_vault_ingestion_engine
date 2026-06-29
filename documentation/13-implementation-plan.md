@@ -984,7 +984,7 @@ Definition of done:
 
 ## F35 - Wakili-Mkononi Integration
 
-Status: Active.
+Status: Complete.
 
 Implement the user-approved integration boundary.
 
@@ -1009,7 +1009,7 @@ Definition of done:
 
 ## F36 - Hosted AI/LLM Boundary
 
-Status: Planned.
+Status: Active.
 
 Add hosted AI only after local RAG is reliable.
 
@@ -1021,9 +1021,14 @@ Deliver:
 - tenant/license entitlement check.
 - audit event.
 - offline fallback to local RAG packet only.
+- provider-key status check.
+- `main.py --hosted-ai-e2e` redacted smoke command.
 
 Definition of done:
 
-- no local context means no answer.
-- prompts exclude recovery keys and cloud credentials.
-- citations required in every generated answer.
+- `python tests\validate_hosted_ai_boundary.py`
+- `python tests\validate_ai_providers.py`
+- `python tests\validate_rag.py`
+- `python tests\validate_real_world_rag_e2e.py`
+- `python tests\validate_security_scan.py`
+- `python main.py --hosted-ai-e2e`

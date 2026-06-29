@@ -23,7 +23,9 @@ ADMIN_OVERRIDE_FORCE_DISABLED = "force_disabled"
 PLAN_FEATURES: dict[str, frozenset[str]] = {
     "trial": frozenset({"document_intake"}),
     "solo": frozenset({"document_intake", "cloud_backup", "matter_rag"}),
-    "firm": frozenset({"document_intake", "cloud_backup", "managed_restore", "matter_rag"}),
+    "firm": frozenset(
+        {"document_intake", "cloud_backup", "managed_restore", "matter_rag", "hosted_ai"}
+    ),
 }
 
 
@@ -206,6 +208,7 @@ def _enabled_license_features(license_result: LicenseValidationResult) -> set[st
         "document_intake" if features.document_intake else "",
         "managed_restore" if features.managed_restore else "",
         "matter_rag" if features.matter_rag else "",
+        "hosted_ai" if features.hosted_ai else "",
     } - {""}
 
 

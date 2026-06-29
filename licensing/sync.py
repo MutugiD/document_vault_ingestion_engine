@@ -26,7 +26,7 @@ PAID_UNKNOWN_STATE = "paid_unknown"
 DEFAULT_SYNC_GRACE_DAYS = 14
 PAYLOAD_SCHEMA_VERSION = "1"
 
-ONLINE_FEATURES = frozenset({"cloud_backup", "managed_restore"})
+ONLINE_FEATURES = frozenset({"cloud_backup", "managed_restore", "hosted_ai"})
 FORBIDDEN_PAYLOAD_KEY_MARKERS = (
     "matter",
     "client",
@@ -350,6 +350,7 @@ def _features_to_mapping(features) -> dict[str, bool]:
         "document_intake": features.document_intake,
         "managed_restore": features.managed_restore,
         "matter_rag": features.matter_rag,
+        "hosted_ai": features.hosted_ai,
     }
 
 
@@ -359,6 +360,7 @@ def _disabled_features() -> dict[str, bool]:
         "document_intake": False,
         "managed_restore": False,
         "matter_rag": False,
+        "hosted_ai": False,
     }
 
 

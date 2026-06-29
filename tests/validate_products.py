@@ -55,7 +55,7 @@ def main() -> None:
     assert intake.name == "Document Intake Engine"
     assert rag.name == "Local Matter RAG Connector"
     assert "matter_rag" in rag.license_features
-    assert "hosted LLM generation" in rag.deferred
+    assert "live hosted provider transport" in rag.deferred
 
     cli = subprocess.run(
         [sys.executable, str(ROOT / "main.py"), "--products"],

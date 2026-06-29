@@ -6,7 +6,7 @@ This repository is being built documentation-first and feature by feature: clear
 
 ## Current Status
 
-F35 Wakili-Mkononi integration boundary is in progress.
+F36 hosted AI/LLM boundary is in progress.
 
 Implemented so far:
 
@@ -26,6 +26,7 @@ Implemented so far:
 - Public Kenyan document corpus E2E validation.
 - Local Matter RAG Connector with citation packets and confidence.
 - Wakili-Mkononi user-approved citation handoff boundary.
+- Hosted AI boundary with local-citation-only prompts, entitlement checks, provider-key redaction, fallback, and audit events.
 - PySide6 shell and worker pattern.
 - PyInstaller package configuration validation.
 - Real Windows PyInstaller one-folder build and frozen executable selftest.
@@ -64,13 +65,14 @@ In scope:
 - Managed encrypted cloud backup through short-lived AWS/GCP/Azure grants.
 - Local matter-scoped RAG retrieval with citations.
 - User-approved Wakili-Mkononi citation handoff boundary.
+- Hosted AI/LLM boundary that only uses local RAG context and citations.
 
 Deferred:
 
 - Local LLM.
 - Live Wakili-Mkononi transport.
+- Live hosted provider transport.
 - Direct Judiciary e-filing automation.
-- Hosted AI.
 
 ## Repository Layout
 
@@ -118,6 +120,7 @@ python tests\validate_ocr_runtime.py
 python tests\validate_search.py
 python tests\validate_rag.py
 python tests\validate_wakili_integration.py
+python tests\validate_hosted_ai_boundary.py
 python tests\validate_backup.py
 python tests\validate_cloud_boundary.py
 python tests\validate_ui.py
@@ -130,6 +133,7 @@ python tests\validate_portable_install.py
 python main.py --selftest
 python main.py --managed-cloud-backup-e2e
 python main.py --wakili-mkononi-e2e
+python main.py --hosted-ai-e2e
 ```
 
 After dependencies are installed:
