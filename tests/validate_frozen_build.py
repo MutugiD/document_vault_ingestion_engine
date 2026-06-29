@@ -79,6 +79,16 @@ def main() -> None:
     assert frozen_cloud.returncode == 0, frozen_cloud.stdout + frozen_cloud.stderr
     assert "interrupted_upload_blocked" in frozen_cloud.stdout
 
+    frozen_wakili = subprocess.run(
+        [str(FROZEN_EXE), "--wakili-mkononi-e2e"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert frozen_wakili.returncode == 0, frozen_wakili.stdout + frozen_wakili.stderr
+    assert "audit_event_recorded" in frozen_wakili.stdout
+
     print("FROZEN BUILD VALIDATION PASS")
 
 

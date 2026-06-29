@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F34 managed cloud backup backend boundary.
+F35 Wakili-Mkononi integration boundary.
 
 ## Accepted Decisions
 
@@ -14,7 +14,7 @@ F34 managed cloud backup backend boundary.
 | AD2 | Use PyInstaller one-folder packaging first. | Clean, inspectable Windows bundle before installer wrapping. |
 | AD3 | Use signed offline license plus periodic online sync. | Supports unreliable internet while preserving monetization controls. |
 | AD4 | Use client-side encrypted backup packages for cloud. | Admin/backend cannot decrypt legal documents. |
-| AD5 | Publish three products through Local Matter RAG Connector. | Moves RAG into near-term scope while keeping Wakili-Mkononi and direct e-filing deferred. |
+| AD5 | Publish three products through Local Matter RAG Connector. | Keeps the local vault, intake, and RAG products primary while adding controlled integration boundaries after local validation. |
 
 ## Open Decisions
 
@@ -62,10 +62,11 @@ F34 managed cloud backup backend boundary.
 | F31 automatic update channel | Complete | Signed update manifest verifier, tamper rejection, user-approval requirement, version comparison, and offline-safe update result |
 | F32 manual Windows app E2E verification | Complete | Real UI import/RAG/backup actions, 50+ document app flow validator, evidence log, and handover guide |
 | F33 admin, license sync, and payment entitlement backend boundary | Complete | Enterprise boundary client, persisted admin/payment state, UI status check, CLI smoke command, and dedicated validator |
-| F34 managed cloud backup backend boundary | Active | AWS/Azure/GCP grant contracts, encrypted-package-only transfer, interrupted upload safety, and clean-machine restore drill |
+| F34 managed cloud backup backend boundary | Complete | AWS/Azure/GCP grant contracts, encrypted-package-only transfer, interrupted upload safety, clean-machine restore drill, `tests/validate_cloud_boundary.py`, and `main.py --managed-cloud-backup-e2e` |
+| F35 Wakili-Mkononi integration boundary | Active | User-approved matter export packet, citation packet handoff, entitlement gating, audit event, privacy validator, `tests/validate_wakili_integration.py`, and `main.py --wakili-mkononi-e2e` |
 
 ## Next Actions
 
-1. Merge F34 only after cloud boundary, backup, security, frozen executable, full gate, and CI are green.
-2. Start F35 Wakili-Mkononi integration boundary.
-3. Continue through F36 hosted AI boundary after local/cloud behavior remains stable.
+1. Merge F35 only after integration, RAG, security, frozen executable, full gate, and CI are green.
+2. Start F36 hosted AI boundary after local/cloud/integration behavior remains stable.
+3. Keep Wakili-Mkononi transport disabled until the handoff endpoint contract is separately reviewed.

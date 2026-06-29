@@ -97,12 +97,14 @@
         "matter_rag"
       ],
       "modules": [
+        "integrations",
         "rag",
         "search",
         "licensing"
       ],
       "validators": [
         "tests/validate_rag.py",
+        "tests/validate_wakili_integration.py",
         "tests/validate_e2e.py",
         "tests/validate_manual_ingest_smoke.py",
         "tests/validate_public_kenyan_e2e.py",
@@ -111,6 +113,7 @@
       "documentation": [
         "documentation/14-three-products-rag-strategy.md",
         "documentation/15-end-to-end-verification.md",
+        "documentation/23-wakili-mkononi-integration-boundary.md",
         "documentation/08-licensing-security.md",
         "documentation/products/local-matter-rag-connector/architecture.md",
         "documentation/products/local-matter-rag-connector/features-breakdown.md",
@@ -123,7 +126,7 @@
       "deferred": [
         "hosted LLM generation",
         "hosted embeddings",
-        "Wakili-Mkononi integration"
+        "live Wakili-Mkononi transport"
       ]
     }
   ]

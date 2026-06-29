@@ -170,7 +170,7 @@ Definition of done:
 
 Branch: `feature/f34-managed-cloud-backup-boundary-v1`
 
-Status: Active.
+Status: Complete.
 
 Deliver:
 
@@ -191,16 +191,21 @@ Definition of done:
 
 Branch: `feature/f35-wakili-mkononi-integration-v1`
 
+Status: Active.
+
 Deliver:
 
 - User-approved matter export packet, citation packet handoff, audit event,
-  entitlement check, and disabled-feature behavior that preserves local access.
+  entitlement check, payload privacy validator, redacted CLI smoke command, and
+  disabled-feature behavior that preserves local access.
 
 Definition of done:
 
+- `python tests\validate_wakili_integration.py`
 - `python tests\validate_e2e.py`
 - `python tests\validate_rag.py`
 - `python tests\validate_security_scan.py`
+- `python main.py --wakili-mkononi-e2e`
 
 ## F36 - Hosted AI/LLM Boundary
 

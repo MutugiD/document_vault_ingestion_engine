@@ -6,7 +6,7 @@ This repository is being built documentation-first and feature by feature: clear
 
 ## Current Status
 
-F17 real-world RAG end-to-end validation complete.
+F35 Wakili-Mkononi integration boundary is in progress.
 
 Implemented so far:
 
@@ -21,14 +21,16 @@ Implemented so far:
 - Matter/document/version records and SQLite FTS5 search.
 - Encrypted local backup/restore drill.
 - Managed cloud backup boundary.
+- Admin, license sync, payment entitlement, and managed cloud backend boundaries.
 - Real-world PDF, DOCX, scanned PDF, RAG, backup, and restore validation.
+- Public Kenyan document corpus E2E validation.
+- Local Matter RAG Connector with citation packets and confidence.
+- Wakili-Mkononi user-approved citation handoff boundary.
 - PySide6 shell and worker pattern.
 - PyInstaller package configuration validation.
 - Real Windows PyInstaller one-folder build and frozen executable selftest.
 - Release ZIP and sidecar manifest validation.
 - Portable install smoke validation from the release ZIP.
-
-F10 Local Matter RAG Connector complete.
 
 ## Published Products
 
@@ -61,11 +63,12 @@ In scope:
 - Local encrypted backups and restore drills.
 - Managed encrypted cloud backup through short-lived AWS/GCP/Azure grants.
 - Local matter-scoped RAG retrieval with citations.
+- User-approved Wakili-Mkononi citation handoff boundary.
 
 Deferred:
 
 - Local LLM.
-- Wakili-Mkononi integration.
+- Live Wakili-Mkononi transport.
 - Direct Judiciary e-filing automation.
 - Hosted AI.
 
@@ -83,6 +86,7 @@ Deferred:
   backup/
   core/
   intake/
+  integrations/
   licensing/
   products/
   rag/
@@ -113,6 +117,7 @@ python tests\validate_extraction.py
 python tests\validate_ocr_runtime.py
 python tests\validate_search.py
 python tests\validate_rag.py
+python tests\validate_wakili_integration.py
 python tests\validate_backup.py
 python tests\validate_cloud_boundary.py
 python tests\validate_ui.py
@@ -123,6 +128,8 @@ python tests\validate_frozen_build.py
 python tests\validate_release_bundle.py
 python tests\validate_portable_install.py
 python main.py --selftest
+python main.py --managed-cloud-backup-e2e
+python main.py --wakili-mkononi-e2e
 ```
 
 After dependencies are installed:

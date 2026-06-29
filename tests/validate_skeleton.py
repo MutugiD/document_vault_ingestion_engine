@@ -17,6 +17,7 @@ PACKAGES = [
     "search",
     "rag",
     "backup",
+    "integrations",
     "products",
     "release",
     "security_checks",
