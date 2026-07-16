@@ -22,6 +22,7 @@ PACKAGES = [
     "release",
     "security_checks",
     "ui",
+    "wakilios",
 ]
 ROOT_FILES = ["README.md", "BUILD.md", "pyproject.toml", "requirements.txt", "main.py", "main.spec"]
 

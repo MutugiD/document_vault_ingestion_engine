@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from PySide6.QtCore import QEventLoop, QObject, QTimer  # noqa: E402
-from PySide6.QtWidgets import QLabel, QLineEdit, QPushButton, QTextEdit  # noqa: E402
+from PySide6.QtWidgets import QLabel, QLineEdit, QPushButton, QTabWidget, QTextEdit  # noqa: E402
 
 from ui import DEFAULT_MODULES, BackgroundWorker, MainWindow, create_app  # noqa: E402
 
@@ -20,7 +20,7 @@ from ui import DEFAULT_MODULES, BackgroundWorker, MainWindow, create_app  # noqa
 def main() -> None:
     app = create_app(["validate_ui"])
     window = MainWindow()
-    assert window.windowTitle() == "Document Vault Ingestion Engine"
+    assert window.windowTitle() == "WakiliOS"
     assert window.minimumWidth() >= 900
     assert len(DEFAULT_MODULES) >= 7
     assert window.tabs.count() == 10
@@ -38,6 +38,20 @@ def main() -> None:
         "recoveryKeyInput",
         "matterPage",
         "matterList",
+        "roleStatusLabel",
+        "exportCalendarButton",
+        "matterWorkspaceTabs",
+        "summaryTab",
+        "matterCaseInformationInput",
+        "matterStatusLabel",
+        "aiMatterSummaryOutput",
+        "partiesTab",
+        "activitiesTab",
+        "lodgingsTab",
+        "courtDecisionsTab",
+        "feesTab",
+        "receiptsTab",
+        "matterDocumentsTab",
         "importPage",
         "documentReviewQueue",
         "ocrStatusLabel",
@@ -66,6 +80,21 @@ def main() -> None:
     )
     for object_name in expected_widgets:
         assert window.findChild(QObject, object_name) is not None, object_name
+
+    matter_workspace = window.findChild(QTabWidget, "matterWorkspaceTabs")
+    assert matter_workspace is not None
+    assert [
+        matter_workspace.tabText(index) for index in range(matter_workspace.count())
+    ] == [
+        "Summary",
+        "Parties",
+        "Activities",
+        "Lodgings",
+        "Court Decisions",
+        "Fees",
+        "Receipts",
+        "Documents",
+    ]
 
     openai_key = window.findChild(QLineEdit, "openaiApiKeyInput")
     provider_status = window.findChild(QLabel, "providerKeyStatusLabel")

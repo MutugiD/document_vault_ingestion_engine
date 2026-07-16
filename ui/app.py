@@ -40,13 +40,15 @@ class ModuleStatus:
 
 
 DEFAULT_MODULES = (
+    ModuleStatus("Firm backend", "Ready"),
+    ModuleStatus("Multi-seat roles", "Ready"),
     ModuleStatus("Licensing", "Ready"),
     ModuleStatus("Encrypted vault", "Ready"),
     ModuleStatus("Document intake", "Ready"),
-    ModuleStatus("Extraction and OCR boundary", "Ready"),
+    ModuleStatus("Matter workspace", "Ready"),
     ModuleStatus("Matter search", "Ready"),
-    ModuleStatus("Backup and restore", "Ready"),
-    ModuleStatus("Managed cloud boundary", "Ready"),
+    ModuleStatus("Calendar export", "Ready"),
+    ModuleStatus("AI summaries", "Ready"),
 )
 
 
@@ -81,7 +83,7 @@ class MainWindow(QMainWindow):
         workspace: Path | None = None,
     ) -> None:
         super().__init__()
-        self.setWindowTitle("Document Vault Ingestion Engine")
+        self.setWindowTitle("WakiliOS")
         self.setMinimumSize(920, 620)
 
         root = QWidget()
@@ -89,13 +91,13 @@ class MainWindow(QMainWindow):
         root_layout.setContentsMargins(16, 16, 16, 16)
         root_layout.setSpacing(12)
 
-        heading = QLabel("Document Vault Ingestion Engine")
+        heading = QLabel("WakiliOS")
         heading.setObjectName("heading")
         heading.setAlignment(Qt.AlignmentFlag.AlignLeft)
         root_layout.addWidget(heading)
 
         subtitle = QLabel(
-            "Local-first legal document intake, encrypted custody, search, and backup."
+            "Multi-seat litigation management, encrypted custody, search, and firm workflows."
         )
         subtitle.setObjectName("subtitle")
         root_layout.addWidget(subtitle)
@@ -198,7 +200,8 @@ class MainWindow(QMainWindow):
             "completeSetupButton": "Setup complete",
             "activateLicenseButton": "License activation checked",
             "initializeVaultButton": "Vault initialization checked",
-            "newMatterButton": "Matter workflow checked",
+            "newMatterButton": "WakiliOS matter workflow checked",
+            "exportCalendarButton": "Matter calendar export checked",
             "runOcrButton": "OCR workflow checked",
         }
         for object_name, message in button_actions.items():
@@ -439,14 +442,83 @@ def _matter_page() -> QWidget:
     page = QWidget()
     page.setObjectName("matterPage")
     layout = QVBoxLayout(page)
-    matter_list = QListWidget()
-    matter_list.setObjectName("matterList")
-    matter_list.addItems(["No matter selected"])
+
+    header = QHBoxLayout()
+    role_status = QLabel("Role: advocate")
+    role_status.setObjectName("roleStatusLabel")
+    export_calendar = QPushButton("Export calendar")
+    export_calendar.setObjectName("exportCalendarButton")
     add_matter = QPushButton("New matter")
     add_matter.setObjectName("newMatterButton")
+    header.addWidget(role_status)
+    header.addStretch(1)
+    header.addWidget(export_calendar)
+    header.addWidget(add_matter)
+
+    matter_list = QListWidget()
+    matter_list.setObjectName("matterList")
+    matter_list.addItems(["WAK-001 - Example litigation matter"])
+
+    workspace_tabs = QTabWidget()
+    workspace_tabs.setObjectName("matterWorkspaceTabs")
+    workspace_tabs.addTab(_matter_summary_tab(), "Summary")
+    workspace_tabs.addTab(_matter_text_list_tab("partiesTab", "Parties involved"), "Parties")
+    workspace_tabs.addTab(
+        _matter_text_list_tab("activitiesTab", "Mentions and applications"),
+        "Activities",
+    )
+    workspace_tabs.addTab(_matter_text_list_tab("lodgingsTab", "Documents for lodging"), "Lodgings")
+    workspace_tabs.addTab(
+        _matter_text_list_tab("courtDecisionsTab", "Decisions so far"),
+        "Court Decisions",
+    )
+    workspace_tabs.addTab(_matter_text_list_tab("feesTab", "Court filing fees"), "Fees")
+    workspace_tabs.addTab(
+        _matter_text_list_tab("receiptsTab", "Court and client receipts"),
+        "Receipts",
+    )
+    workspace_tabs.addTab(
+        _matter_text_list_tab("matterDocumentsTab", "Matter document vault"),
+        "Documents",
+    )
+
+    layout.addLayout(header)
     layout.addWidget(matter_list)
-    layout.addWidget(add_matter)
+    layout.addWidget(workspace_tabs, stretch=1)
     return page
+
+
+def _matter_summary_tab() -> QWidget:
+    tab = QWidget()
+    tab.setObjectName("summaryTab")
+    layout = QFormLayout(tab)
+    case_information = QTextEdit()
+    case_information.setObjectName("matterCaseInformationInput")
+    case_information.setFixedHeight(86)
+    matter_status = QLabel("Active - filed")
+    matter_status.setObjectName("matterStatusLabel")
+    ai_summary = QTextEdit()
+    ai_summary.setObjectName("aiMatterSummaryOutput")
+    ai_summary.setReadOnly(True)
+    ai_summary.setPlainText("No summary yet")
+    layout.addRow("Case information", case_information)
+    layout.addRow("Status", matter_status)
+    layout.addRow("AI summary", ai_summary)
+    return tab
+
+
+def _matter_text_list_tab(object_name: str, empty_text: str) -> QWidget:
+    tab = QWidget()
+    tab.setObjectName(object_name)
+    layout = QVBoxLayout(tab)
+    listing = QListWidget()
+    listing.setObjectName(f"{object_name}List")
+    listing.addItem(empty_text)
+    add_button = QPushButton("Add")
+    add_button.setObjectName(f"{object_name}AddButton")
+    layout.addWidget(listing)
+    layout.addWidget(add_button)
+    return tab
 
 
 def _import_page() -> QWidget:

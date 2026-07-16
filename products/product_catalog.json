@@ -2,9 +2,10 @@
   "products": [
     {
       "slug": "windows-legal-document-vault",
-      "name": "Windows Legal Document Vault",
-      "summary": "Licensed local encrypted vault for matter records, document versions, audit events, search, backup, restore, and recovery ownership.",
+      "name": "WakiliOS",
+      "summary": "Multi-seat Windows legal firm management for litigation matters, roles, encrypted document custody, activities, lodgings, court decisions, fees, receipts, calendars, audit events, search, backup, restore, and recovery ownership.",
       "license_features": [
+        "firm_management",
         "document_intake",
         "cloud_backup",
         "managed_restore"
@@ -14,9 +15,11 @@
         "vault",
         "search",
         "backup",
-        "ui"
+        "ui",
+        "wakilios"
       ],
       "validators": [
+        "tests/validate_wakilios_backend.py",
         "tests/validate_license.py",
         "tests/validate_admin_license_payment_boundary.py",
         "tests/validate_vault.py",
@@ -35,6 +38,7 @@
         "documentation/07-search-indexing.md",
         "documentation/08-licensing-security.md",
         "documentation/09-backup-restore-cloud.md",
+        "documentation/25-wakilios-firm-management.md",
         "documentation/11-packaging-distribution.md",
         "documentation/products/windows-legal-document-vault/architecture.md",
         "documentation/products/windows-legal-document-vault/features-breakdown.md",

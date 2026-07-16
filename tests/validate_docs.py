@@ -35,6 +35,7 @@ REQUIRED_DOCS = [
     "documentation/22-managed-cloud-backup-boundary.md",
     "documentation/23-wakili-mkononi-integration-boundary.md",
     "documentation/24-hosted-ai-llm-boundary.md",
+    "documentation/25-wakilios-firm-management.md",
     "documentation/enterprise/README.md",
     "documentation/enterprise/architecture.md",
     "documentation/enterprise/product-roadmap.md",

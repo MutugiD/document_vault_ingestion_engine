@@ -4,7 +4,7 @@ Document Vault Ingestion Engine is a local-first Windows application for legal d
 
 ## Current Phase
 
-F36 hosted AI/LLM boundary.
+F37 WakiliOS multi-seat firm management.
 
 ## Accepted Decisions
 
@@ -65,9 +65,10 @@ F36 hosted AI/LLM boundary.
 | F34 managed cloud backup backend boundary | Complete | AWS/Azure/GCP grant contracts, encrypted-package-only transfer, interrupted upload safety, clean-machine restore drill, `tests/validate_cloud_boundary.py`, and `main.py --managed-cloud-backup-e2e` |
 | F35 Wakili-Mkononi integration boundary | Complete | User-approved matter export packet, citation packet handoff, entitlement gating, audit event, privacy validator, `tests/validate_wakili_integration.py`, and `main.py --wakili-mkononi-e2e` |
 | F36 hosted AI/LLM boundary | Active | Provider-key status, local-citation-only prompt boundary, entitlement gating, no-context blocking, local fallback, audit event, `tests/validate_hosted_ai_boundary.py`, and `main.py --hosted-ai-e2e` |
+| F37 WakiliOS firm management | Active | Multi-seat firm backend, standard roles, litigation matter workspace, court costs and receipts, `.ics` calendar export, read-only offline cache, AI summaries with citations, `tests/validate_wakilios_backend.py`, and `main.py --wakilios-backend-e2e` |
 
 ## Next Actions
 
-1. Merge F36 after local hosted AI, provider, RAG, security, frozen executable, and release checks pass.
-2. Keep live hosted provider calls disabled until endpoint/provider transport review is complete.
-3. Keep Wakili-Mkononi transport disabled until the handoff endpoint contract is separately reviewed.
+1. Validate F37 with backend, UI, product catalog, and security gates.
+2. Keep live Outlook/Google calendar sync deferred behind the `.ics` export boundary.
+3. Keep full client billing and trust accounting deferred until accounting controls are separately designed.

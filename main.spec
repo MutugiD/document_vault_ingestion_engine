@@ -18,6 +18,7 @@ for package_name in (
     "search",
     "ui",
     "vault",
+    "wakilios",
 ):
     hiddenimports += collect_submodules(package_name)
 
