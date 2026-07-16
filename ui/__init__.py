@@ -1,5 +1,7 @@
 """User interface package for PySide6 windows and workers."""
 
+APP_VERSION = "0.1.0"
+
 from ui.app import (
     DEFAULT_MODULES,
     BackendConnectionDialog,

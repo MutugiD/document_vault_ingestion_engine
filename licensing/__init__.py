@@ -7,6 +7,12 @@ from licensing.admin import (
     load_admin_license_payment_state,
     sync_admin_license_payment_boundary,
 )
+from licensing.clockguard import (
+    FileStore,
+    InMemoryStore,
+    check_clock,
+    ntp_utc,
+)
 from licensing.core import (
     ACTIVE_STATUS,
     BAD_SIGNATURE_STATUS,
@@ -109,6 +115,7 @@ __all__ = [
     "assert_payment_entitlement_privacy",
     "build_license_check_in_payload",
     "canonical_license_bytes",
+    "check_clock",
     "ensure_installation_identity",
     "evaluate_admin_license_payment_boundary",
     "evaluate_effective_entitlements",

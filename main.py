@@ -9,6 +9,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from ui import APP_VERSION
+
 CORE_MODULES = (
     "ai",
     "core",
@@ -47,6 +49,17 @@ def run_selftest() -> int:
     except Exception as exc:  # pragma: no cover - deliberately broad for frozen selftest
         failures.append(f"licensing selftest: {exc}")
 
+    try:
+        from licensing import check_clock, InMemoryStore
+        from datetime import datetime, timezone
+
+        store = InMemoryStore()
+        ok, reason = check_clock(store, now=datetime(2026, 1, 1, tzinfo=timezone.utc))
+        if not ok:
+            failures.append(f"clock guard: {reason}")
+    except Exception as exc:  # pragma: no cover
+        failures.append(f"clockguard selftest: {exc}")
+
     if failures:
         print("SELFTEST FAIL")
         for failure in failures:
@@ -55,7 +68,9 @@ def run_selftest() -> int:
 
     print("SELFTEST PASS")
     print(f"Imported modules: {', '.join(CORE_MODULES)}")
-    print("Licensing installation identity check: pass")
+    print(f"Licensing installation identity check: pass")
+    print(f"Clock guard check: pass")
+    print(f"App version: {APP_VERSION}")
     return 0
 
 
