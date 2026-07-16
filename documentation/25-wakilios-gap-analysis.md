@@ -1,149 +1,117 @@
 # 25 - WakiliOS Firm Management Gap Analysis
 
+## Architecture Direction
+
+WakiliOS is a single-process desktop application. The UI calls `wakilios.core` directly — no HTTP client, no separate server needed for solo use. For multi-seat firms, the optional `wakilios.api` FastAPI wrapper allows LAN/VPN access to the same core logic.
+
+The `wakilios.client` HTTP module is only needed for multi-seat LAN/VPN mode. Solo users never use it.
+
 ## Spec vs Implementation Matrix
 
 | Spec Requirement | Status | Gap |
 |---|---|---|
 | Firm initialization | DONE | None |
-| User/seat/role management (CRUD) | PARTIAL | No deactivate/reactivate user, no list users, no update role API endpoints |
+| User/seat/role management (CRUD) | PARTIAL | No deactivate/reactivate, no update role in UI |
 | Login with PBKDF2-HMAC-SHA256 | DONE | None |
 | Session token signing/verification | DONE | None |
 | Seat limit enforcement | DONE | None |
-| Matter workspace CRUD | PARTIAL | No update/delete matter, no matter list endpoint |
-| MatterParty CRUD | DONE (core) | No API endpoint |
-| MatterActivity CRUD | DONE (core) | No API endpoint |
-| Lodging CRUD | DONE (core) | No API endpoint |
-| CourtDecision CRUD | DONE (core) | No API endpoint |
-| FeeEntry CRUD | DONE (core) | No API endpoint |
-| Receipt CRUD | DONE (core) | No API endpoint |
-| Document upload/download | PARTIAL | Upload in core, no download endpoint, no API endpoints |
-| AI summary generation | DONE (core) | No API endpoint beyond the one existing |
+| Matter workspace CRUD | DONE (core+API) | UI needs to call core directly for solo mode |
+| MatterParty CRUD | DONE (core+API) | UI needs direct core calls |
+| MatterActivity CRUD | DONE (core+API) | UI needs direct core calls |
+| Lodging CRUD | DONE (core+API) | UI needs direct core calls |
+| CourtDecision CRUD | DONE (core+API) | UI needs direct core calls |
+| FeeEntry CRUD | DONE (core+API) | UI needs direct core calls |
+| Receipt CRUD | DONE (core+API) | UI needs direct core calls |
+| Document upload/download | PARTIAL | Upload in core, needs integration with intake/vault |
+| AI summary generation | DONE (core) | Needs integration with rag/ and ai/ |
 | Calendar .ics export | DONE (core+API) | None |
-| Offline read-only cache | DONE (core) | No API endpoint, no UI |
-| Audit event tracking | DONE (core) | No API endpoint |
-| Role-aware UI behavior | MISSING | UI has static role label, no dynamic role enforcement |
-| Login/auth dialog in UI | MISSING | UI has no login screen, no backend connection |
-| Backend API client in UI | MISSING | UI has no HTTP client to talk to FastAPI backend |
-| Fee-receipt linking in e2e test | DONE | None |
-| Document-receipt proof attachment | MISSING | Receipt linked_document_id exists in schema but e2e never tests file attachment |
-| FastAPI test client validation | MISSING | No test exercising API endpoints via HTTP (only core layer tested) |
-| pyproject.toml dependencies | MISSING | No runtime deps declared in pyproject.toml (requirements.txt has them but not installable) |
-| CI WakiliOS validation | MISSING | ci.yml has no WakiliOS backend validation step |
-| Python version pin | BUG | requires-python ">=3.11,<3.12" blocks 3.12, but no 3.11 CI install |
+| Offline read-only cache | DONE (core) | No UI |
+| Audit event tracking | DONE (core) | UI needs audit log viewer |
+| Role-aware UI behavior | DONE | UI enables/disables controls based on role |
+| Login/auth dialog in UI | DONE | BackendConnectionDialog exists for multi-seat |
+| Fee-receipt linking | DONE (core) | UI shows linked_fee_id on receipts |
+| Document-receipt proof attachment | MISSING | Schema supports linked_document_id, no UI/flow yet |
+| FastAPI test client validation | DONE | TestClient tests pass |
+| pyproject.toml dependencies | DONE | Runtime deps declared |
+| CI WakiliOS validation | DONE | Steps added to ci.yml |
 
-## Backend API Gaps
+## UI Integration Gaps
 
-### Missing API Endpoints (wakilios/api.py)
-The FastAPI app only has 6 endpoints:
-- GET /health
-- POST /auth/login
-- POST /matters (create only)
-- GET /matters/{id}/workspace
-- POST /matters/{id}/activities
-- POST /matters/{id}/summaries
-- GET /matters/{id}/calendar.ics
+### Solo mode: UI must call wakilios.core directly
 
-Missing endpoints that the spec and core.py support:
-1. **GET /matters** - List all matters for user
-2. **GET /matters/{id}** - Get single matter
-3. **PUT /matters/{id}/summary** - Update matter summary
-4. **POST /matters/{id}/parties** - Add party
-5. **GET /matters/{id}/parties** - List parties
-6. **POST /matters/{id}/lodgings** - Add lodging
-7. **POST /matters/{id}/court-decisions** - Add court decision
-8. **POST /matters/{id}/fees** - Add fee
-9. **POST /matters/{id}/receipts** - Add receipt
-10. **POST /matters/{id}/documents** - Upload document
-11. **GET /matters/{id}/documents/{doc_id}** - Download document
-12. **POST /users** - Create user (exists in core, no API)
-13. **GET /users** - List users (missing entirely)
-14. **GET /audit** - View audit log (missing)
-15. **GET /offline-cache** - Build offline cache (missing)
+The current UI (`app.py`) calls `wakilios.client.WakiliOSClient` for all matter operations. This is wrong for solo mode — the UI should import and call `wakilios.core` directly when running in-process.
 
-### Schema Validation Gaps
-- No Pydantic response models for any endpoint
-- No request models for parties, lodgings, court decisions, fees, receipts, documents
-- File upload uses multipart - no UploadFile schema
+**Needed changes:**
 
-## UI Gaps
+1. `MainWindow` should detect solo vs multi-seat mode at startup
+2. In solo mode, create a `FirmBackend` instance directly and call its methods
+3. In multi-seat mode, use `WakiliOSClient` to talk to the LAN/VPN server
+4. Both paths exercise the same business logic (`wakilios.core`)
 
-### Missing Login/Auth Flow
-- No login dialog or screen
-- No backend URL configuration
-- No session token storage
-- No logout/re-auth flow
+### Missing solo-mode initialization
 
-### Missing Matter Workspace CRUD
-- Workspace tabs are read-only list widgets with placeholder text
-- No "Add" button wiring to backend API calls
-- No form dialogs for creating parties, activities, lodgings, etc.
-- No document upload/download in workspace
+- Setup page should initialize a `FirmBackend` for solo use (no server URL needed)
+- Login dialog should support local authentication against `FirmBackend`
+- Matter operations in solo mode go through `FirmBackend` methods, not HTTP
 
-### Missing Role-Aware Behavior
-- UI shows static "Role: advocate" label
-- No dynamic role-based enable/disable of controls
-- Admin tab doesn't show user management or audit log
+### Module integration
 
-### Missing Backend Client
-- No HTTP client module for calling FastAPI endpoints
-- No connection configuration (host, port, auth)
-- No offline cache UI
+The UI currently has separate code for intake, search, RAG, and backup that works independently of `wakilios.core`. These need to be connected through the matter workspace:
+
+- **Document tab**: Import files via `intake/` → extract text → store in `vault/` → link to matter in `wakilios.core`
+- **Search tab**: Search within current matter scope using `search/`
+- **AI Summary tab**: Generate summaries using `rag/` + `ai/` with matter-scoped context
+- **Backup tab**: Use existing `backup/` module, also accessible from matter workspace
 
 ## Connections/Billing Gaps
 
 ### Fee-Receipt Linking
-- Schema supports linked_fee_id and linked_document_id on receipts
+- Schema supports `linked_fee_id` and `linked_document_id` on receipts
 - E2E test links receipt to fee correctly
-- BUT: No UI to view linked fees/receipts
-- No API endpoint to retrieve fees/receipts for a matter independently
+- UI shows linked_fee_id on receipts
+- API endpoint returns fees and receipts in workspace response
 
 ### Document Proof Attachment
-- Receipt proof attachment (linked_document_id) exists in schema
-- No endpoint or UI to attach proof documents
-- No download endpoint to retrieve proof
+- Receipt `linked_document_id` exists in schema but no UI flow to attach proof
+- No download endpoint to retrieve proof documents
+- Needs integration: receipt → document upload → link document_id to receipt
 
 ### Calendar Export
-- API has .ics endpoint
-- UI has "Export calendar" button that doesn't call the API
+- `.ics` export wired to API endpoint and UI button
+- Works in both solo and multi-seat modes
 
-## CI/CD Gaps
+## PR Plan (Revised)
 
-### Missing from ci.yml
-- No `python tests\validate_wakilios_backend.py` step
-- No `python main.py --wakilios-backend-e2e` step
-- Python 3.11 pin is correct but pyproject.toml version range blocks 3.12+
-
-### Dependencies
-- requirements.txt has fastapi, uvicorn, pydantic but pyproject.toml has NO [project.dependencies]
-- Package is not pip-installable with dependencies
-- requirements-dev.txt doesn't include httpx (needed for FastAPI TestClient)
-
-## PR Plan
-
-### PR1: feature/f37-wakilios-backend-gaps
+### PR1: feature/f37-wakilios-backend-gaps [MERGED]
 - Add all missing API endpoints to wakilios/api.py
 - Add Pydantic request/response models for all endpoints
-- Add httpx to requirements-dev.txt
 - Add FastAPI TestClient validation test
 - Fix pyproject.toml dependencies
-- Expand validate_wakilios_backend.py with API-level tests
+- Add CI WakiliOS validation steps
 
-### PR2: feature/f37-wakilios-ui-gaps
-- Add backend API client module (wakilios/client.py)
-- Add login dialog to UI
-- Wire matter workspace tabs to backend API
-- Add role-aware UI behavior
-- Add offline cache UI indicator
+### PR2: feature/f37-wakilios-ui-gaps [OPEN - needs rework]
+Current state: Has separate HTTP client (`wakilios/client.py`) and login dialog.
+Needs rework: UI must call `wakilios.core` directly for solo mode, keep `wakilios.client` as optional for multi-seat.
 
-### PR3: feature/f37-wakilios-connections-billing
-- Wire fee-receipt linking in UI
-- Wire document upload/download in workspace
-- Wire .ics calendar export button to API
-- Add audit log viewer tab in admin
-- Add proof document attachment for receipts
+Rework plan:
+- Add `FirmBackend` direct-call path in `MainWindow`
+- Solo mode: no server URL, login against local `FirmBackend`
+- Multi-seat mode: existing `BackendConnectionDialog` + `WakiliOSClient`
+- Both modes share the same UI and workspace tabs
+- Keep role-aware controls, audit log viewer, document upload
+
+### PR3: feature/f37-wakilios-connections-billing [OPEN - needs rework]
+Current state: Has fee-receipt linking, document upload, audit log viewer.
+Needs rework: Wire these through the existing module stack (intake → vault → search → RAG) instead of only through the HTTP client.
+
+Rework plan:
+- Document upload in UI calls `intake.import_document()` → `vault.store()` → link to matter
+- AI summary generation calls `rag.build_answer_packet()` → `ai.providers` with matter context
+- Fee-receipt display refreshes from `FirmBackend.workspace()` in solo mode
+- Audit log viewer reads from `FirmBackend.audit_events()` directly
 
 ### PR4: feature/f37-wakilios-cicd-testing
-- Add WakiliOS validation steps to ci.yml
-- Add wakilios-backend-e2e CLI step to ci.yml
 - Ensure full functional test pass on Python 3.11
+- Add solo-mode integration test (UI → core directly, no HTTP)
+- Keep API validation test for multi-seat mode
 - Fix any remaining integration issues

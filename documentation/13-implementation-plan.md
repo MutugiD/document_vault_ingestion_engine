@@ -1032,3 +1032,43 @@ Definition of done:
 - `python tests\validate_real_world_rag_e2e.py`
 - `python tests\validate_security_scan.py`
 - `python main.py --hosted-ai-e2e`
+
+## F37 - WakiliOS Firm Management
+
+Status: Active.
+
+Transform the Windows Legal Document Vault into WakiliOS, a litigation-focused legal firm management system. WakiliOS is the top-level product that runs on top of the existing document vault, RAG, search, intake, and backup modules.
+
+### Architecture
+
+WakiliOS is a single-process desktop application. The UI calls Python modules directly:
+
+- Solo mode: UI → `wakilios.core` (in-process, no HTTP)
+- Multi-seat mode: UI → `wakilios.client` → `wakilios.api` → `wakilios.core` (LAN/VPN)
+
+The `wakilios.core` module owns firm/matter/fee/receipt/audit logic. Everything else (intake, vault, search, RAG, backup) delegates to the existing repo modules.
+
+### Deliver
+
+- Firm initialization, users, seats, roles (admin, advocate, clerk, accounts, read_only).
+- Matter workspace CRUD with parties, activities, lodgings, court decisions, fees, receipts.
+- Document intake through existing `intake/` module, linked to matters in `wakilios.core`.
+- Search through existing `search/` module, scoped to current matter.
+- RAG summaries through existing `rag/` + `ai/` modules.
+- Calendar `.ics` export from matter events.
+- Encrypted backup through existing `backup/` module.
+- Audit event log viewable in Admin tab.
+- Fee-receipt linking with `linked_fee_id`.
+- Role-aware UI controls (write roles, accounts roles, summary roles, document roles).
+- Solo mode: direct `wakilios.core` calls from UI (no server needed).
+- Multi-seat mode: optional `wakilios.api` FastAPI wrapper + `wakilios.client` HTTP module.
+- Offline read-only cache.
+
+Definition of done:
+
+- `python tests\validate_wakilios_backend.py`
+- `python tests\validate_wakilios_api.py`
+- `python tests\validate_ui.py`
+- `python tests\validate_products.py`
+- `python tests\validate_security_scan.py`
+- `python main.py --wakilios-backend-e2e`

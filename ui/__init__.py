@@ -2,6 +2,7 @@
 
 from ui.app import (
     DEFAULT_MODULES,
+    BackendConnectionDialog,
     BackgroundWorker,
     MainWindow,
     ModuleStatus,
@@ -12,6 +13,7 @@ from ui.app import (
 
 __all__ = [
     "DEFAULT_MODULES",
+    "BackendConnectionDialog",
     "BackgroundWorker",
     "MainWindow",
     "ModuleStatus",
