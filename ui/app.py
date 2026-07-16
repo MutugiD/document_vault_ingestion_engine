@@ -196,15 +196,9 @@ class MainWindow(QMainWindow):
 
         self.tabs = QTabWidget()
         self.tabs.setObjectName("workflowTabs")
-        self.tabs.addTab(_first_run_page(), "Setup")
-        self.tabs.addTab(_license_page(), "License")
-        self.tabs.addTab(_vault_page(), "Vault")
-        self.tabs.addTab(_matter_page(), "Matters")
-        self.tabs.addTab(_import_page(), "Import")
-        self.tabs.addTab(_search_rag_page(), "Search and RAG")
-        self.tabs.addTab(_provider_keys_page(), "AI Keys")
-        self.tabs.addTab(_backup_page(), "Backup")
-        self.tabs.addTab(_admin_page(), "Admin")
+        self.tabs.addTab(_dashboard_page(), "Dashboard")
+        self.tabs.addTab(_workspace_page(), "Workspace")
+        self.tabs.addTab(_settings_page(), "Settings")
         self.tabs.addTab(_about_page(modules), "About")
         root_layout.addWidget(self.tabs, stretch=1)
 
@@ -899,11 +893,28 @@ def _module_card(module: ModuleStatus) -> QFrame:
     return frame
 
 
-def _first_run_page() -> QWidget:
+def _dashboard_page() -> QWidget:
+    """Dashboard: setup, connection, license, and vault in one view."""
     page = QWidget()
-    page.setObjectName("setupPage")
-    layout = QFormLayout(page)
-    layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+    page.setObjectName("dashboardPage")
+    layout = QVBoxLayout(page)
+
+    # --- Connection section ---
+    connection_group = QFrame()
+    connection_group.setObjectName("connectionGroup")
+    connection_layout = QVBoxLayout(connection_group)
+    connection_label = QLabel("Connect to WakiliOS")
+    connection_label.setObjectName("connectionGroupLabel")
+    connection_layout.addWidget(connection_label)
+    backend_connection = BackendConnectionDialog()
+    backend_connection.setObjectName("backendConnectionDialog")
+    connection_layout.addWidget(backend_connection)
+    layout.addWidget(connection_group)
+
+    # --- Setup section ---
+    setup_group = QFrame()
+    setup_group.setObjectName("setupGroup")
+    setup_layout = QFormLayout(setup_group)
     firm_name = QLineEdit()
     firm_name.setObjectName("firmNameInput")
     primary_user = QLineEdit()
@@ -914,40 +925,32 @@ def _first_run_page() -> QWidget:
     recovery_confirmed.setObjectName("recoveryKeyConfirmedCheck")
     setup_button = QPushButton("Setup complete")
     setup_button.setObjectName("completeSetupButton")
+    setup_layout.addRow("Firm", firm_name)
+    setup_layout.addRow("Primary user", primary_user)
+    setup_layout.addRow("Device", device_name)
+    setup_layout.addRow("", recovery_confirmed)
+    setup_layout.addRow("", setup_button)
+    layout.addWidget(setup_group)
 
-    # Backend connection section
-    backend_connection = BackendConnectionDialog()
-    backend_connection.setObjectName("backendConnectionDialog")
-
-    layout.addRow("Firm", firm_name)
-    layout.addRow("Primary user", primary_user)
-    layout.addRow("Device", device_name)
-    layout.addRow("", recovery_confirmed)
-    layout.addRow("", setup_button)
-    layout.addRow(backend_connection)
-    return page
-
-
-def _license_page() -> QWidget:
-    page = QWidget()
-    page.setObjectName("licensePage")
-    layout = QFormLayout(page)
+    # --- License section ---
+    license_group = QFrame()
+    license_group.setObjectName("licenseGroup")
+    license_layout = QFormLayout(license_group)
     license_file = QLineEdit()
     license_file.setObjectName("licenseFileInput")
     license_status = QLabel("Not activated")
     license_status.setObjectName("licenseStatusLabel")
-    activate = QPushButton("Activate")
+    activate = QPushButton("Activate license")
     activate.setObjectName("activateLicenseButton")
-    layout.addRow("License file", license_file)
-    layout.addRow("Status", license_status)
-    layout.addRow("", activate)
-    return page
+    license_layout.addRow("License file", license_file)
+    license_layout.addRow("Status", license_status)
+    license_layout.addRow("", activate)
+    layout.addWidget(license_group)
 
-
-def _vault_page() -> QWidget:
-    page = QWidget()
-    page.setObjectName("vaultPage")
-    layout = QFormLayout(page)
+    # --- Vault section ---
+    vault_group = QFrame()
+    vault_group.setObjectName("vaultGroup")
+    vault_layout = QFormLayout(vault_group)
     vault_path = QLineEdit()
     vault_path.setObjectName("vaultPathInput")
     recovery_key = QLineEdit()
@@ -955,17 +958,22 @@ def _vault_page() -> QWidget:
     recovery_key.setEchoMode(QLineEdit.EchoMode.Password)
     initialize = QPushButton("Initialize vault")
     initialize.setObjectName("initializeVaultButton")
-    layout.addRow("Vault path", vault_path)
-    layout.addRow("Recovery key", recovery_key)
-    layout.addRow("", initialize)
+    vault_layout.addRow("Vault path", vault_path)
+    vault_layout.addRow("Recovery key", recovery_key)
+    vault_layout.addRow("", initialize)
+    layout.addWidget(vault_group)
+
+    layout.addStretch(1)
     return page
 
 
-def _matter_page() -> QWidget:
+def _workspace_page() -> QWidget:
+    """Workspace: matters, import, and search/RAG in one view with sub-tabs."""
     page = QWidget()
-    page.setObjectName("matterPage")
+    page.setObjectName("workspacePage")
     layout = QVBoxLayout(page)
 
+    # Matter header with role status and actions
     header = QHBoxLayout()
     role_status = QLabel("Role: not connected")
     role_status.setObjectName("roleStatusLabel")
@@ -981,10 +989,12 @@ def _matter_page() -> QWidget:
     header.addWidget(export_calendar)
     header.addWidget(add_matter)
 
+    # Matter list
     matter_list = QListWidget()
     matter_list.setObjectName("matterList")
     matter_list.addItems(["Connect to backend to load matters"])
 
+    # Workspace sub-tabs (parties, activities, etc.)
     workspace_tabs = QTabWidget()
     workspace_tabs.setObjectName("matterWorkspaceTabs")
     workspace_tabs.addTab(_matter_summary_tab(), "Summary")
@@ -1015,6 +1025,138 @@ def _matter_page() -> QWidget:
     layout.addLayout(header)
     layout.addWidget(matter_list)
     layout.addWidget(workspace_tabs, stretch=1)
+    return page
+
+
+def _settings_page() -> QWidget:
+    """Settings: AI keys, backup, admin, and audit log."""
+    page = QWidget()
+    page.setObjectName("settingsPage")
+    layout = QVBoxLayout(page)
+
+    # --- Import section ---
+    import_group = QFrame()
+    import_group.setObjectName("importGroup")
+    import_layout = QVBoxLayout(import_group)
+    import_label = QLabel("Document Import")
+    import_label.setObjectName("importGroupLabel")
+    import_layout.addWidget(import_label)
+    queue = QListWidget()
+    queue.setObjectName("documentReviewQueue")
+    queue.addItems(["Queue empty"])
+    controls = QHBoxLayout()
+    add_files = QPushButton("Add files")
+    add_files.setObjectName("addFilesButton")
+    run_ocr = QPushButton("Run OCR")
+    run_ocr.setObjectName("runOcrButton")
+    duplicate_status = QLabel("Duplicates: none")
+    duplicate_status.setObjectName("duplicateStatusLabel")
+    ocr_status = QLabel("OCR: idle")
+    ocr_status.setObjectName("ocrStatusLabel")
+    controls.addWidget(add_files)
+    controls.addWidget(run_ocr)
+    controls.addWidget(duplicate_status)
+    controls.addWidget(ocr_status)
+    controls.addStretch(1)
+    import_layout.addWidget(queue)
+    import_layout.addLayout(controls)
+    layout.addWidget(import_group)
+
+    # --- Search & RAG section ---
+    search_group = QFrame()
+    search_group.setObjectName("searchGroup")
+    search_layout = QVBoxLayout(search_group)
+    search_label = QLabel("Search & RAG")
+    search_label.setObjectName("searchGroupLabel")
+    search_layout.addWidget(search_label)
+    search_box = QLineEdit()
+    search_box.setObjectName("matterSearchInput")
+    search_box.setPlaceholderText("Search documents...")
+    ask_box = QTextEdit()
+    ask_box.setObjectName("ragQuestionInput")
+    ask_box.setFixedHeight(80)
+    ask_box.setPlaceholderText("Ask a question about your documents...")
+    answer_box = QTextEdit()
+    answer_box.setObjectName("ragCitationPacketOutput")
+    answer_box.setReadOnly(True)
+    answer_box.setPlaceholderText("Answers and citations will appear here...")
+    ask_button = QPushButton("Ask")
+    ask_button.setObjectName("askRagButton")
+    search_layout.addWidget(search_box)
+    search_layout.addWidget(ask_box)
+    search_layout.addWidget(ask_button)
+    search_layout.addWidget(answer_box)
+    layout.addWidget(search_group)
+
+    # --- AI Keys section ---
+    ai_group = QFrame()
+    ai_group.setObjectName("aiKeysGroup")
+    ai_layout = QFormLayout(ai_group)
+    providers = (
+        ("OpenAI", "openaiApiKeyInput"),
+        ("Anthropic", "anthropicApiKeyInput"),
+        ("Google", "googleApiKeyInput"),
+        ("Azure OpenAI", "azureOpenaiApiKeyInput"),
+        ("Mistral", "mistralApiKeyInput"),
+    )
+    for label, object_name in providers:
+        field = QLineEdit()
+        field.setObjectName(object_name)
+        field.setEchoMode(QLineEdit.EchoMode.Password)
+        ai_layout.addRow(label, field)
+    ai_status = QLabel("Provider keys are local settings")
+    ai_status.setObjectName("providerKeyStatusLabel")
+    save = QPushButton("Save provider settings")
+    save.setObjectName("saveProviderSettingsButton")
+    ai_layout.addRow("Status", ai_status)
+    ai_layout.addRow("", save)
+    layout.addWidget(ai_group)
+
+    # --- Backup section ---
+    backup_group = QFrame()
+    backup_group.setObjectName("backupGroup")
+    backup_layout = QFormLayout(backup_group)
+    backup_status = QLabel("No backup yet")
+    backup_status.setObjectName("backupStatusLabel")
+    restore_status = QLabel("No restore drill yet")
+    restore_status.setObjectName("restoreStatusLabel")
+    backup_button = QPushButton("Create backup")
+    backup_button.setObjectName("createBackupButton")
+    restore_button = QPushButton("Restore drill")
+    restore_button.setObjectName("restoreDrillButton")
+    backup_layout.addRow("Backup", backup_status)
+    backup_layout.addRow("Restore", restore_status)
+    backup_layout.addRow("", backup_button)
+    backup_layout.addRow("", restore_button)
+    layout.addWidget(backup_group)
+
+    # --- Admin & Audit section ---
+    admin_group = QFrame()
+    admin_group.setObjectName("adminGroup")
+    admin_layout = QVBoxLayout(admin_group)
+    admin_form = QFormLayout()
+    installation = QLabel("Installation not synced")
+    installation.setObjectName("installationStatusLabel")
+    entitlement = QLabel("Entitlement unknown")
+    entitlement.setObjectName("entitlementStatusLabel")
+    sync_button = QPushButton("Check status")
+    sync_button.setObjectName("adminSyncButton")
+    admin_form.addRow("Installation", installation)
+    admin_form.addRow("Entitlement", entitlement)
+    admin_form.addRow("", sync_button)
+    admin_layout.addLayout(admin_form)
+
+    admin_layout.addWidget(QLabel("Audit Log"))
+    audit_list = QListWidget()
+    audit_list.setObjectName("auditLogList")
+    audit_list.addItem("No audit events loaded")
+    refresh_audit = QPushButton("Refresh audit log")
+    refresh_audit.setObjectName("refreshAuditLogButton")
+    admin_layout.addWidget(audit_list)
+    admin_layout.addWidget(refresh_audit)
+    layout.addWidget(admin_group)
+
+    layout.addStretch(1)
     return page
 
 
@@ -1052,125 +1194,6 @@ def _matter_text_list_tab(object_name: str, empty_text: str) -> QWidget:
     layout.addWidget(listing)
     layout.addWidget(add_button)
     return tab
-
-
-def _import_page() -> QWidget:
-    page = QWidget()
-    page.setObjectName("importPage")
-    layout = QVBoxLayout(page)
-    queue = QListWidget()
-    queue.setObjectName("documentReviewQueue")
-    queue.addItems(["Queue empty"])
-    controls = QHBoxLayout()
-    add_files = QPushButton("Add files")
-    add_files.setObjectName("addFilesButton")
-    run_ocr = QPushButton("Run OCR")
-    run_ocr.setObjectName("runOcrButton")
-    duplicate_status = QLabel("Duplicates: none")
-    duplicate_status.setObjectName("duplicateStatusLabel")
-    ocr_status = QLabel("OCR: idle")
-    ocr_status.setObjectName("ocrStatusLabel")
-    controls.addWidget(add_files)
-    controls.addWidget(run_ocr)
-    controls.addWidget(duplicate_status)
-    controls.addWidget(ocr_status)
-    controls.addStretch(1)
-    layout.addWidget(queue)
-    layout.addLayout(controls)
-    return page
-
-
-def _search_rag_page() -> QWidget:
-    page = QWidget()
-    page.setObjectName("searchRagPage")
-    layout = QVBoxLayout(page)
-    search_box = QLineEdit()
-    search_box.setObjectName("matterSearchInput")
-    ask_box = QTextEdit()
-    ask_box.setObjectName("ragQuestionInput")
-    ask_box.setFixedHeight(96)
-    answer_box = QTextEdit()
-    answer_box.setObjectName("ragCitationPacketOutput")
-    answer_box.setReadOnly(True)
-    ask_button = QPushButton("Ask")
-    ask_button.setObjectName("askRagButton")
-    layout.addWidget(search_box)
-    layout.addWidget(ask_box)
-    layout.addWidget(ask_button)
-    layout.addWidget(answer_box)
-    return page
-
-
-def _provider_keys_page() -> QWidget:
-    page = QWidget()
-    page.setObjectName("providerKeysPage")
-    layout = QFormLayout(page)
-    providers = (
-        ("OpenAI", "openaiApiKeyInput"),
-        ("Anthropic", "anthropicApiKeyInput"),
-        ("Google", "googleApiKeyInput"),
-        ("Azure OpenAI", "azureOpenaiApiKeyInput"),
-        ("Mistral", "mistralApiKeyInput"),
-    )
-    for label, object_name in providers:
-        field = QLineEdit()
-        field.setObjectName(object_name)
-        field.setEchoMode(QLineEdit.EchoMode.Password)
-        layout.addRow(label, field)
-    status = QLabel("Provider keys are local settings")
-    status.setObjectName("providerKeyStatusLabel")
-    save = QPushButton("Save provider settings")
-    save.setObjectName("saveProviderSettingsButton")
-    layout.addRow("Status", status)
-    layout.addRow("", save)
-    return page
-
-
-def _backup_page() -> QWidget:
-    page = QWidget()
-    page.setObjectName("backupPage")
-    layout = QFormLayout(page)
-    backup_status = QLabel("No backup yet")
-    backup_status.setObjectName("backupStatusLabel")
-    restore_status = QLabel("No restore drill yet")
-    restore_status.setObjectName("restoreStatusLabel")
-    backup_button = QPushButton("Create backup")
-    backup_button.setObjectName("createBackupButton")
-    restore_button = QPushButton("Restore drill")
-    restore_button.setObjectName("restoreDrillButton")
-    layout.addRow("Backup", backup_status)
-    layout.addRow("Restore", restore_status)
-    layout.addRow("", backup_button)
-    layout.addRow("", restore_button)
-    return page
-
-
-def _admin_page() -> QWidget:
-    page = QWidget()
-    page.setObjectName("adminPage")
-    layout = QVBoxLayout(page)
-    form = QFormLayout()
-    installation = QLabel("Installation not synced")
-    installation.setObjectName("installationStatusLabel")
-    entitlement = QLabel("Entitlement unknown")
-    entitlement.setObjectName("entitlementStatusLabel")
-    sync_button = QPushButton("Check status")
-    sync_button.setObjectName("adminSyncButton")
-    form.addRow("Installation", installation)
-    form.addRow("Entitlement", entitlement)
-    form.addRow("", sync_button)
-    layout.addLayout(form)
-
-    # Audit log viewer
-    layout.addWidget(QLabel("Audit Log"))
-    audit_list = QListWidget()
-    audit_list.setObjectName("auditLogList")
-    audit_list.addItem("No audit events loaded")
-    refresh_audit = QPushButton("Refresh audit log")
-    refresh_audit.setObjectName("refreshAuditLogButton")
-    layout.addWidget(audit_list)
-    layout.addWidget(refresh_audit)
-    return page
 
 
 def _about_page(modules: tuple[ModuleStatus, ...]) -> QWidget:
