@@ -64,6 +64,7 @@ def run_selftest() -> int:
         print("SELFTEST FAIL")
         for failure in failures:
             print(f"- {failure}")
+        _write_selftest_result("FAIL", failures)
         return 1
 
     print("SELFTEST PASS")
@@ -71,7 +72,26 @@ def run_selftest() -> int:
     print(f"Licensing installation identity check: pass")
     print(f"Clock guard check: pass")
     print(f"App version: {APP_VERSION}")
+    _write_selftest_result("PASS", [])
     return 0
+
+
+def _write_selftest_result(status: str, failures: list[str]) -> None:
+    """Write selftest result to a temp file for the release workflow gate.
+
+    The release CI runs the frozen bundle with --selftest and gates on this
+    file because the GUI-subsystem exe (console=False) doesn't pipe stdout.
+    """
+    import tempfile as _tf
+
+    result_path = Path(_tf.gettempdir()) / "WakiliOS_selftest.txt"
+    lines = [f"SELFTEST {status}"]
+    for f in failures:
+        lines.append(f"- {f}")
+    try:
+        result_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    except OSError:
+        pass  # degrade gracefully, never crash at launch
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:

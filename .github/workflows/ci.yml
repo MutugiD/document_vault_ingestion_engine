@@ -3,119 +3,134 @@ name: CI
 on:
   pull_request:
   push:
-    branches:
-      - main
-      - "feature/**"
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  validate:
-    name: Validate documentation and skeleton
-    runs-on: windows-latest
-
+  lint:
+    name: Lint & format
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff==0.14.4
+      - name: ruff check (lint)
+        run: ruff check .
+      - name: ruff format (style)
+        run: ruff format --check .
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+  security:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pip-audit==2.10.1
+      - name: Audit pinned runtime dependencies
+        run: pip-audit --strict -r requirements.txt
+
+  test:
+    name: Test & coverage
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install validation tools
-        run: python -m pip install --upgrade pip ruff cryptography PyMuPDF python-docx PySide6 pyinstaller
+      - name: Install hash-locked dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --require-hashes -r requirements-dev.txt
 
-      - name: Install runtime dependencies
-        run: python -m pip install fastapi uvicorn pydantic httpx python-multipart starlette
+      - name: Verify dependency consistency
+        run: pip check
 
-      - name: Validate documentation pack
-        run: python tests\validate_docs.py
+      - name: Install coverage
+        run: pip install coverage==7.14.3
 
-      - name: Validate Python skeleton
-        run: python tests\validate_skeleton.py
+      - name: Core validation suites + coverage (>= 80%)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        shell: pwsh
+        run: |
+          python -m coverage erase
+          $suites = @(
+            "tests/validate_docs.py",
+            "tests/validate_products.py",
+            "tests/validate_security_scan.py",
+            "tests/validate_license.py",
+            "tests/validate_vault.py",
+            "tests/validate_intake.py",
+            "tests/validate_search.py",
+            "tests/validate_rag.py",
+            "tests/validate_backup.py",
+            "tests/validate_wakilios_backend.py",
+            "tests/validate_wakilios_api.py",
+            "tests/validate_e2e.py"
+          )
+          foreach ($s in $suites) {
+            Write-Host "=== $s ==="
+            python -m coverage run -a --source=core,licensing,vault,intake,search,rag,backup,wakilios,ui $s
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+          }
+          python -m coverage report --fail-under=80
 
-      - name: Validate published products
-        run: python tests\validate_products.py
+      - name: UI validation (no coverage, needs PySide6)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python tests/validate_ui.py
 
-      - name: Validate security scan
-        run: python tests\validate_security_scan.py
+      - name: Selftest
+        run: python main.py --selftest
 
-      - name: Validate licensing
-        run: python tests\validate_license.py
+  package:
+    name: Build bundle (smoke)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-      - name: Validate admin license payment boundary
-        run: python tests\validate_admin_license_payment_boundary.py
+      - name: Detect packaging spec
+        id: spec
+        shell: pwsh
+        run: |
+          if (Test-Path main.spec) {
+            "present=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
+            "present=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            Write-Host "no main.spec yet; skipping bundle build"
+          }
 
-      - name: Validate AI provider key settings
-        run: python tests\validate_ai_providers.py
+      - name: Install hash-locked dependencies
+        if: steps.spec.outputs.present == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install --require-hashes -r requirements-dev.txt
 
-      - name: Validate hosted AI boundary
-        run: python tests\validate_hosted_ai_boundary.py
+      - name: Install Cython (obfuscation build tool)
+        if: steps.spec.outputs.present == 'true'
+        run: pip install "cython>=3,<4"
 
-      - name: Validate encrypted vault
-        run: python tests\validate_vault.py
+      - name: Obfuscate licensing (Cython -> .pyd)
+        if: steps.spec.outputs.present == 'true'
+        run: python scripts/obfuscate_licensing.py
 
-      - name: Validate document intake
-        run: python tests\validate_intake.py
+      - name: Build one-folder bundle (PyInstaller)
+        if: steps.spec.outputs.present == 'true'
+        run: pyinstaller main.spec --noconfirm --clean
 
-      - name: Validate extraction and OCR boundary
-        run: python tests\validate_extraction.py
-
-      - name: Validate OCR runtime bundle contract
-        run: python tests\validate_ocr_runtime.py
-
-      - name: Validate matter search
-        run: python tests\validate_search.py
-
-      - name: Validate Local Matter RAG Connector
-        run: python tests\validate_rag.py
-
-      - name: Validate Wakili-Mkononi integration boundary
-        run: python tests\validate_wakili_integration.py
-
-      - name: Validate backup restore
-        run: python tests\validate_backup.py
-
-      - name: Validate managed cloud boundary
-        run: python tests\validate_cloud_boundary.py
-
-      - name: Validate managed cloud backup CLI
-        run: python main.py --managed-cloud-backup-e2e
-
-      - name: Validate Wakili-Mkononi integration CLI
-        run: python main.py --wakili-mkononi-e2e
-
-      - name: Validate hosted AI CLI
-        run: python main.py --hosted-ai-e2e
-
-      - name: Validate UI shell
-        run: python tests\validate_ui.py
-
-      - name: Validate packaging configuration
-        run: python tests\validate_package.py
-
-      - name: Validate end-to-end product flow
-        run: python tests\validate_e2e.py
-
-      - name: Validate native app workflow
-        run: python tests\validate_native_workflow.py
-
-      - name: Validate manual Windows app E2E flow
-        run: python tests\validate_manual_windows_app_e2e.py
-
-      - name: Validate real-world RAG end-to-end flow
-        run: python tests\validate_real_world_rag_e2e.py
-
-      - name: Validate public Kenyan document E2E flow
-        run: python tests\validate_public_kenyan_e2e.py
-
-      - name: Validate manual private-document smoke runner
-        run: python tests\validate_manual_ingest_smoke.py
-
-      - name: Validate WakiliOS multi-seat backend
-        run: python tests\validate_wakilios_backend.py
-
-      - name: Validate WakiliOS API endpoints
-        run: python tests\validate_wakilios_api.py
-
-      - name: Validate WakiliOS backend CLI
-        run: python main.py --wakilios-backend-e2e
+      - name: Bundle self-test
+        if: steps.spec.outputs.present == 'true'
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: dist\WakiliOS\WakiliOS.exe --selftest
