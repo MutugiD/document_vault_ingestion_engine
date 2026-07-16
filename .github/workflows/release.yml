@@ -18,10 +18,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install hash-locked dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install --require-hashes -r requirements-dev.txt
+          pip install -r requirements.txt
+          pip install cython
 
       - name: Verify tag matches the app version
         shell: pwsh
