@@ -27,5 +27,11 @@ __all__ = [
     "SeatLimitError",
     "WakiliOSError",
     "WakiliOSBackend",
+    "WakiliOSClient",
+    "WakiliOSClientConfig",
+    "WakiliOSClientError",
+    "WakiliOSConnectionError",
     "initialize_firm_backend",
 ]
+
+from wakilios.client import WakiliOSClient, WakiliOSClientConfig, WakiliOSClientError, WakiliOSConnectionError

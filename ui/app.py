@@ -1,4 +1,4 @@
-"""PySide6 desktop shell and worker pattern."""
+"""WakiliOS desktop shell with backend connectivity."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, Signal, 
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
+    QComboBox,
     QFileDialog,
     QFormLayout,
     QFrame,
@@ -22,6 +23,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QTabWidget,
     QTextEdit,
@@ -31,6 +33,12 @@ from PySide6.QtWidgets import (
 
 from ai import configured_provider_statuses, provider_env_var, supported_providers
 from core import ManualAppSession
+from wakilios.client import (
+    WakiliOSClient,
+    WakiliOSClientConfig,
+    WakiliOSClientError,
+    WakiliOSConnectionError,
+)
 
 
 @dataclass(frozen=True)
@@ -73,6 +81,55 @@ class BackgroundWorker(QRunnable):
             self.signals.failed.emit(str(exc))
 
 
+class BackendConnectionDialog(QFrame):
+    """Login dialog for connecting to a WakiliOS backend."""
+
+    login_succeeded = Signal(str, str, str)  # token, username, role
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("backendConnectionDialog")
+        layout = QFormLayout(self)
+
+        self.server_url = QLineEdit("http://localhost:8000")
+        self.server_url.setObjectName("serverUrlInput")
+        self.username_input = QLineEdit()
+        self.username_input.setObjectName("backendUsernameInput")
+        self.password_input = QLineEdit()
+        self.password_input.setObjectName("backendPasswordInput")
+        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.status_label = QLabel("Not connected")
+        self.status_label.setObjectName("backendStatusLabel")
+        self.connect_button = QPushButton("Connect")
+        self.connect_button.setObjectName("connectButton")
+
+        layout.addRow("Server URL", self.server_url)
+        layout.addRow("Username", self.username_input)
+        layout.addRow("Password", self.password_input)
+        layout.addRow("Status", self.status_label)
+        layout.addRow("", self.connect_button)
+
+        self.connect_button.clicked.connect(self._attempt_login)
+
+    def _attempt_login(self) -> None:
+        url = self.server_url.text().strip()
+        username = self.username_input.text().strip()
+        password = self.password_input.text()
+        if not url or not username or not password:
+            self.status_label.setText("Enter server URL, username, and password")
+            return
+        try:
+            client = WakiliOSClient(WakiliOSClientConfig(base_url=url))
+            result = client.login(username, password)
+            role = str(result.get("role", ""))
+            self.status_label.setText(f"Connected as {username} ({role})")
+            self.login_succeeded.emit(client.config.session_token, username, role)
+        except WakiliOSClientError as exc:
+            self.status_label.setText(f"Login failed: {exc.detail}")
+        except WakiliOSConnectionError as exc:
+            self.status_label.setText(f"Connection failed: {exc}")
+
+
 class MainWindow(QMainWindow):
     """Production-oriented V1 desktop workbench."""
 
@@ -85,6 +142,11 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("WakiliOS")
         self.setMinimumSize(920, 620)
+
+        self._backend_client: WakiliOSClient | None = None
+        self._current_role: str = ""
+        self._current_username: str = ""
+        self._current_matter_id: str = ""
 
         root = QWidget()
         root_layout = QVBoxLayout(root)
@@ -140,6 +202,238 @@ class MainWindow(QMainWindow):
             workspace or Path(tempfile.gettempdir()) / "document-vault-manual-app-session"
         )
         self._connect_workflow_controls()
+        self._connect_backend_controls()
+
+    def _connect_workflow_controls(self) -> None:
+        """Wire up the existing workflow control buttons."""
+        button_actions = {
+            "completeSetupButton": "Setup complete",
+            "activateLicenseButton": "License activation checked",
+            "initializeVaultButton": "Vault initialization checked",
+            "newMatterButton": "WakiliOS matter workflow checked",
+            "exportCalendarButton": "Matter calendar export checked",
+            "runOcrButton": "OCR workflow checked",
+        }
+        for object_name, message in button_actions.items():
+            button = self.findChild(QPushButton, object_name)
+            if button is not None:
+                button.clicked.connect(
+                    lambda _checked=False, text=message: self.status_label.setText(text)
+                )
+
+        save_provider_button = self.findChild(QPushButton, "saveProviderSettingsButton")
+        if save_provider_button is not None:
+            save_provider_button.clicked.connect(self._save_provider_settings)
+
+        add_files_button = self.findChild(QPushButton, "addFilesButton")
+        if add_files_button is not None:
+            add_files_button.clicked.connect(self.choose_and_import_files)
+        ask_button = self.findChild(QPushButton, "askRagButton")
+        if ask_button is not None:
+            ask_button.clicked.connect(self.ask_current_question)
+        backup_button = self.findChild(QPushButton, "createBackupButton")
+        if backup_button is not None:
+            backup_button.clicked.connect(self.create_backup_and_restore)
+        restore_button = self.findChild(QPushButton, "restoreDrillButton")
+        if restore_button is not None:
+            restore_button.clicked.connect(self.create_backup_and_restore)
+        admin_sync_button = self.findChild(QPushButton, "adminSyncButton")
+        if admin_sync_button is not None:
+            admin_sync_button.clicked.connect(self.check_admin_license_payment_status)
+
+    def _connect_backend_controls(self) -> None:
+        """Wire up the backend connection and matter workspace controls."""
+        connect_button = self.findChild(QPushButton, "connectButton")
+        if connect_button is not None:
+            dialog = self.findChild(BackendConnectionDialog)
+            if dialog is not None:
+                dialog.login_succeeded.connect(self._on_backend_login)
+
+        for tab_name, button_name, handler in [
+            ("Matters", "newMatterButton", self._on_new_matter),
+            ("Matters", "exportCalendarButton", self._on_export_calendar),
+            ("Matters", "refreshMatterListButton", self._on_refresh_matters),
+        ]:
+            button = self.findChild(QPushButton, button_name)
+            if button is not None:
+                button.clicked.connect(handler)
+
+        for tab_name, button_suffix, handler in [
+            ("Summary", "AddButton", self._on_update_summary),
+            ("Parties", "AddButton", self._on_add_party),
+            ("Activities", "AddButton", self._on_add_activity),
+            ("Lodgings", "AddButton", self._on_add_lodging),
+            ("Court Decisions", "AddButton", self._on_add_court_decision),
+            ("Fees", "AddButton", self._on_add_fee),
+            ("Receipts", "AddButton", self._on_add_receipt),
+        ]:
+            object_name = f"{tab_name.lower().replace(' ', '')}{button_suffix}" if tab_name != "Summary" else f"summary{button_suffix}"
+            button = self.findChild(QPushButton, object_name)
+            if button is None:
+                object_name = f"{tab_name.replace(' ', '').lower()}{button_suffix}"
+                button = self.findChild(QPushButton, object_name)
+            if button is not None:
+                button.clicked.connect(handler)
+
+    @Slot(str, str, str)
+    def _on_backend_login(self, token: str, username: str, role: str) -> None:
+        url_input = self.findChild(QLineEdit, "serverUrlInput")
+        url = url_input.text().strip() if url_input else "http://localhost:8000"
+        self._backend_client = WakiliOSClient(WakiliOSClientConfig(base_url=url, session_token=token))
+        self._current_role = role
+        self._current_username = username
+        role_label = self.findChild(QLabel, "roleStatusLabel")
+        if role_label is not None:
+            role_label.setText(f"Role: {role}")
+        self.status_label.setText(f"Connected to backend as {username} ({role})")
+        self._apply_role_permissions(role)
+
+    def _apply_role_permissions(self, role: str) -> None:
+        """Enable/disable controls based on user role."""
+        from wakilios.core import ACCOUNTS_ROLES, DOCUMENT_ROLES, SUMMARY_ROLES, WRITE_ROLES
+
+        can_write = role in WRITE_ROLES
+        can_manage_fees = role in ACCOUNTS_ROLES
+        can_summarize = role in SUMMARY_ROLES
+        can_manage_docs = role in DOCUMENT_ROLES
+
+        fee_add = self.findChild(QPushButton, "feesAddButton")
+        if fee_add is not None:
+            fee_add.setEnabled(can_manage_fees)
+        receipt_add = self.findChild(QPushButton, "receiptsAddButton")
+        if receipt_add is not None:
+            receipt_add.setEnabled(can_manage_fees)
+        for tab_name in ["partiesAddButton", "activitiesAddButton", "lodgingsAddButton"]:
+            button = self.findChild(QPushButton, tab_name)
+            if button is not None:
+                button.setEnabled(can_write)
+        summary_add = self.findChild(QPushButton, "summaryAddButton")
+        if summary_add is not None:
+            summary_add.setEnabled(can_summarize)
+        new_matter = self.findChild(QPushButton, "newMatterButton")
+        if new_matter is not None:
+            new_matter.setEnabled(can_write)
+
+    def _on_new_matter(self) -> None:
+        if self._backend_client is None:
+            self.status_label.setText("Connect to backend first")
+            return
+        try:
+            result = self._backend_client.create_matter(
+                internal_reference="NEW-001",
+                client_name="New Client",
+                parties="New Matter Parties",
+                court="High Court",
+                station="Nairobi",
+                case_number="NEW/2026",
+                practice_area="General",
+                responsible_advocate=self._current_username,
+                filing_status="draft",
+                filing_date="",
+            )
+            self._current_matter_id = str(result["matter_id"])
+            self.status_label.setText(f"Created matter: {result.get('internal_reference', self._current_matter_id)}")
+            self._on_refresh_matters()
+        except (WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Failed to create matter: {exc}")
+
+    def _on_export_calendar(self) -> None:
+        if self._backend_client is None:
+            self.status_label.setText("Connect to backend first")
+            return
+        if not self._current_matter_id:
+            self.status_label.setText("Select a matter first")
+            return
+        try:
+            ics = self._backend_client.export_calendar(self._current_matter_id)
+            dest = QFileDialog.getSaveFileName(self, "Save Calendar", "", "Calendar Files (*.ics)")[0]
+            if dest:
+                Path(dest).write_text(ics, encoding="utf-8")
+                self.status_label.setText(f"Calendar exported to {dest}")
+        except (WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Calendar export failed: {exc}")
+
+    def _on_refresh_matters(self) -> None:
+        if self._backend_client is None:
+            self.status_label.setText("Connect to backend first")
+            return
+        try:
+            result = self._backend_client.list_matters()
+            matter_list = self.findChild(QListWidget, "matterList")
+            if matter_list is not None:
+                matter_list.clear()
+                for m in result:
+                    ref = m.get("internal_reference", "")
+                    client = m.get("client_name", "")
+                    matter_list.addItem(f"{ref} - {client}")
+        except (WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Failed to list matters: {exc}")
+
+    def _on_update_summary(self) -> None:
+        if self._backend_client is None or not self._current_matter_id:
+            return
+        summary_box = self.findChild(QTextEdit, "aiMatterSummaryOutput")
+        if summary_box is None:
+            return
+        try:
+            self._backend_client.update_matter_summary(self._current_matter_id, summary_box.toPlainText())
+            self.status_label.setText("Summary updated")
+        except (WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Summary update failed: {exc}")
+
+    def _on_add_party(self) -> None:
+        if self._backend_client is None or not self._current_matter_id:
+            return
+        try:
+            self._backend_client.add_party(self._current_matter_id, name="New Party", party_role="Respondent")
+            self.status_label.setText("Party added")
+        except (WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Add party failed: {exc}")
+
+    def _on_add_activity(self) -> None:
+        if self._backend_client is None or not self._current_matter_id:
+            return
+        try:
+            self._backend_client.add_activity(self._current_matter_id, activity_type="mention", title="New Activity", starts_at="")
+            self.status_label.setText("Activity added")
+        except (WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Add activity failed: {exc}")
+
+    def _on_add_lodging(self) -> None:
+        if self._backend_client is None or not self._current_matter_id:
+            return
+        try:
+            self._backend_client.add_lodging(self._current_matter_id, document_kind="New Lodging")
+            self.status_label.setText("Lodging added")
+        except (WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Add lodging failed: {exc}")
+
+    def _on_add_court_decision(self) -> None:
+        if self._backend_client is None or not self._current_matter_id:
+            return
+        try:
+            self._backend_client.add_court_decision(self._current_matter_id, decision_type="Ruling", decision_date="")
+            self.status_label.setText("Court decision added")
+        except (WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Add court decision failed: {exc}")
+
+    def _on_add_fee(self) -> None:
+        if self._backend_client is None or not self._current_matter_id:
+            return
+        try:
+            self._backend_client.add_fee(self._current_matter_id, fee_type="Filing fee", amount=0)
+            self.status_label.setText("Fee added")
+        except (WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Add fee failed: {exc}")
+
+    def _on_add_receipt(self) -> None:
+        if self._backend_client is None or not self._current_matter_id:
+            return
+        try:
+            self._backend_client.add_receipt(self._current_matter_id, receipt_number="NEW-RCT", amount=0)
+            self.status_label.setText("Receipt added")
+        except (WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Add receipt failed: {exc}")
 
     @Slot()
     def run_worker_selftest(self) -> None:
@@ -191,45 +485,9 @@ class MainWindow(QMainWindow):
         status_label = self.findChild(QLabel, "providerKeyStatusLabel")
         if status_label is not None:
             if configured:
-                status_label.setText(f"Configured providers: {', '.join(configured)}")
+                status_label.setText(f"Configured: {', '.join(configured)}")
             else:
-                status_label.setText("No provider keys configured")
-
-    def _connect_workflow_controls(self) -> None:
-        button_actions = {
-            "completeSetupButton": "Setup complete",
-            "activateLicenseButton": "License activation checked",
-            "initializeVaultButton": "Vault initialization checked",
-            "newMatterButton": "WakiliOS matter workflow checked",
-            "exportCalendarButton": "Matter calendar export checked",
-            "runOcrButton": "OCR workflow checked",
-        }
-        for object_name, message in button_actions.items():
-            button = self.findChild(QPushButton, object_name)
-            if button is not None:
-                button.clicked.connect(
-                    lambda _checked=False, text=message: self.status_label.setText(text)
-                )
-
-        save_provider_button = self.findChild(QPushButton, "saveProviderSettingsButton")
-        if save_provider_button is not None:
-            save_provider_button.clicked.connect(self._save_provider_settings)
-
-        add_files_button = self.findChild(QPushButton, "addFilesButton")
-        if add_files_button is not None:
-            add_files_button.clicked.connect(self.choose_and_import_files)
-        ask_button = self.findChild(QPushButton, "askRagButton")
-        if ask_button is not None:
-            ask_button.clicked.connect(self.ask_current_question)
-        backup_button = self.findChild(QPushButton, "createBackupButton")
-        if backup_button is not None:
-            backup_button.clicked.connect(self.create_backup_and_restore)
-        restore_button = self.findChild(QPushButton, "restoreDrillButton")
-        if restore_button is not None:
-            restore_button.clicked.connect(self.create_backup_and_restore)
-        admin_sync_button = self.findChild(QPushButton, "adminSyncButton")
-        if admin_sync_button is not None:
-            admin_sync_button.clicked.connect(self.check_admin_license_payment_status)
+                status_label.setText("No providers configured")
 
     @Slot()
     def choose_and_import_files(self) -> None:
@@ -395,13 +653,19 @@ def _first_run_page() -> QWidget:
     device_name.setObjectName("deviceNicknameInput")
     recovery_confirmed = QCheckBox("Recovery key recorded")
     recovery_confirmed.setObjectName("recoveryKeyConfirmedCheck")
-    setup_button = QPushButton("Complete setup")
+    setup_button = QPushButton("Setup complete")
     setup_button.setObjectName("completeSetupButton")
+
+    # Backend connection section
+    backend_connection = BackendConnectionDialog()
+    backend_connection.setObjectName("backendConnectionDialog")
+
     layout.addRow("Firm", firm_name)
     layout.addRow("Primary user", primary_user)
     layout.addRow("Device", device_name)
     layout.addRow("", recovery_confirmed)
     layout.addRow("", setup_button)
+    layout.addRow(backend_connection)
     return page
 
 
@@ -444,20 +708,23 @@ def _matter_page() -> QWidget:
     layout = QVBoxLayout(page)
 
     header = QHBoxLayout()
-    role_status = QLabel("Role: advocate")
+    role_status = QLabel("Role: not connected")
     role_status.setObjectName("roleStatusLabel")
     export_calendar = QPushButton("Export calendar")
     export_calendar.setObjectName("exportCalendarButton")
     add_matter = QPushButton("New matter")
     add_matter.setObjectName("newMatterButton")
+    refresh_matters = QPushButton("Refresh")
+    refresh_matters.setObjectName("refreshMatterListButton")
     header.addWidget(role_status)
     header.addStretch(1)
+    header.addWidget(refresh_matters)
     header.addWidget(export_calendar)
     header.addWidget(add_matter)
 
     matter_list = QListWidget()
     matter_list.setObjectName("matterList")
-    matter_list.addItems(["WAK-001 - Example litigation matter"])
+    matter_list.addItems(["Connect to backend to load matters"])
 
     workspace_tabs = QTabWidget()
     workspace_tabs.setObjectName("matterWorkspaceTabs")
@@ -501,9 +768,12 @@ def _matter_summary_tab() -> QWidget:
     ai_summary.setObjectName("aiMatterSummaryOutput")
     ai_summary.setReadOnly(True)
     ai_summary.setPlainText("No summary yet")
+    summary_add = QPushButton("Update summary")
+    summary_add.setObjectName("summaryAddButton")
     layout.addRow("Case information", case_information)
     layout.addRow("Status", matter_status)
     layout.addRow("AI summary", ai_summary)
+    layout.addRow("", summary_add)
     return tab
 
 
@@ -593,16 +863,6 @@ def _provider_keys_page() -> QWidget:
     return page
 
 
-def _provider_environment_from_os() -> dict[str, str]:
-    environment: dict[str, str] = {}
-    for provider in supported_providers():
-        env_var = provider_env_var(provider)
-        value = os.environ.get(env_var, "")
-        if value:
-            environment[env_var] = value
-    return environment
-
-
 def _backup_page() -> QWidget:
     page = QWidget()
     page.setObjectName("backupPage")
@@ -642,14 +902,23 @@ def _about_page(modules: tuple[ModuleStatus, ...]) -> QWidget:
     page = QWidget()
     page.setObjectName("aboutPage")
     layout = QVBoxLayout(page)
-    module_grid = QGridLayout()
-    module_grid.setHorizontalSpacing(12)
-    module_grid.setVerticalSpacing(12)
-    for index, module in enumerate(modules):
-        module_grid.addWidget(_module_card(module), index // 2, index % 2)
-    release_info = QLabel("Version 0.1.0")
+    release_info = QLabel("WakiliOS multi-seat litigation management")
     release_info.setObjectName("releaseInfoLabel")
-    layout.addLayout(module_grid)
     layout.addWidget(release_info)
+    grid = QGridLayout()
+    for index, module in enumerate(modules):
+        card = _module_card(module)
+        grid.addWidget(card, index // 3, index % 3)
+    layout.addLayout(grid)
     layout.addStretch(1)
     return page
+
+
+def _provider_environment_from_os() -> dict[str, str]:
+    environment: dict[str, str] = {}
+    for provider in supported_providers():
+        env_var = provider_env_var(provider)
+        value = os.environ.get(env_var, "")
+        if value:
+            environment[env_var] = value
+    return environment

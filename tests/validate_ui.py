@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 from PySide6.QtCore import QEventLoop, QObject, QTimer  # noqa: E402
 from PySide6.QtWidgets import QLabel, QLineEdit, QPushButton, QTabWidget, QTextEdit  # noqa: E402
 
-from ui import DEFAULT_MODULES, BackgroundWorker, MainWindow, create_app  # noqa: E402
+from ui import DEFAULT_MODULES, BackgroundWorker, BackendConnectionDialog, MainWindow, create_app  # noqa: E402
 
 
 def main() -> None:
@@ -77,6 +77,14 @@ def main() -> None:
         "aboutPage",
         "releaseInfoLabel",
         "runNativeWorkflowButton",
+        "backendConnectionDialog",
+        "serverUrlInput",
+        "backendUsernameInput",
+        "backendPasswordInput",
+        "backendStatusLabel",
+        "connectButton",
+        "refreshMatterListButton",
+        "summaryAddButton",
     )
     for object_name in expected_widgets:
         assert window.findChild(QObject, object_name) is not None, object_name
