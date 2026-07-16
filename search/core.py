@@ -229,6 +229,24 @@ def add_document_version(
     return version
 
 
+def _sanitize_fts_query(query: str) -> str:
+    """Sanitize a search query for SQLite FTS5 MATCH.
+
+    FTS5 treats hyphens and special characters as column operators.
+    Strip or escape them to avoid query errors.
+    """
+    import re
+    # Remove characters that break FTS5 syntax
+    sanitized = re.sub(r'[^a-zA-Z0-9\s]', ' ', query)
+    # Collapse multiple spaces
+    sanitized = re.sub(r'\s+', ' ', sanitized).strip()
+    # Wrap each token in quotes for exact matching
+    tokens = sanitized.split()
+    if not tokens:
+        return ""
+    return " ".join(f'"{t}"' for t in tokens)
+
+
 def search_documents(
     vault_root: Path,
     query: str,
@@ -238,6 +256,9 @@ def search_documents(
 ) -> list[SearchResult]:
     with _connect(_database_path(vault_root)) as connection:
         _create_schema(connection)
+        safe_query = _sanitize_fts_query(query)
+        if not safe_query:
+            return []
         if matter_id is None:
             rows = connection.execute(
                 """
@@ -249,7 +270,7 @@ def search_documents(
                 ORDER BY rank
                 LIMIT ?
                 """,
-                (query, limit),
+                (safe_query, limit),
             ).fetchall()
         else:
             rows = connection.execute(
@@ -263,7 +284,7 @@ def search_documents(
                 ORDER BY rank
                 LIMIT ?
                 """,
-                (query, matter_id, limit),
+                (safe_query, matter_id, limit),
             ).fetchall()
     return [_row_to_search_result(row) for row in rows]
 
