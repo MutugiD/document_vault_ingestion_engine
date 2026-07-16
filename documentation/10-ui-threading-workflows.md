@@ -2,56 +2,55 @@
 
 ## Purpose
 
-Provide a responsive Windows desktop UI for intake, matters, backup, restore, licensing, and local RAG.
+Provide a responsive Windows desktop UI for intake, matters, backup, restore,
+licensing, and local RAG.
 
 ## UI Stack
 
-PySide6.
+PySide6 with a professional dark navy/blue theme (`ui/wakilios.qss`).
 
-## Required Windows
+## Tab Layout (4 tabs)
 
-- License/setup.
-- Main dashboard.
-- Intake queue.
-- Matter/document workspace.
-- Backup and restore.
-- Admin/license status.
-- Search and Local Matter RAG.
+| Tab | Sections |
+| --- | --- |
+| **Dashboard** | Backend connection (Start Solo / Connect to server), Firm setup, License activation, Vault initialization |
+| **Workspace** | Matter list with actions (New, Refresh, Export calendar), 8 sub-tabs: Summary, Parties, Activities, Lodgings, Court Decisions, Fees, Receipts, Documents |
+| **Settings** | Document Import, Search & RAG, AI Keys, Backup/Restore, Admin & Audit Log |
+| **About** | Module cards, release info, native workflow button |
 
-## F25 Workflow Surface
+## Solo Mode
 
-The production workbench includes tabs for:
+- "Start Solo" button on Dashboard initializes an in-process `WakiliOSBackend`.
+- UI calls `wakilios.core` directly — no server needed.
+- Role is set to the admin user; all features available.
 
-- first-run setup
-- license activation
-- vault initialization and recovery key entry
-- matter list
-- document import/review queue
-- OCR status and duplicate status
-- matter search and Local Matter RAG question panel
-- backup status and restore drill
-- admin/license status
-- release/about information
+## Multi-Seat Mode
 
-## Threading Rules
+- "Connect" button on Dashboard connects to a remote FastAPI server via `WakiliOSClient`.
+- `WakiliOSClient` uses `urllib` (no extra HTTP deps for Windows desktop).
+- Role-aware UI: buttons enable/disable based on user permissions (write, accounts, summary, document roles).
 
-- Long-running intake/OCR/backup work runs outside the UI thread.
-- Workers emit progress and status.
-- Cancellation is cooperative.
-- Closing during a job requires confirmation.
+## Worker Pattern
 
-## F8 Implementation Boundary
+Long operations (backup, restore, OCR, RAG queries) run in `QThread` workers
+to keep the UI responsive. The `BackgroundWorker` class wraps a callable and
+emits `succeeded`/`failed` signals back to the main thread.
 
-The first UI slice implements:
+## Key Widgets
 
-- PySide6 application shell.
-- Main window with module readiness cards.
-- `--gui` application entrypoint.
-- `QRunnable` worker pattern with completion/failure signals.
-- Offscreen UI validation for CI.
-
-F25 expands the shell into workflow tabs for setup, licensing, vault initialization, matters, import/OCR review, search/RAG, backup/restore, admin status, and release information. Later UI slices wire these controls to the live vault/intake/search/backup services.
-
-## Verification
-
-`tests/validate_ui.py` uses the Qt offscreen platform to instantiate the app, open the main window, verify the workflow tabs and key controls, and verify the worker-thread pattern.
+| Object Name | Purpose |
+| --- | --- |
+| `backendConnectionDialog` | Solo/Connect panel with server URL, username, password |
+| `startSoloButton` | Initializes local backend |
+| `connectButton` | Connects to remote backend |
+| `roleStatusLabel` | Shows current role (e.g., "admin (solo)") |
+| `matterList` | List of litigation matters |
+| `matterWorkspaceTabs` | 8 sub-tabs for matter details |
+| `refreshMatterListButton` | Refreshes matter list from backend |
+| `newMatterButton` | Creates new matter |
+| `documentReviewQueue` | Import queue with OCR status |
+| `matterSearchInput` | FTS5 search box |
+| `ragQuestionInput` | RAG question box |
+| `ragCitationPacketOutput` | RAG answer with citations |
+| `auditLogList` | Audit event viewer |
+| `refreshAuditLogButton` | Refreshes audit log |

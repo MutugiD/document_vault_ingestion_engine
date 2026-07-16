@@ -2,156 +2,74 @@
 
 Multi-seat Windows legal firm management built on a local-first encrypted document vault, intake, matter RAG, and audit foundation.
 
-This repository is being built documentation-first and feature by feature: clear architecture docs, a project tracker, small validation scripts, and a Windows packaging path before feature work expands.
+This repository is built documentation-first and feature by feature: clear architecture docs, a project tracker, small validation scripts, and a Windows packaging path.
 
 ## Current Status
 
-F37 WakiliOS multi-seat firm management is in progress.
+**v0.1.0 release candidate** — all features through F39 complete, CI/CD green, E2E validated.
 
-Implemented so far:
+### What's implemented
 
-- Documentation pack under `documentation/`.
-- Python package skeleton and `main.py --selftest`.
-- Signed offline license validation.
-- Encrypted local vault storage.
-- Document intake validation and quarantine records.
-- PDF/DOCX extraction and OCR adapter boundary.
-- Tesseract OCR runtime bundle manifest validation.
-- Repository and release security scan validation.
-- Matter/document/version records and SQLite FTS5 search.
-- Encrypted local backup/restore drill.
-- Managed cloud backup boundary.
-- Admin, license sync, payment entitlement, and managed cloud backend boundaries.
-- Real-world PDF, DOCX, scanned PDF, RAG, backup, and restore validation.
-- Public Kenyan document corpus E2E validation.
-- Local Matter RAG Connector with citation packets and confidence.
-- Wakili-Mkononi user-approved citation handoff boundary.
-- Hosted AI boundary with local-citation-only prompts, entitlement checks, provider-key redaction, fallback, and audit events.
-- WakiliOS firm backend with standard roles, litigation matter workspace tabs, court fees and receipts, `.ics` calendar export, read-only offline cache, AI summaries with citations, and audit events.
-- PySide6 shell and worker pattern.
-- PyInstaller package configuration validation.
-- Real Windows PyInstaller one-folder build and frozen executable selftest.
-- Release ZIP and sidecar manifest validation.
-- Portable install smoke validation from the release ZIP.
+- **4-tab desktop UI**: Dashboard (setup + license + vault), Workspace (matters + sub-tabs), Settings (import + search/RAG + AI keys + backup + admin), About
+- **Professional dark theme**: Navy/blue stylesheet (`ui/wakilios.qss`)
+- **Solo mode**: In-process backend, no server needed; UI calls `wakilios.core` directly
+- **Multi-seat mode**: Optional FastAPI server (`wakilios.api`) with HTTP client (`wakilios.client`)
+- **Hard-coded RSA public key** (spec §6.2): No swappable `public_key.pem` on disk; Cython-compiled to `.pyd` in release builds
+- **Clock-rollback guard**: NTP cross-check, file-backed monotonic store
+- **IFC-Converter CI/CD pattern**: Lint+format, dependency audit, test+coverage, build+smoke, CodeQL weekly
+- **Tag-triggered release**: Cython obfuscation, selftest gate, GitHub Release with zip + sha256
+- **FTS5 query sanitizer**: Handles hyphens and special characters in search
+- **Signed offline license** with RSA-PSS/SHA-256
+- **Encrypted local vault** (AES-GCM, SQLite metadata)
+- **Document intake** (quarantine, signature detection, duplicates)
+- **PDF/DOCX extraction** and OCR adapter boundary
+- **Matter RAG** with citation-backed responses
+- **Backup/restore** with encrypted packages and wrong-key rejection
+- **5 Kenyan court judgment PDFs** tested end-to-end
+- **14 validation suites** all passing
 
-## Published Products
-
-1. WakiliOS.
-2. Document Intake Engine.
-3. Local Matter RAG Connector.
-
-The authoritative product catalog lives in:
-
-- `products/product_catalog.json`
-- `products/catalog.py`
-
-Validate it with:
+### Quick start
 
 ```powershell
-python tests\validate_products.py
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip wheel setuptools
+pip install -r requirements.txt
+python main.py --selftest
+python main.py --gui
 ```
 
-## Product Boundary
-
-In scope:
-
-- Signed offline license with periodic entitlement sync.
-- Local encrypted document vault.
-- Document intake from watched folders and manual import.
-- PDF/DOCX/image validation and text extraction.
-- Local OCR using bundled Tesseract.
-- Matter/document/version metadata.
-- SQLite FTS5 local search.
-- Local encrypted backups and restore drills.
-- Managed encrypted cloud backup through short-lived AWS/GCP/Azure grants.
-- Local matter-scoped RAG retrieval with citations.
-- User-approved Wakili-Mkononi citation handoff boundary.
-- Hosted AI/LLM boundary that only uses local RAG context and citations.
-
-Deferred:
-
-- Local LLM.
-- Live Wakili-Mkononi transport.
-- Live hosted provider transport.
-- Direct Judiciary e-filing automation.
-
-## Repository Layout
-
-```text
-.
-  README.md
-  BUILD.md
-  main.py
-  main.spec
-  pyproject.toml
-  requirements.txt
-  requirements-dev.txt
-  backup/
-  core/
-  intake/
-  integrations/
-  licensing/
-  products/
-  rag/
-  scripts/
-  search/
-  security_checks/
-  tests/
-  tools/
-  release/
-  ui/
-  vault/
-  documentation/
-```
-
-## Local Validation
-
-From the repo root:
+### Validation
 
 ```powershell
-python tests\validate_docs.py
-python tests\validate_skeleton.py
-python tests\validate_products.py
-python tests\validate_security_scan.py
 python tests\validate_license.py
+python tests\validate_wakilios_backend.py
+python tests\validate_wakilios_api.py
 python tests\validate_vault.py
-python tests\validate_intake.py
-python tests\validate_extraction.py
-python tests\validate_ocr_runtime.py
 python tests\validate_search.py
 python tests\validate_rag.py
-python tests\validate_wakili_integration.py
-python tests\validate_hosted_ai_boundary.py
-python tests\validate_wakilios_backend.py
 python tests\validate_backup.py
-python tests\validate_cloud_boundary.py
-python tests\validate_ui.py
-python tests\validate_package.py
 python tests\validate_e2e.py
-python tests\validate_real_world_rag_e2e.py
-python tests\validate_frozen_build.py
-python tests\validate_release_bundle.py
-python tests\validate_portable_install.py
+python tests\validate_ui.py
 python main.py --selftest
-python main.py --managed-cloud-backup-e2e
-python main.py --wakili-mkononi-e2e
-python main.py --hosted-ai-e2e
-python main.py --wakilios-backend-e2e
+python main.py --products
 ```
 
-After dependencies are installed:
+### Release
 
-```powershell
-python -m pip install -r requirements-dev.txt
-ruff check .
-```
+See [RELEASE.md](RELEASE.md) and [BUILD.md](BUILD.md) for packaging and release instructions.
 
-## Documentation
+### Documentation
 
-Start here:
+See [documentation/README.md](documentation/README.md) for the full documentation pack index and [documentation/STATUS.md](documentation/STATUS.md) for the live feature tracker.
 
-- [documentation/README.md](documentation/README.md)
-- [documentation/STATUS.md](documentation/STATUS.md)
-- [documentation/13-implementation-plan.md](documentation/13-implementation-plan.md)
-- [documentation/16-end-to-end-testing-guide.md](documentation/16-end-to-end-testing-guide.md)
-- [documentation/products/README.md](documentation/products/README.md)
+### CI/CD
+
+4-job CI on every PR and push to `main`:
+
+1. **Lint & format** — `ruff check` + `ruff format --check`
+2. **Dependency audit** — `pip-audit --strict`
+3. **Test & coverage** — All validation suites with >=60% coverage
+4. **Build bundle (smoke)** — PyInstaller build + `--selftest` gate
+
+Plus weekly **CodeQL** security scanning.

@@ -1,10 +1,10 @@
 # Project Tracker
 
-Document Vault Ingestion Engine is a local-first Windows application for legal document intake, encrypted vault custody, local search, licensing, backup, and restore.
+WakiliOS is a local-first Windows application for legal document intake, encrypted vault custody, local search, licensing, backup, and restore — with optional multi-seat firm management via a FastAPI backend.
 
 ## Current Phase
 
-F37 WakiliOS multi-seat firm management.
+F38 Release hardening, CI/CD, and E2E validation complete. Ready for v0.1.0 tag.
 
 ## Accepted Decisions
 
@@ -15,28 +15,25 @@ F37 WakiliOS multi-seat firm management.
 | AD3 | Use signed offline license plus periodic online sync. | Supports unreliable internet while preserving monetization controls. |
 | AD4 | Use client-side encrypted backup packages for cloud. | Admin/backend cannot decrypt legal documents. |
 | AD5 | Publish three products through Local Matter RAG Connector. | Keeps the local vault, intake, and RAG products primary while adding controlled integration boundaries after local validation. |
-
-## Open Decisions
-
-| ID | Decision Needed | Default |
-| --- | --- | --- |
-| OD1 | Exact OCR binary distribution for Windows. | Bundle Tesseract 5.x with recorded provenance and checksum. |
-| OD2 | Exact managed cloud provider priority. | Implement provider-neutral grant interface first. |
-| OD3 | Installer wrapper after PyInstaller one-folder build. | Implement after the F27 enterprise roadmap is merged. |
+| AD6 | Hard-code RSA public key in licensing/core.py (spec §6.2). | Closes key-substitution bypass; attacker can no longer swap public_key.pem on disk. Release builds Cython-compile to .pyd. |
+| AD7 | Clock-rollback guard with NTP cross-check (spec §6.2). | Detects system clock tampering; degrades gracefully when NTP unreachable. |
+| AD8 | IFC-Converter CI/CD pattern for release. | Lint+format, dependency audit, test+coverage, build+smoke, CodeQL weekly. Tag-triggered release with Cython obfuscation and selftest gate. |
+| AD9 | Solo mode as default; FastAPI backend optional. | UI calls core/vault/rag modules directly in solo mode. Multi-seat via WakiliOSClient HTTP client. |
+| AD10 | 4-tab UI: Dashboard, Workspace, Settings, About. | Consolidates 10 tabs into logical groups. License is part of Dashboard, not a separate tab. |
 
 ## Progress
 
 | Feature | Status | Evidence |
 | --- | --- | --- |
 | F0 documentation and skeleton | Complete | PR #1 merged, documentation pack, package dirs, validators |
-| F1 licensing | Complete | Offline license module, `tests/validate_license.py`, `main.py --selftest` licensing smoke check |
+| F1 licensing | Complete | Offline license module, clock-rollback guard, hard-coded RSA public key (§6.2), Cython obfuscation (§6.3), `tests/validate_license.py`, `main.py --selftest` |
 | F2 vault | Complete | SQLite metadata, audit ledger, AES-GCM object storage, `tests/validate_vault.py` |
 | F3 intake | Complete | Quarantine import, signature detection, duplicate detection, SQLite records, `tests/validate_intake.py` |
 | F4 extraction/OCR | Complete | PyMuPDF PDF extraction, python-docx extraction, OCR adapter boundary, `tests/validate_extraction.py` |
-| F5 matter/search | Complete | Matter records, document versions, SQLite FTS5, matter-scoped search, `tests/validate_search.py` |
+| F5 matter/search | Complete | Matter records, document versions, SQLite FTS5 (sanitized), matter-scoped search, `tests/validate_search.py` |
 | F6 backup/restore | Complete | Encrypted local backup package, manifest, restore drill, wrong-key behavior, `tests/validate_backup.py` |
 | F7 cloud boundary | Complete | Provider-neutral grants, metadata allowlist, encrypted-package-only upload boundary, `tests/validate_cloud_boundary.py` |
-| F8 UI/package | Complete | PySide6 shell, worker pattern, package selftest, `tests/validate_ui.py`, `tests/validate_package.py` |
+| F8 UI/package | Complete | PySide6 shell, 4-tab UI (Dashboard/Workspace/Settings/About), dark theme (wakilios.qss), solo mode, role-aware controls, worker pattern, `tests/validate_ui.py` |
 | F9 frozen build | Complete | Real PyInstaller one-folder build, frozen executable selftest, `tests/validate_frozen_build.py` |
 | F10 local matter RAG | Complete | Three-product strategy, `matter_rag` entitlement, local hybrid retrieval, citation packet, `tests/validate_rag.py` |
 | F11 end-to-end verification | Complete | Licensed intake-to-RAG-to-backup-to-restore workflow, `tests/validate_e2e.py` |
@@ -53,8 +50,8 @@ F37 WakiliOS multi-seat firm management.
 | F22 admin and license sync backend boundary | Complete | Privacy-safe check-in payload, sync state, admin disablement, grace-expired paid feature stop, local data access preserved |
 | F23 managed cloud grant backend | Complete | AWS/Azure/GCP grant requests, encrypted-package upload/download boundary, credential-bearing grant rejection |
 | F24 payment entitlements | Complete | Plan features, active/suspended/expired behavior, admin override, cloud/RAG disablement without local lockout |
-| F25 production Windows UI | Complete | PySide6 workflow tabs for setup, license, vault, matters, import/OCR, search/RAG, backup/restore, admin status, and release info |
-| F26 PyInstaller bundling and release packaging | Complete | Release ZIP includes product catalog, license public key, public Kenyan doc manifest, provider-key status, public Kenyan E2E command, and checklist |
+| F25 production Windows UI | Complete | PySide6 4-tab shell (Dashboard/Workspace/Settings/About), dark navy/blue theme, solo+multi-seat, role-aware controls |
+| F26 PyInstaller bundling and release packaging | Complete | Release ZIP includes product catalog, license public key, public Kenyan doc manifest, provider-key status, selftest result file |
 | F27 enterprise documentation masterpack | Complete | Enterprise architecture, roadmap, CI/CD release gate, security, Windows distribution, E2E validation, and commercial operations docs |
 | F28 native app end-to-end workflow hardening | Complete | Shared native workflow runner, CLI command, UI workflow button, provider-key redaction, and app-level validator |
 | F29 Kenyan public document corpus E2E expansion | Complete | Expanded public manifest metadata, hash-report downloader, duplicate/legacy/scanned/DOCX coverage, redacted citation/confidence report |
@@ -62,13 +59,16 @@ F37 WakiliOS multi-seat firm management.
 | F31 automatic update channel | Complete | Signed update manifest verifier, tamper rejection, user-approval requirement, version comparison, and offline-safe update result |
 | F32 manual Windows app E2E verification | Complete | Real UI import/RAG/backup actions, 50+ document app flow validator, evidence log, and handover guide |
 | F33 admin, license sync, and payment entitlement backend boundary | Complete | Enterprise boundary client, persisted admin/payment state, UI status check, CLI smoke command, and dedicated validator |
-| F34 managed cloud backup backend boundary | Complete | AWS/Azure/GCP grant contracts, encrypted-package-only transfer, interrupted upload safety, clean-machine restore drill, `tests/validate_cloud_boundary.py`, and `main.py --managed-cloud-backup-e2e` |
-| F35 Wakili-Mkononi integration boundary | Complete | User-approved matter export packet, citation packet handoff, entitlement gating, audit event, privacy validator, `tests/validate_wakili_integration.py`, and `main.py --wakili-mkononi-e2e` |
-| F36 hosted AI/LLM boundary | Active | Provider-key status, local-citation-only prompt boundary, entitlement gating, no-context blocking, local fallback, audit event, `tests/validate_hosted_ai_boundary.py`, and `main.py --hosted-ai-e2e` |
-| F37 WakiliOS firm management | Active | Multi-seat firm backend, standard roles, litigation matter workspace, court costs and receipts, `.ics` calendar export, read-only offline cache, AI summaries with citations, `tests/validate_wakilios_backend.py`, and `main.py --wakilios-backend-e2e` |
+| F34 managed cloud backup backend boundary | Complete | AWS/Azure/GCP grant contracts, encrypted-package-only transfer, interrupted upload safety, clean-machine restore drill, `tests/validate_cloud_boundary.py`, `main.py --managed-cloud-backup-e2e` |
+| F35 Wakili-Mkononi integration boundary | Complete | User-approved matter export packet, citation packet handoff, entitlement gating, audit event, privacy validator, `tests/validate_wakilios_integration.py`, `main.py --wakili-mkononi-e2e` |
+| F36 hosted AI/LLM boundary | Complete | Provider-key status, local-citation-only prompt boundary, entitlement gating, no-context blocking, local fallback, audit event, `tests/validate_hosted_ai_boundary.py`, `main.py --hosted-ai-e2e` |
+| F37 WakiliOS firm management | Complete | Multi-seat firm backend, standard roles, litigation matter workspace, court costs and receipts, `.ics` calendar export, read-only offline cache, AI summaries with citations, solo mode, in-process architecture, `tests/validate_wakilios_backend.py`, `main.py --wakilios-backend-e2e` |
+| F38 UI redesign and polish | Complete | 4-tab UI (Dashboard/Workspace/Settings/About), dark navy/blue theme (wakilios.qss), BackendConnectionDialog for solo/multi-seat, role-aware controls |
+| F39 Licensing hardening and CI/CD | Complete | Hard-coded RSA public key (§6.2), clock-rollback guard, Cython obfuscation (§6.3), IFC-Converter CI/CD (lint+audit+coverage+build+CodeQL), release workflow, `tools/keygen.py`, `tools/sign_license.py` |
 
 ## Next Actions
 
-1. Validate F37 with backend, UI, product catalog, and security gates.
-2. Keep live Outlook/Google calendar sync deferred behind the `.ics` export boundary.
-3. Keep full client billing and trust accounting deferred until accounting controls are separately designed.
+1. Enable Code Scanning in GitHub repo Settings > Code security (required for CodeQL).
+2. Tag v0.1.0 for first release.
+3. Keep live Outlook/Google calendar sync deferred behind the `.ics` export boundary.
+4. Keep full client billing and trust accounting deferred until accounting controls are separately designed.
