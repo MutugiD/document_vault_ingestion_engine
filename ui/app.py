@@ -868,7 +868,12 @@ def create_app(argv: list[str] | None = None) -> QApplication:
     app = QApplication.instance()
     if isinstance(app, QApplication):
         return app
-    return QApplication(list(sys.argv if argv is None else argv))
+    app = QApplication(list(sys.argv if argv is None else argv))
+    # Load professional stylesheet
+    stylesheet_path = Path(__file__).parent / "wakilios.qss"
+    if stylesheet_path.exists():
+        app.setStyleSheet(stylesheet_path.read_text(encoding="utf-8"))
+    return app
 
 
 def run_gui(argv: list[str] | None = None, *, smoke_ms: int | None = None) -> int:
