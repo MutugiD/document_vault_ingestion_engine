@@ -276,12 +276,31 @@ QLabel#backendStatusLabel {
     background: transparent;
 }
 
-/* ── Backend Connection Dialog ── */
-QFrame#backendConnectionDialog {
+/* ── Group Frames (Dashboard, Settings sections) ── */
+QFrame#connectionGroup,
+QFrame#setupGroup,
+QFrame#licenseGroup,
+QFrame#vaultGroup,
+QFrame#importGroup,
+QFrame#searchGroup,
+QFrame#aiKeysGroup,
+QFrame#backupGroup,
+QFrame#adminGroup {
     background-color: #16213e;
     border: 1px solid #2d2d44;
-    border-radius: 6px;
-    padding: 8px;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 8px;
+}
+
+QLabel#connectionGroupLabel,
+QLabel#importGroupLabel,
+QLabel#searchGroupLabel {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    padding: 4px 0px;
+    background: transparent;
 }
 
 /* ── Scrollbars ── */
