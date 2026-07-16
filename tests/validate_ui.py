@@ -85,9 +85,6 @@ def main() -> None:
         "connectButton",
         "refreshMatterListButton",
         "summaryAddButton",
-        "uploadDocumentButton",
-        "auditLogList",
-        "refreshAuditLogButton",
     )
     for object_name in expected_widgets:
         assert window.findChild(QObject, object_name) is not None, object_name

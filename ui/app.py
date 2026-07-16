@@ -275,16 +275,6 @@ class MainWindow(QMainWindow):
             if button is not None:
                 button.clicked.connect(handler)
 
-        # Document upload
-        upload_btn = self.findChild(QPushButton, "uploadDocumentButton")
-        if upload_btn is not None:
-            upload_btn.clicked.connect(self._on_upload_document)
-
-        # Audit log refresh
-        audit_btn = self.findChild(QPushButton, "refreshAuditLogButton")
-        if audit_btn is not None:
-            audit_btn.clicked.connect(self._on_refresh_audit_log)
-
     @Slot(str, str, str)
     def _on_backend_login(self, token: str, username: str, role: str) -> None:
         url_input = self.findChild(QLineEdit, "serverUrlInput")
@@ -323,9 +313,6 @@ class MainWindow(QMainWindow):
         new_matter = self.findChild(QPushButton, "newMatterButton")
         if new_matter is not None:
             new_matter.setEnabled(can_write)
-        upload_doc = self.findChild(QPushButton, "uploadDocumentButton")
-        if upload_doc is not None:
-            upload_doc.setEnabled(can_manage_docs)
 
     def _on_new_matter(self) -> None:
         if self._backend_client is None:
@@ -436,7 +423,6 @@ class MainWindow(QMainWindow):
         try:
             self._backend_client.add_fee(self._current_matter_id, fee_type="Filing fee", amount=0)
             self.status_label.setText("Fee added")
-            self._on_refresh_fee_receipt_view()
         except (WakiliOSClientError, WakiliOSConnectionError) as exc:
             self.status_label.setText(f"Add fee failed: {exc}")
 
@@ -446,86 +432,8 @@ class MainWindow(QMainWindow):
         try:
             self._backend_client.add_receipt(self._current_matter_id, receipt_number="NEW-RCT", amount=0)
             self.status_label.setText("Receipt added")
-            self._on_refresh_fee_receipt_view()
         except (WakiliOSClientError, WakiliOSConnectionError) as exc:
             self.status_label.setText(f"Add receipt failed: {exc}")
-
-    def _on_upload_document(self) -> None:
-        if self._backend_client is None or not self._current_matter_id:
-            self.status_label.setText("Connect to backend and select a matter first")
-            return
-        file_paths, _ = QFileDialog.getOpenFileNames(
-            self,
-            "Upload document to matter",
-            "",
-            "Documents (*.pdf *.docx *.doc *.png *.jpg *.jpeg *.tif *.tiff *.txt);;All files (*)",
-        )
-        if not file_paths:
-            return
-        for file_path in file_paths:
-            try:
-                result = self._backend_client.upload_document(self._current_matter_id, file_path)
-                doc_id = result.get("document_id", "?")
-                self.status_label.setText(f"Uploaded document: {doc_id}")
-            except (WakiliOSClientError, WakiliOSConnectionError) as exc:
-                self.status_label.setText(f"Document upload failed: {exc}")
-                return
-        # Refresh document list
-        doc_list = self.findChild(QListWidget, "matterDocumentsTabList")
-        if doc_list is not None:
-            doc_list.clear()
-            try:
-                workspace = self._backend_client.workspace(self._current_matter_id)
-                for doc in workspace.get("documents", []):
-                    title = doc.get("title", doc.get("document_type", "Document"))
-                    doc_list.addItem(f"{title} (id: {doc.get('document_id', '?')})")
-            except (WakiliOSClientError, WakiliOSConnectionError):
-                pass
-
-    def _on_refresh_fee_receipt_view(self) -> None:
-        """Refresh the fees and receipts tabs to show linked data."""
-        if self._backend_client is None or not self._current_matter_id:
-            return
-        try:
-            workspace = self._backend_client.workspace(self._current_matter_id)
-            fees_list = self.findChild(QListWidget, "feesTabList")
-            if fees_list is not None:
-                fees_list.clear()
-                for fee in workspace.get("fees", []):
-                    fee_id = fee.get("fee_id", "?")
-                    fee_type = fee.get("fee_type", "Fee")
-                    amount = fee.get("amount", 0)
-                    status = fee.get("status", "")
-                    fees_list.addItem(f"[{fee_id}] {fee_type}: KES {amount} ({status})")
-            receipts_list = self.findChild(QListWidget, "receiptsTabList")
-            if receipts_list is not None:
-                receipts_list.clear()
-                for receipt in workspace.get("receipts", []):
-                    receipt_number = receipt.get("receipt_number", "?")
-                    amount = receipt.get("amount", 0)
-                    linked = receipt.get("linked_fee_id", "")
-                    linked_info = f" -> fee {linked}" if linked else ""
-                    receipts_list.addItem(f"[{receipt_number}] KES {amount}{linked_info}")
-        except (WakiliOSClientError, WakiliOSConnectionError) as exc:
-            self.status_label.setText(f"Failed to refresh fees/receipts: {exc}")
-
-    def _on_refresh_audit_log(self) -> None:
-        if self._backend_client is None:
-            self.status_label.setText("Connect to backend first")
-            return
-        try:
-            result = self._backend_client.audit_log()
-            audit_list = self.findChild(QListWidget, "auditLogList")
-            if audit_list is not None:
-                audit_list.clear()
-                for event in result.get("events", []):
-                    timestamp = event.get("timestamp", "")
-                    action = event.get("action", "")
-                    user = event.get("username", "")
-                    audit_list.addItem(f"{timestamp} | {user} | {action}")
-            self.status_label.setText(f"Audit log: {len(result.get('events', []))} events")
-        except (WakiliOSClientError, WakiliOSConnectionError) as exc:
-            self.status_label.setText(f"Failed to load audit log: {exc}")
 
     @Slot()
     def run_worker_selftest(self) -> None:
@@ -840,10 +748,6 @@ def _matter_page() -> QWidget:
         _matter_text_list_tab("matterDocumentsTab", "Matter document vault"),
         "Documents",
     )
-    # Document upload button (separate from the generic Add)
-    doc_upload_btn = QPushButton("Upload document")
-    doc_upload_btn.setObjectName("uploadDocumentButton")
-    workspace_tabs.findChild(QWidget, "matterDocumentsTab").layout().addWidget(doc_upload_btn)
 
     layout.addLayout(header)
     layout.addWidget(matter_list)
@@ -981,28 +885,16 @@ def _backup_page() -> QWidget:
 def _admin_page() -> QWidget:
     page = QWidget()
     page.setObjectName("adminPage")
-    layout = QVBoxLayout(page)
-    form = QFormLayout()
+    layout = QFormLayout(page)
     installation = QLabel("Installation not synced")
     installation.setObjectName("installationStatusLabel")
     entitlement = QLabel("Entitlement unknown")
     entitlement.setObjectName("entitlementStatusLabel")
     sync_button = QPushButton("Check status")
     sync_button.setObjectName("adminSyncButton")
-    form.addRow("Installation", installation)
-    form.addRow("Entitlement", entitlement)
-    form.addRow("", sync_button)
-    layout.addLayout(form)
-
-    # Audit log viewer
-    layout.addWidget(QLabel("Audit Log"))
-    audit_list = QListWidget()
-    audit_list.setObjectName("auditLogList")
-    audit_list.addItem("No audit events loaded")
-    refresh_audit = QPushButton("Refresh audit log")
-    refresh_audit.setObjectName("refreshAuditLogButton")
-    layout.addWidget(audit_list)
-    layout.addWidget(refresh_audit)
+    layout.addRow("Installation", installation)
+    layout.addRow("Entitlement", entitlement)
+    layout.addRow("", sync_button)
     return page
 
 
