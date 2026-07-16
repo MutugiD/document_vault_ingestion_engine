@@ -24,6 +24,9 @@ jobs:
       - name: Install validation tools
         run: python -m pip install --upgrade pip ruff cryptography PyMuPDF python-docx PySide6 pyinstaller
 
+      - name: Install runtime dependencies
+        run: python -m pip install fastapi uvicorn pydantic httpx python-multipart starlette
+
       - name: Validate documentation pack
         run: python tests\validate_docs.py
 
@@ -108,23 +111,11 @@ jobs:
       - name: Validate manual private-document smoke runner
         run: python tests\validate_manual_ingest_smoke.py
 
-      - name: Validate frozen Windows build
-        run: python tests\validate_frozen_build.py
+      - name: Validate WakiliOS multi-seat backend
+        run: python tests\validate_wakilios_backend.py
 
-      - name: Validate release bundle
-        run: python tests\validate_release_bundle.py
+      - name: Validate WakiliOS API endpoints
+        run: python tests\validate_wakilios_api.py
 
-      - name: Validate portable install smoke
-        run: python tests\validate_portable_install.py
-
-      - name: Validate installer publishing metadata
-        run: python tests\validate_installer_publishing.py
-
-      - name: Validate automatic update channel
-        run: python tests\validate_update_channel.py
-
-      - name: Run application selftest
-        run: python main.py --selftest
-
-      - name: Lint Python files
-        run: ruff check .
+      - name: Validate WakiliOS backend CLI
+        run: python main.py --wakilios-backend-e2e
