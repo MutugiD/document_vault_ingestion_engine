@@ -25,7 +25,7 @@ jobs:
         run: python -m pip install --upgrade pip ruff cryptography PyMuPDF python-docx PySide6 pyinstaller
 
       - name: Install runtime dependencies
-        run: python -m pip install fastapi uvicorn pydantic httpx
+        run: python -m pip install fastapi uvicorn pydantic httpx python-multipart starlette
 
       - name: Validate documentation pack
         run: python tests\validate_docs.py
