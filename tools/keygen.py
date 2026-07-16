@@ -2,8 +2,9 @@
 RSA key generation for WakiliOS licensing.
 
 Run ONCE, offline. Writes:
-  resources/license_public_key.pem  -> bundled in the app (and hard-coded in licensing/core.py, spec §6.2)
-  _vendor/private_key.pem          -> KEPT BY VENDOR ONLY, never bundled/committed
+  resources/license_public_key.pem -> bundled in the app
+    (and hard-coded in licensing/core.py, spec §6.2)
+  _vendor/private_key.pem -> KEPT BY VENDOR ONLY, never bundled
 
 Production uses 4096-bit (spec). Pass a size arg to override (tests use 2048 for speed).
 """

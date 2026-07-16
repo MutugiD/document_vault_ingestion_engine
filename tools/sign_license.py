@@ -5,7 +5,8 @@ Produces a license.key JSON file for a customer's installation.
 Uses _vendor/private_key.pem. Never ship this script or the private key.
 
 Usage:
-    python tools/sign_license.py <installation_id> <firm_name> <plan> <expiry YYYY-MM-DD> [out=license.key]
+    python tools/sign_license.py <installation_id> <firm_name> \
+        <plan> <expiry YYYY-MM-DD> [out=license.key]
 
     plan: solo, pro, enterprise
 
@@ -16,16 +17,19 @@ import base64
 import json
 import os
 import sys
+from datetime import UTC, datetime
 
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from licensing.core import LicenseDocument, FeatureEntitlements, canonical_license_bytes  # noqa: E402
-
+from licensing.core import (  # noqa: E402
+    FeatureEntitlements,
+    LicenseDocument,
+    canonical_license_bytes,
+)
 
 PLAN_FEATURES = {
     "solo": FeatureEntitlements(
@@ -54,7 +58,10 @@ PLAN_FEATURES = {
 
 def main() -> None:
     if len(sys.argv) < 5:
-        print("usage: python tools/sign_license.py <installation_id> <firm_name> <plan> <expiry> [out]")
+        print(
+            "usage: python tools/sign_license.py "
+            "<installation_id> <firm_name> <plan> <expiry> [out]"
+        )
         print("  plan: solo, pro, enterprise")
         print("  out: output file path (default: license.key)")
         raise SystemExit(2)
@@ -78,18 +85,18 @@ def main() -> None:
     with open(priv_path, "rb") as f:
         priv = serialization.load_pem_private_key(f.read(), password=None)
 
-    from datetime import date, datetime, timezone
-    from uuid import uuid4
+    from datetime import date
+    from uuid import uuid4 as _uuid4
 
     features = PLAN_FEATURES[plan]
     doc = LicenseDocument(
         installation_id=installation_id,
-        license_id=str(uuid4()),
+        license_id=str(_uuid4()),
         firm_display_name=firm_name,
         plan=plan,
         features=features,
         expiry=date.fromisoformat(expiry),
-        issued_at=datetime.now(timezone.utc),
+        issued_at=datetime.now(UTC),
         signature="",  # placeholder
     )
 

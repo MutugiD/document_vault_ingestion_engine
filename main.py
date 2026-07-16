@@ -7,6 +7,7 @@ import importlib
 import json
 import sys
 import tempfile
+from datetime import UTC
 from pathlib import Path
 
 from ui import APP_VERSION
@@ -50,11 +51,12 @@ def run_selftest() -> int:
         failures.append(f"licensing selftest: {exc}")
 
     try:
-        from licensing import check_clock, InMemoryStore
-        from datetime import datetime, timezone
+        from datetime import datetime
+
+        from licensing import InMemoryStore, check_clock
 
         store = InMemoryStore()
-        ok, reason = check_clock(store, now=datetime(2026, 1, 1, tzinfo=timezone.utc))
+        ok, reason = check_clock(store, now=datetime(2026, 1, 1, tzinfo=UTC))
         if not ok:
             failures.append(f"clock guard: {reason}")
     except Exception as exc:  # pragma: no cover
@@ -69,8 +71,8 @@ def run_selftest() -> int:
 
     print("SELFTEST PASS")
     print(f"Imported modules: {', '.join(CORE_MODULES)}")
-    print(f"Licensing installation identity check: pass")
-    print(f"Clock guard check: pass")
+    print("Licensing installation identity check: pass")
+    print("Clock guard check: pass")
     print(f"App version: {APP_VERSION}")
     _write_selftest_result("PASS", [])
     return 0

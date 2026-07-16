@@ -17,11 +17,13 @@ def main() -> None:
     assert "products/product_catalog.json" in spec_text
     assert "resources/license_public_key.pem" in spec_text
     assert "resources/public_kenyan_legal_docs.json" in spec_text
-    assert "\"ai\"" in spec_text
+    assert '"ai"' in spec_text
     assert "runtime/tesseract" in spec_text
-    assert (ROOT / "resources" / "license_public_key.pem").read_text(
-        encoding="utf-8"
-    ).startswith("-----BEGIN PUBLIC KEY-----")
+    assert (
+        (ROOT / "resources" / "license_public_key.pem")
+        .read_text(encoding="utf-8")
+        .startswith("-----BEGIN PUBLIC KEY-----")
+    )
     assert "private" not in spec_text.lower()
     assert "secret" not in spec_text.lower()
     assert "credential" not in spec_text.lower()

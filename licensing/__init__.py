@@ -7,7 +7,7 @@ from licensing.admin import (
     load_admin_license_payment_state,
     sync_admin_license_payment_boundary,
 )
-from licensing.clockguard import (
+from licensing.clockguard import (  # noqa: F401
     FileStore,
     InMemoryStore,
     check_clock,

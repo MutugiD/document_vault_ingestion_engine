@@ -13,7 +13,6 @@ from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, Signal, 
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
-    QComboBox,
     QFileDialog,
     QFormLayout,
     QFrame,
@@ -23,7 +22,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QMainWindow,
-    QMessageBox,
     QPushButton,
     QTabWidget,
     QTextEdit,
@@ -274,7 +272,7 @@ class MainWindow(QMainWindow):
                 dialog.login_succeeded.connect(self._on_backend_login)
                 dialog.solo_mode_started.connect(self._on_solo_mode_started)
 
-        for tab_name, button_name, handler in [
+        for _tab_name, button_name, handler in [
             ("Matters", "newMatterButton", self._on_new_matter),
             ("Matters", "exportCalendarButton", self._on_export_calendar),
             ("Matters", "refreshMatterListButton", self._on_refresh_matters),
@@ -311,7 +309,9 @@ class MainWindow(QMainWindow):
     def _on_backend_login(self, token: str, username: str, role: str) -> None:
         url_input = self.findChild(QLineEdit, "serverUrlInput")
         url = url_input.text().strip() if url_input else "http://localhost:8000"
-        self._backend_client = WakiliOSClient(WakiliOSClientConfig(base_url=url, session_token=token))
+        self._backend_client = WakiliOSClient(
+            WakiliOSClientConfig(base_url=url, session_token=token)
+        )
         self._backend_local = None
         self._current_role = role
         self._current_username = username
@@ -344,12 +344,11 @@ class MainWindow(QMainWindow):
 
     def _apply_role_permissions(self, role: str) -> None:
         """Enable/disable controls based on user role."""
-        from wakilios.core import ACCOUNTS_ROLES, DOCUMENT_ROLES, SUMMARY_ROLES, WRITE_ROLES
+        from wakilios.core import ACCOUNTS_ROLES, SUMMARY_ROLES, WRITE_ROLES
 
         can_write = role in WRITE_ROLES
         can_manage_fees = role in ACCOUNTS_ROLES
         can_summarize = role in SUMMARY_ROLES
-        can_manage_docs = role in DOCUMENT_ROLES
 
         fee_add = self.findChild(QPushButton, "feesAddButton")
         if fee_add is not None:
@@ -379,7 +378,8 @@ class MainWindow(QMainWindow):
         """Create a matter via local backend or HTTP client."""
         if self._backend_local is not None:
             return self._backend_local.create_litigation_matter(
-                self._solo_token(), **fields,
+                self._solo_token(),
+                **fields,
             )
         if self._backend_client is not None:
             return self._backend_client.create_matter(**fields)
@@ -485,7 +485,9 @@ class MainWindow(QMainWindow):
                 filing_date="",
             )
             self._current_matter_id = str(result.get("matter_id", ""))
-            self.status_label.setText(f"Created matter: {result.get('internal_reference', self._current_matter_id)}")
+            self.status_label.setText(
+                f"Created matter: {result.get('internal_reference', self._current_matter_id)}"
+            )
             self._on_refresh_matters()
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Failed to create matter: {exc}")
@@ -499,7 +501,9 @@ class MainWindow(QMainWindow):
             return
         try:
             ics = self._backend_export_calendar(self._current_matter_id)
-            dest = QFileDialog.getSaveFileName(self, "Save Calendar", "", "Calendar Files (*.ics)")[0]
+            dest = QFileDialog.getSaveFileName(self, "Save Calendar", "", "Calendar Files (*.ics)")[
+                0
+            ]
             if dest:
                 Path(dest).write_text(ics, encoding="utf-8")
                 self.status_label.setText(f"Calendar exported to {dest}")
@@ -523,7 +527,9 @@ class MainWindow(QMainWindow):
             self.status_label.setText(f"Failed to list matters: {exc}")
 
     def _on_update_summary(self) -> None:
-        if (self._backend_local is None and self._backend_client is None) or not self._current_matter_id:
+        if (
+            self._backend_local is None and self._backend_client is None
+        ) or not self._current_matter_id:
             return
         summary_box = self.findChild(QTextEdit, "aiMatterSummaryOutput")
         if summary_box is None:
@@ -535,25 +541,35 @@ class MainWindow(QMainWindow):
             self.status_label.setText(f"Summary update failed: {exc}")
 
     def _on_add_party(self) -> None:
-        if (self._backend_local is None and self._backend_client is None) or not self._current_matter_id:
+        if (
+            self._backend_local is None and self._backend_client is None
+        ) or not self._current_matter_id:
             return
         try:
-            self._backend_add_party(self._current_matter_id, name="New Party", party_role="Respondent")
+            self._backend_add_party(
+                self._current_matter_id, name="New Party", party_role="Respondent"
+            )
             self.status_label.setText("Party added")
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Add party failed: {exc}")
 
     def _on_add_activity(self) -> None:
-        if (self._backend_local is None and self._backend_client is None) or not self._current_matter_id:
+        if (
+            self._backend_local is None and self._backend_client is None
+        ) or not self._current_matter_id:
             return
         try:
-            self._backend_add_activity(self._current_matter_id, activity_type="mention", title="New Activity", starts_at="")
+            self._backend_add_activity(
+                self._current_matter_id, activity_type="mention", title="New Activity", starts_at=""
+            )
             self.status_label.setText("Activity added")
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Add activity failed: {exc}")
 
     def _on_add_lodging(self) -> None:
-        if (self._backend_local is None and self._backend_client is None) or not self._current_matter_id:
+        if (
+            self._backend_local is None and self._backend_client is None
+        ) or not self._current_matter_id:
             return
         try:
             self._backend_add_lodging(self._current_matter_id, document_kind="New Lodging")
@@ -562,16 +578,22 @@ class MainWindow(QMainWindow):
             self.status_label.setText(f"Add lodging failed: {exc}")
 
     def _on_add_court_decision(self) -> None:
-        if (self._backend_local is None and self._backend_client is None) or not self._current_matter_id:
+        if (
+            self._backend_local is None and self._backend_client is None
+        ) or not self._current_matter_id:
             return
         try:
-            self._backend_add_court_decision(self._current_matter_id, decision_type="Ruling", decision_date="")
+            self._backend_add_court_decision(
+                self._current_matter_id, decision_type="Ruling", decision_date=""
+            )
             self.status_label.setText("Court decision added")
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Add court decision failed: {exc}")
 
     def _on_add_fee(self) -> None:
-        if (self._backend_local is None and self._backend_client is None) or not self._current_matter_id:
+        if (
+            self._backend_local is None and self._backend_client is None
+        ) or not self._current_matter_id:
             return
         try:
             self._backend_add_fee(self._current_matter_id, fee_type="Filing fee", amount=0)
@@ -581,10 +603,17 @@ class MainWindow(QMainWindow):
             self.status_label.setText(f"Add fee failed: {exc}")
 
     def _on_add_receipt(self) -> None:
-        if (self._backend_local is None and self._backend_client is None) or not self._current_matter_id:
+        if (
+            self._backend_local is None and self._backend_client is None
+        ) or not self._current_matter_id:
             return
         try:
-            self._backend_add_receipt(self._current_matter_id, receipt_number="NEW-RCT", amount=0, receipt_date="2026-07-16")
+            self._backend_add_receipt(
+                self._current_matter_id,
+                receipt_number="NEW-RCT",
+                amount=0,
+                receipt_date="2026-07-16",
+            )
             self.status_label.setText("Receipt added")
             self._on_refresh_fee_receipt_view()
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
@@ -611,7 +640,8 @@ class MainWindow(QMainWindow):
                     token = self._backend_local.login(self._current_username, "admin-pass").token
                     content = Path(file_path).read_bytes()
                     result = self._backend_local.upload_document(
-                        token, self._current_matter_id,
+                        token,
+                        self._current_matter_id,
                         title=Path(file_path).name,
                         document_type="general",
                         content=content,
@@ -620,7 +650,9 @@ class MainWindow(QMainWindow):
                         extracted_text=content.decode("utf-8", errors="replace"),
                     )
                 elif self._backend_client is not None:
-                    result = self._backend_client.upload_document(self._current_matter_id, file_path)
+                    result = self._backend_client.upload_document(
+                        self._current_matter_id, file_path
+                    )
                 else:
                     continue
                 doc_id = result.get("document_id", "?")
@@ -642,7 +674,9 @@ class MainWindow(QMainWindow):
 
     def _on_refresh_fee_receipt_view(self) -> None:
         """Refresh the fees and receipts tabs to show linked data."""
-        if (self._backend_local is None and self._backend_client is None) or not self._current_matter_id:
+        if (
+            self._backend_local is None and self._backend_client is None
+        ) or not self._current_matter_id:
             return
         try:
             workspace = self._backend_workspace(self._current_matter_id)
@@ -684,6 +718,7 @@ class MainWindow(QMainWindow):
             self.status_label.setText(f"Audit log: {len(result.get('events', []))} events")
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Failed to load audit log: {exc}")
+
     def run_worker_selftest(self) -> None:
         self.selftest_button.setEnabled(False)
         self.status_label.setText("Running worker selftest")

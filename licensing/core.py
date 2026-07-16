@@ -1,12 +1,16 @@
 """Offline license validation and feature gate decisions.
 
-License = JSON {installation_id, license_id, firm_display_name, plan, features, expiry, issued_at, signature}.
-The signature is over a CANONICAL serialization (sorted keys, no whitespace) using PSS + SHA-256
-with the vendor's RSA private key. The public key is HARD-CODED below (spec §6.2), not read from
-a swappable file. In a release build this module is Cython-compiled to licensing/core.pyd
-(scripts/obfuscate_licensing.py), so the key lives in native machine code. This closes the
-key-substitution bypass — an attacker can no longer replace a loose public_key.pem on disk to
-self-sign licenses; forging one still requires the vendor private key.
+License = JSON {installation_id, license_id, firm_display_name,
+plan, features, expiry, issued_at, signature}.
+The signature is over a CANONICAL serialization (sorted keys, no
+whitespace) using PSS + SHA-256 with the vendor's RSA private key.
+The public key is HARD-CODED below (spec §6.2), not read from a
+swappable file. In a release build this module is Cython-compiled
+to licensing/core.pyd (scripts/obfuscate_licensing.py), so the key
+lives in native machine code. This closes the key-substitution
+bypass — an attacker can no longer replace a loose
+public_key.pem on disk to self-sign licenses; forging one still
+requires the vendor private key.
 """
 
 from __future__ import annotations

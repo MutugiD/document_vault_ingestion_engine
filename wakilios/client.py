@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
 from typing import Any
-from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 
 @dataclass
@@ -74,12 +73,24 @@ class WakiliOSClient:
         return self._request("GET", "/health", include_auth=False)
 
     def login(self, username: str, password: str) -> dict[str, Any]:
-        result = self._request("POST", "/auth/login", {"username": username, "password": password}, include_auth=False)
+        result = self._request(
+            "POST", "/auth/login", {"username": username, "password": password}, include_auth=False
+        )
         self.config.session_token = str(result.get("token", ""))
         return result
 
-    def create_user(self, username: str, password: str, role: str, display_name: str) -> dict[str, Any]:
-        return self._post("/users", {"username": username, "password": password, "role": role, "display_name": display_name})
+    def create_user(
+        self, username: str, password: str, role: str, display_name: str
+    ) -> dict[str, Any]:
+        return self._post(
+            "/users",
+            {
+                "username": username,
+                "password": password,
+                "role": role,
+                "display_name": display_name,
+            },
+        )
 
     def list_matters(self) -> list[dict[str, Any]]:
         result = self._get("/matters")
@@ -101,7 +112,9 @@ class WakiliOSClient:
         return self._post(f"/matters/{matter_id}/parties", fields)
 
     def add_activity(self, matter_id: str, **fields: object) -> dict[str, Any]:
-        return self._post(f"/matters/{matter_id}/activities", {k: str(v) for k, v in fields.items()})
+        return self._post(
+            f"/matters/{matter_id}/activities", {k: str(v) for k, v in fields.items()}
+        )
 
     def add_lodging(self, matter_id: str, **fields: str) -> dict[str, Any]:
         return self._post(f"/matters/{matter_id}/lodgings", fields)
@@ -124,12 +137,14 @@ class WakiliOSClient:
     def offline_cache(self) -> dict[str, Any]:
         return self._get("/offline-cache")
 
-    def upload_document(self, matter_id: str, file_path: str, title: str = "", document_type: str = "general") -> dict[str, Any]:
+    def upload_document(
+        self, matter_id: str, file_path: str, title: str = "", document_type: str = "general"
+    ) -> dict[str, Any]:
         """Upload a document to a matter using multipart form-data."""
         import mimetypes
-        from urllib.request import Request
-        from pathlib import Path as PPath
         import uuid
+        from pathlib import Path as PPath
+        from urllib.request import Request
 
         path = PPath(file_path)
         filename = path.name
@@ -139,11 +154,11 @@ class WakiliOSClient:
         boundary = uuid.uuid4().hex
         lines: list[bytes] = []
         lines.append(f"--{boundary}".encode())
-        lines.append(f'Content-Disposition: form-data; name="title"'.encode())
+        lines.append(b'Content-Disposition: form-data; name="title"')
         lines.append(b"")
         lines.append(title.encode() or filename.encode())
         lines.append(f"--{boundary}".encode())
-        lines.append(f'Content-Disposition: form-data; name="document_type"'.encode())
+        lines.append(b'Content-Disposition: form-data; name="document_type"')
         lines.append(b"")
         lines.append(document_type.encode())
         lines.append(f"--{boundary}".encode())

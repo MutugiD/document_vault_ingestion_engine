@@ -11,9 +11,8 @@ can clear the file. A missing stored value is treated as first run.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-
 
 _TAMPERED = "System clock tampered - license revoked"
 
@@ -59,8 +58,9 @@ def ntp_utc(server: str = "pool.ntp.org", timeout: float = 2.0) -> datetime | No
     """Best-effort UTC time from an NTP server. Returns None when unreachable."""
     try:
         import ntplib
+
         resp = ntplib.NTPClient().request(server, version=3, timeout=timeout)
-        return datetime.fromtimestamp(resp.tx_time, tz=timezone.utc)
+        return datetime.fromtimestamp(resp.tx_time, tz=UTC)
     except Exception:
         return None
 
@@ -72,7 +72,7 @@ def check_clock(
     ntp_tolerance_days: int = 1,
 ) -> tuple[bool, str]:
     """Return (ok, reason). Locks if the system clock rolled back vs the stored stamp."""
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
 
     # NTP cross-check: system clock far behind true time => rolled back
     if ntp is not None and now < ntp - timedelta(days=ntp_tolerance_days):

@@ -30,9 +30,7 @@ ADVOCATE_ROLE = "advocate"
 CLERK_ROLE = "clerk"
 ACCOUNTS_ROLE = "accounts"
 READ_ONLY_ROLE = "read_only"
-STANDARD_ROLES = frozenset(
-    {ADMIN_ROLE, ADVOCATE_ROLE, CLERK_ROLE, ACCOUNTS_ROLE, READ_ONLY_ROLE}
-)
+STANDARD_ROLES = frozenset({ADMIN_ROLE, ADVOCATE_ROLE, CLERK_ROLE, ACCOUNTS_ROLE, READ_ONLY_ROLE})
 WRITE_ROLES = frozenset({ADMIN_ROLE, ADVOCATE_ROLE, CLERK_ROLE, ACCOUNTS_ROLE})
 SUMMARY_ROLES = frozenset({ADMIN_ROLE, ADVOCATE_ROLE})
 DOCUMENT_ROLES = frozenset({ADMIN_ROLE, ADVOCATE_ROLE, CLERK_ROLE})
@@ -602,8 +600,7 @@ class WakiliOSBackend:
                 """
             ).fetchall()
         return [
-            _row_mapping(row) | {"details": json.loads(str(row["details_json"]))}
-            for row in rows
+            _row_mapping(row) | {"details": json.loads(str(row["details_json"]))} for row in rows
         ]
 
     def require_authenticated(self, token: str) -> dict[str, str]:

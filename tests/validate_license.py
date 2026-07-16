@@ -163,7 +163,7 @@ def main() -> None:
 
 def _validate_clockguard() -> None:
     """Validate clock-rollback detection logic (spec §6.2)."""
-    from licensing import InMemoryStore, FileStore, check_clock
+    from licensing import FileStore, InMemoryStore, check_clock
 
     # Normal forward clock: should pass
     store = InMemoryStore()
@@ -181,7 +181,9 @@ def _validate_clockguard() -> None:
     # Rollback: should fail
     ok, reason = check_clock(store, now=datetime(2026, 6, 24, tzinfo=UTC))
     assert not ok, "rollback should be detected"
-    assert "tampered" in reason.lower() or "revoked" in reason.lower(), f"unexpected reason: {reason}"
+    assert "tampered" in reason.lower() or "revoked" in reason.lower(), (
+        f"unexpected reason: {reason}"
+    )
 
     # NTP cross-check: system clock far behind NTP
     store2 = InMemoryStore()
@@ -192,7 +194,9 @@ def _validate_clockguard() -> None:
         ntp_tolerance_days=1,
     )
     assert not ok, "clock behind NTP should be detected"
-    assert "tampered" in reason.lower() or "revoked" in reason.lower(), f"unexpected reason: {reason}"
+    assert "tampered" in reason.lower() or "revoked" in reason.lower(), (
+        f"unexpected reason: {reason}"
+    )
 
     # NTP within tolerance: should pass
     store3 = InMemoryStore()
@@ -206,6 +210,7 @@ def _validate_clockguard() -> None:
 
     # FileStore test
     import tempfile
+
     with tempfile.TemporaryDirectory() as td:
         fs = FileStore(Path(td) / "clock.json")
         ok, reason = check_clock(fs, now=datetime(2026, 6, 25, tzinfo=UTC))

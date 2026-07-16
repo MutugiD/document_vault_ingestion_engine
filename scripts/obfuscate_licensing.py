@@ -41,6 +41,7 @@ def _have_compiler() -> bool:
     """True if a C compiler is available."""
     try:
         from setuptools._distutils import ccompiler, errors
+
         c = ccompiler.new_compiler()
         try:
             c.initialize()
@@ -53,7 +54,8 @@ def _have_compiler() -> bool:
 
 def _check() -> int:
     try:
-        import Cython
+        import Cython  # noqa: F401
+
         cy = True
     except ImportError:
         cy = False
@@ -69,8 +71,16 @@ def _check() -> int:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Cython-obfuscate the licensing package.")
-    ap.add_argument("--keep-sources", action="store_true", help="keep the .py after compiling (inspect)")
-    ap.add_argument("--check", action="store_true", help="only report Cython + compiler availability")
+    ap.add_argument(
+        "--keep-sources",
+        action="store_true",
+        help="keep the .py after compiling (inspect)",
+    )
+    ap.add_argument(
+        "--check",
+        action="store_true",
+        help="only report Cython + compiler availability",
+    )
     args = ap.parse_args(argv)
 
     if args.check:
@@ -117,7 +127,8 @@ def main(argv=None) -> int:
             shutil.copy2(built[0], os.path.join(PKG, os.path.basename(built[0])))
             if not args.keep_sources:
                 os.remove(os.path.join(PKG, f"{m}.py"))
-            print(f"  {m}: {os.path.basename(built[0])}" + ("" if args.keep_sources else "  (.py removed)"))
+            status = "removed" if not args.keep_sources else "kept"
+            print(f"  {m}: {os.path.basename(built[0])} ({status})")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
