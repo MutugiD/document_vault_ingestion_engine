@@ -6,8 +6,20 @@ Support commercial licensing without weakening local data ownership.
 
 ## Model
 
-- Signed offline license.
-- RSA-PSS/SHA-256 verification.
+- Signed offline license (RSA-PSS/SHA-256).
+- **Hard-coded RSA public key** (spec §6.2): The public key is compiled into
+  `licensing/core.py` as a bytes literal, not read from a swappable file. In
+  release builds, Cython compiles this module to `licensing/core.pyd`, so the
+  key lives in native machine code. This closes the key-substitution bypass — an
+  attacker can no longer replace a loose `public_key.pem` on disk to self-sign
+  licenses; forging one still requires the vendor private key.
+- **Clock-rollback guard** (spec §6.2): `licensing/clockguard.py` stores a
+  monotonic "last seen" UTC timestamp. If the system clock is earlier than the
+  stored value, the app locks. NTP cross-check catches clocks set far behind
+  real time. Degrades gracefully when NTP is unreachable.
+- **Cython obfuscation** (spec §6.3): `scripts/obfuscate_licensing.py` compiles
+  `licensing/core.py` and `licensing/clockguard.py` to `.pyd`. The shipped
+  bundle carries no `.py`/`.pyc` for licence logic. Free (no PyArmor).
 - Periodic online sync for entitlement state.
 - Feature flags for paid modules such as cloud backup and matter RAG.
 - Privacy-allowlisted admin check-in payloads.
@@ -19,66 +31,41 @@ Support commercial licensing without weakening local data ownership.
 - installation ID
 - license ID
 - firm display name
-- plan
-- features
-- expiry
-- issued at
-- signature
+- plan (solo, pro, enterprise)
+- features (document_intake, cloud_backup, managed_restore, matter_rag, hosted_ai)
+- expiry date
+- issued_at timestamp
+- RSA-PSS/SHA-256 signature over canonical JSON (sorted keys, no whitespace)
 
-## Forbidden Sync Data
+## Verification Flow
 
-- Matter names.
-- Client names.
-- Case numbers.
-- Document filenames.
-- OCR text.
-- Extracted text.
-- Document hashes.
-- Prompts.
-- Retrieved RAG context.
-- Recovery keys.
-- Local paths.
+1. Read `license.key` from the app directory or `%APPDATA%\WakiliOS\`.
+2. Parse JSON, re-serialize with sorted keys and no whitespace.
+3. Verify signature against the hard-coded `_PUBLIC_KEY_PEM`.
+4. Check `installation_id` matches local identity.
+5. Check `expiry` is not past.
+6. Return `LicenseValidationResult` with status and feature flags.
 
-## Admin Check-In Payload
+## Vendor Tools
 
-The Windows app may send only:
+- `tools/keygen.py` — Generate 4096-bit RSA key pair; auto-updates hard-coded key in `core.py`.
+- `tools/sign_license.py` — Sign a license for a customer's installation ID.
+- `scripts/obfuscate_licensing.py` — Cython-compile licensing modules for release builds.
 
-- installation ID
-- license ID
-- app version
-- device nickname
-- license status
-- paid entitlement state
-- feature flags
-- coarse backup health
-- generated timestamp
+## Clock-Rollback Guard
 
-The backend response may enable, disable, suspend, or expire paid/admin features. Disablement stops paid and online features, but does not delete documents and does not block local recovery/export of already-owned legal data.
+- `InMemoryStore` for tests, `FileStore` for production.
+- `check_clock(store, now=..., ntp=...)` returns `(ok, reason)`.
+- NTP cross-check with configurable tolerance (default 1 day).
+- Degrades gracefully: missing stored value is treated as first run; NTP failure
+  is non-fatal.
 
-## Payment Entitlements
+## Key Substitution Attack
 
-Supported local plan definitions:
+In a non-obfuscated build, an attacker could:
+1. Replace `resources/license_public_key.pem` on disk (defeated: key is hard-coded).
+2. Edit `licensing/core.py` to use a different key (defeated: Cython compiles to `.pyd`).
+3. Patch the `.pyd` binary (requires reverse engineering native code).
 
-- `trial`: document intake only
-- `solo`: document intake, cloud backup, and matter RAG
-- `firm`: document intake, cloud backup, managed restore, and matter RAG
-
-Payment status can be active, suspended, expired, or disabled. Suspended/expired/disabled payment stops paid and online features but preserves local data access for valid offline licenses. Admin override can force-disable paid features or temporarily force-enable plan features for support cases.
-
-## Verification
-
-`tests/validate_license.py` proves:
-
-- A valid signed license activates paid feature flags.
-- A valid signed license can activate `matter_rag`.
-- A tampered license fails signature validation.
-- A license bound to another installation fails safely.
-- An expired license disables paid features but still allows local data access.
-- A disabled installation disables paid features but still allows local data access.
-- The admin check-in payload excludes matter, client, case, filename, OCR, prompt, hash, and recovery-key fields.
-- Owner-backend disablement stops paid/online features without blocking local data access.
-- A grace-expired sync state stops paid/online features while preserving local document access.
-- Payment suspended/expired states stop cloud backup and matter RAG without blocking local recovery access.
-- Admin override states can force-disable or force-enable paid feature decisions.
-
-`main.py --selftest` also checks that installation identity persistence works in packaged-app style temporary storage.
+The hard-coded key + Cython obfuscation raises the bar from "replace a file" to
+"reverse-engineer native code."

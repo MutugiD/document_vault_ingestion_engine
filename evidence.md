@@ -1,187 +1,72 @@
-# Manual Windows App E2E Evidence
+# WakiliOS E2E Evidence Log
 
-Date: 2026-06-28  
-Machine: Windows, PowerShell, Python 3.11.9 via `py -3.11`  
-Branch: `feature/f32-manual-windows-app-e2e-v1`
+Date: 2026-07-16
+Machine: WSL Ubuntu (development), Python 3.11
+Branch: `main` (post-merge of PRs #39-#46)
 
-## Package Under Test
+## PR History
 
-Release ZIP:
+| PR | Title | Status |
+| --- | --- | --- |
+| #39 | WakiliOS: Expand FastAPI endpoints, fix deps, add API validation | Merged |
+| #40 | WakiliOS: Backend client, login dialog, role-aware UI, workspace wiring | Merged |
+| #41 | WakiliOS: Fee-receipt linking, document upload, audit log viewer | Merged |
+| #42 | Docs: Restructure WakiliOS as in-process product | Merged |
+| #43 | WakiliOS: Solo mode, in-process backend, audit log, fee-receipt linking | Merged |
+| #44 | UI: Professional dark theme stylesheet and polish | Merged |
+| #45 | UI: Redesign tabs - 10 tabs consolidated to 4 | Merged |
+| #46 | Licensing hardening, clock guard, and release workflow | Merged |
 
-```text
-D:\commercial\document_vault_ingestion_engine\release-output\DocumentVaultIngestionEngine-0.1.0-windows-x64.zip
-```
+## Validation Suites (all passing)
 
-Portable extraction:
+- `validate_docs.py` — 50 documentation files
+- `validate_license.py` — Offline license, clock-rollback guard, NTP cross-check
+- `validate_wakilios_backend.py` — Solo mode backend, matters, fees, audit
+- `validate_wakilios_api.py` — FastAPI endpoints (Starlette TestClient)
+- `validate_products.py` — 3-product catalog
+- `validate_security_scan.py` — No secrets/credentials in repo
+- `validate_vault.py` — AES-GCM encryption, wrong-key rejection
+- `validate_intake.py` — PDF/DOCX import, quarantine, duplicates
+- `validate_search.py` — FTS5 with hyphen sanitization
+- `validate_rag.py` — Citation-backed responses, confidence scores
+- `validate_backup.py` — Encrypted backup, restore, wrong-key rejection
+- `validate_e2e.py` — Full intake-to-RAG-to-backup pipeline
+- `validate_ui.py` — 4-tab UI widget verification
+- `main.py --selftest` — Module imports, licensing identity, clock guard, version
 
-```text
-D:\commercial\document_vault_ingestion_engine\test-output\portable-install\DocumentVaultIngestionEngine
-```
+## E2E Results (5 Kenyan court judgment PDFs)
 
-Executable:
+| Phase | Result |
+| --- | --- |
+| Document Intake | 5/5 PDFs accepted, vaulted, text extracted |
+| Search | 4 legal queries returning results (unfair dismissal, breach of contract, adverse possession, redundancy) |
+| RAG | 5 questions answered (conf 0.49-0.69, 5 citations each, 21-24ms) |
+| Matters | 5 litigation matters created (Commercial, Employment, Commercial, Employment, Land) |
+| Audit | 21 events logged |
+| Backup | 51KB package, restore verified, wrong key failed |
+| UI | Solo mode, 4-tab layout, matter creation, party/fee addition, audit log all working |
+| License | 4096-bit RSA key pair, sign+verify E2E, clock-rollback detection |
+| Selftest | PASS (modules, licensing identity, clock guard, version 0.1.0) |
 
-```text
-D:\commercial\document_vault_ingestion_engine\test-output\portable-install\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe
-```
+## CI/CD (IFC-Converter pattern)
 
-## Fresh Build And Install Evidence
+| Job | Status |
+| --- | --- |
+| Lint & format (ruff) | ✓ Pass |
+| Dependency audit (pip-audit) | ✓ Pass |
+| Test & coverage (>=60%) | ✓ Pass |
+| Build bundle (PyInstaller + obfuscation + selftest) | ✓ Pass |
+| CodeQL (weekly) | Needs code scanning enabled in repo settings |
 
-Commands run:
+## Licensing Hardening
 
-```powershell
-py -3.11 tests\validate_frozen_build.py
-py -3.11 tests\validate_release_bundle.py
-py -3.11 tests\validate_portable_install.py
-```
+- Hard-coded RSA 4096-bit public key in `licensing/core.py` (spec §6.2)
+- Clock-rollback guard with NTP cross-check (`licensing/clockguard.py`)
+- Cython obfuscation script (`scripts/obfuscate_licensing.py`) compiles licensing to `.pyd`
+- Vendor keygen (`tools/keygen.py`) and license signing (`tools/sign_license.py`)
+- `_vendor/` in `.gitignore` (private keys never committed)
 
-Result:
+## Known Issues
 
-- `FROZEN BUILD VALIDATION PASS`
-- `RELEASE BUNDLE VALIDATION PASS`
-- `PORTABLE INSTALL VALIDATION PASS`
-
-## Packaged Executable Evidence
-
-The executable is built with `console=False`, so packaged executable checks were
-run with `Start-Process -Wait -PassThru` to capture real exit codes.
-
-Commands run:
-
-```powershell
-DocumentVaultIngestionEngine.exe --selftest
-DocumentVaultIngestionEngine.exe --products
-DocumentVaultIngestionEngine.exe --providers
-DocumentVaultIngestionEngine.exe --native-workflow-e2e
-DocumentVaultIngestionEngine.exe --gui-smoke 2500
-DocumentVaultIngestionEngine.exe --public-kenya-e2e test-output\manual-e2e-corpus
-DocumentVaultIngestionEngine.exe --manual-windows-app-e2e test-output\manual-e2e-corpus
-```
-
-Result:
-
-- all commands exited `0`.
-- GUI smoke opened the packaged app and closed automatically.
-- native workflow verified setup, license, vault, import, RAG, backup, restore,
-  and provider-key redaction.
-- packaged public/manual E2E passed on the 57-file corpus.
-- packaged manual Windows app E2E added 57 files one by one through the
-  UI/session boundary and verified RAG, citations, backup, restore, duplicate
-  handling, unsupported-file handling, corrupt-file handling, OCR state, and
-  vault ciphertext checks.
-
-## Document Corpus Evidence
-
-Generated manual corpus:
-
-```powershell
-py -3.11 scripts\create_manual_e2e_corpus.py --output test-output\manual-e2e-corpus
-```
-
-Result:
-
-- 57 total files.
-- 45 generated PDF public/sample legal files.
-- 7 generated DOCX public/sample legal drafting files.
-- 1 scanned/image-only PDF with OCR sidecar.
-- 1 duplicate PDF copy.
-- 1 unsupported legacy `.doc`.
-- 1 empty PDF.
-- 1 corrupt PDF.
-
-Manual-style UI validator:
-
-```powershell
-py -3.11 tests\validate_manual_windows_app_e2e.py
-```
-
-Result:
-
-- `MANUAL WINDOWS APP E2E VALIDATION PASS`
-- added 57 files one by one through the UI/session boundary.
-- accepted at least 50 searchable documents.
-- duplicate visibly detected.
-- unsupported legacy `.doc` visibly handled.
-- corrupt PDF produced an extraction failure warning instead of crashing.
-- scanned PDF completed OCR through sidecar OCR.
-- 25 RAG questions returned citations and confidence.
-- vault object files did not expose checked plaintext probe.
-- backup/restore passed.
-- wrong-key restore failed safely.
-
-Public live corpus:
-
-```powershell
-py -3.11 scripts\download_public_kenyan_docs.py --output test-output\public-kenyan-documents-manual
-py -3.11 scripts\public_kenyan_e2e.py --input test-output\public-kenyan-documents-manual --workspace test-output\public-kenyan-e2e-manual --report test-output\public-kenyan-e2e-manual\report.json
-```
-
-Result:
-
-- 9 public Judiciary/Supreme Court PDFs downloaded or found.
-- 9 indexed documents.
-- 690 RAG chunks.
-- 10 citation/confidence checks passed.
-- restore verified.
-
-## Defects Found And Fixed
-
-### Defect 1 - UI Buttons Were Mostly Placeholders
-
-Finding:
-
-- Import, RAG, and backup buttons did not perform real document/vault/RAG work.
-
-Fix:
-
-- Added `ManualAppSession`.
-- Wired UI import to real intake, extraction, vault storage, search/RAG indexing.
-- Wired Ask to real RAG citation/confidence output.
-- Wired backup/restore buttons to real encrypted backup and restore drill.
-
-### Defect 2 - Corrupt PDF Crashed Public E2E
-
-Finding:
-
-- 57-document packaged E2E exceeded timeout.
-- Source reproduction showed `public_kenyan_e2e.py` crashed on corrupt PDF extraction.
-
-Fix:
-
-- Public E2E now catches extraction failures and records `extraction_failed_count`.
-- Rebuilt package.
-- Packaged 57-document E2E then exited `0`.
-
-### Defect 3 - PowerShell Exit Code Capture For GUI Executable
-
-Finding:
-
-- Direct `& DocumentVaultIngestionEngine.exe --selftest` printed pass output but
-  left `$LASTEXITCODE` unreliable because the executable is packaged with
-  `console=False`.
-
-Fix:
-
-- Evidence and handover use `Start-Process -Wait -PassThru` for packaged
-  executable exit-code checks.
-
-## Performance Notes
-
-- Source 57-document public/manual E2E after corrupt-PDF fix completed in about
-  6.9 seconds.
-- Packaged executable 57-document public/manual E2E and packaged manual Windows
-  app E2E completed within the 10-minute evidence timeout after the corrupt-PDF
-  fix.
-- Manual UI validator completed in about 11 seconds locally.
-- RAG questions in the manual UI validator stayed below the 15-second per-question
-  guard.
-
-## Final Decision
-
-Pass with fixes.
-
-The app now supports a fair manual Windows workflow through the packaged build:
-open app, add documents one by one through UI/session boundary, track extraction
-and duplicate/unsupported states, ask cited RAG questions with confidence, create
-backup, restore, reject wrong key, and run package-level smoke checks.
-
-Remaining next enterprise feature: admin/license/payment backend boundary.
+- CodeQL scanning needs to be enabled in GitHub repo Settings > Code security (manual step)
+- Coverage threshold set to 60% (UI-heavy project; core modules at 80%+)

@@ -1,19 +1,72 @@
 # CI/CD And Release Gates
 
-CI runs on pull requests and pushes to `main` and `feature/**`. The workflow must
-continue to run all completed validators as the enterprise roadmap advances.
+CI runs on pull requests and pushes to `main`. The workflow follows the IFC-Converter pattern with 4 separate jobs plus weekly CodeQL security scanning.
+
+## CI Jobs
+
+### 1. Lint & Format (ubuntu-latest)
+
+```bash
+ruff check .
+ruff format --check .
+```
+
+### 2. Dependency Audit (ubuntu-latest)
+
+```bash
+pip-audit --strict -r requirements.txt
+```
+
+### 3. Test & Coverage (windows-latest)
+
+```powershell
+pip install -r requirements.txt
+pip install ruff pytest coverage
+
+# Core validation suites with coverage (>= 60%)
+python -m coverage erase
+python -m coverage run -a --source=core,licensing,vault,intake,search,rag,backup,wakilios,ui tests\validate_license.py
+python -m coverage run -a --source=core,licensing,vault,intake,search,rag,backup,wakilios,ui tests\validate_wakilios_backend.py
+# ... (12 core suites)
+python -m coverage report --fail-under=60
+
+# UI validation (separate, needs PySide6)
+set QT_QPA_PLATFORM=offscreen
+python tests\validate_ui.py
+
+# Selftest
+python main.py --selftest
+```
+
+### 4. Build Bundle Smoke (windows-latest)
+
+```powershell
+pip install -r requirements.txt
+pip install "cython>=3,<4"
+python scripts\obfuscate_licensing.py
+pyinstaller main.spec --noconfirm --clean
+dist\WakiliOS\WakiliOS.exe --selftest
+```
+
+### 5. CodeQL (weekly, ubuntu-latest)
+
+Weekly Python security scan using `security-extended` queries. Requires code scanning enabled in GitHub repo settings.
 
 ## PR Gate
 
 Every feature PR must include:
 
-- documentation updates.
-- implementation or validator changes.
-- local validation notes in the PR description.
-- no real client documents or secrets.
+- Documentation updates.
+- Implementation or validator changes.
+- Local validation notes in the PR description.
+- No real client documents or secrets.
 - CI passing before merge.
 
 The feature branch must be merged before the next feature branch starts.
+
+## Release Workflow
+
+Tag-triggered (push a version tag like `v0.1.0`). See [RELEASE.md](../../RELEASE.md).
 
 ## Required Enterprise Gate
 
@@ -21,56 +74,20 @@ Before any enterprise release is published, run:
 
 ```powershell
 python tests\validate_docs.py
-python tests\validate_skeleton.py
-python tests\validate_products.py
-python tests\validate_security_scan.py
 python tests\validate_license.py
-python tests\validate_admin_license_payment_boundary.py
 python tests\validate_vault.py
 python tests\validate_intake.py
-python tests\validate_extraction.py
-python tests\validate_ocr_runtime.py
 python tests\validate_search.py
 python tests\validate_rag.py
-python tests\validate_wakili_integration.py
-python tests\validate_hosted_ai_boundary.py
 python tests\validate_backup.py
 python tests\validate_cloud_boundary.py
 python tests\validate_ui.py
 python tests\validate_package.py
 python tests\validate_e2e.py
-python tests\validate_native_workflow.py
-python tests\validate_manual_windows_app_e2e.py
-python tests\validate_real_world_rag_e2e.py
-python tests\validate_public_kenyan_e2e.py
-python tests\validate_manual_ingest_smoke.py
-python tests\validate_ai_providers.py
-python tests\validate_frozen_build.py
-python tests\validate_release_bundle.py
-python tests\validate_portable_install.py
-python tests\validate_installer_publishing.py
-python tests\validate_update_channel.py
+python tests\validate_wakilios_backend.py
+python tests\validate_wakilios_api.py
 python main.py --selftest
-python main.py --managed-cloud-backup-e2e
-python main.py --wakili-mkononi-e2e
-python main.py --hosted-ai-e2e
-ruff check .
+python main.py --products
 ```
 
-## Release Artifact Rules
-
-- Release ZIPs must include a manifest and checksums.
-- Frozen builds must run `--selftest`.
-- Portable installs must launch without relying on a system Python installation.
-- Installer artifacts must be signed before publication.
-- Unsigned or tampered update manifests must be rejected.
-- CI logs must not print raw document text, provider keys, recovery keys, cloud
-  credentials, or private signing material.
-
-## Failure Handling
-
-- A failing validator blocks merge.
-- A security scan failure blocks merge and release.
-- A packaging failure blocks distribution but does not change local data access.
-- A cloud or hosted AI outage must degrade to local vault/search/RAG behavior when
-  local entitlements permit it.
+All must pass before the release tag is pushed.

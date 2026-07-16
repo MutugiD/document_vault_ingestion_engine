@@ -10,91 +10,70 @@ PyInstaller one-folder build through `main.spec`.
 
 ## Bundle Includes
 
-- app executable
-- Python runtime files
-- PySide6 runtime files once UI begins
-- Tesseract binaries once OCR begins
-- license public key
-- public Kenyan legal document manifest
-- schema/config templates
+- Application executable (`WakiliOS.exe`, console=False).
+- Python runtime files.
+- PySide6 runtime files.
+- Tesseract binaries once OCR begins.
+- License public key (hard-coded in `licensing/core.pyd` after obfuscation).
+- `resources/license_public_key.pem` (reference copy, not used at runtime).
+- `resources/public_kenyan_legal_docs.json`.
+- `ui/wakilios.qss` (dark theme stylesheet).
+- `products/product_catalog.json`.
+- Embedded `release-manifest.json`.
+
+The Tesseract runtime folder must include a manifest that records:
+
+- provider `tesseract`
+- Windows platform `windows-x64`
+- `tesseract.exe`
+- required `tessdata/<language>.traineddata` files
+- SHA-256 and byte size for every OCR runtime file
 
 ## Bundle Excludes
 
-- private signing keys
-- cloud provider credentials
-- real legal documents
-- real logs
-- `.env` files
+- Vendor private signing keys (`_vendor/`).
+- Cloud provider long-lived credentials.
+- Real client documents.
+- Real client logs.
+- `.env` files.
+- Plaintext sample matters.
+- `licensing/core.py` and `licensing/clockguard.py` (replaced by `.pyd` after obfuscation).
 
-## F8 Implementation Boundary
+## Obfuscated Production Build (spec §6.3)
 
-The first packaging slice implements:
+Before packaging, run the Cython obfuscation script:
 
-- PyInstaller one-folder `main.spec` validation.
-- `DocumentVaultIngestionEngine` bundle name.
-- Windowed bundle configuration with `console=False`.
-- Packaged-app `main.py --selftest` smoke path.
-- PyInstaller availability check in CI.
+```powershell
+pip install "cython>=3,<4"
+python scripts\obfuscate_licensing.py
+```
 
-## F9 Implementation Boundary
+This compiles `licensing/core.py` and `licensing/clockguard.py` to native `.pyd`
+extensions and removes the `.py` source files. The hard-coded RSA public key
+(spec §6.2) is now inside `core.pyd` — not readable from a `.pyc`.
 
-The frozen-build hardening slice implements:
+Then build:
 
-- Real PyInstaller one-folder build on Windows.
-- Frozen executable existence check.
-- `_internal` runtime folder existence check.
-- Frozen `DocumentVaultIngestionEngine.exe --selftest` exit-code validation.
-- `strip=False` in `main.spec` to avoid GNU strip warnings on Windows.
+```powershell
+pyinstaller main.spec --noconfirm --clean
+```
 
-Installer wrapping, code signing, bundled Tesseract, and clean-machine smoke testing are later distribution hardening slices.
+## Vendor License Key Generation
 
-## F13 Implementation Boundary
+See [BUILD.md](../BUILD.md) for the full keygen and license signing workflow.
 
-The release-bundle slice implements:
+## Portable Install Smoke
 
-- Checked ZIP creation from `dist/DocumentVaultIngestionEngine`.
-- Sidecar release manifest with app name, version, platform, product catalog, release files, and SHA-256 hashes.
-- Embedded `release-manifest.json` inside the ZIP without self-referential ZIP hash.
-- Validation that the release includes `DocumentVaultIngestionEngine.exe`, `_internal/products/product_catalog.json`, and the embedded manifest.
-- Guardrails against obvious secret, private-key, credential, `.env`, recovery-key, and client-document file names.
-- CI execution of `tests/validate_release_bundle.py` after the frozen build.
+After the release bundle is created, extract it to an isolated local folder
+and run the frozen executable from that extracted location:
 
-Installer wrapping, code signing, bundled Tesseract binary provenance, and clean-machine VM acceptance remain later distribution hardening slices.
+```powershell
+python scripts\portable_install_smoke.py
+```
 
-## F26 Implementation Boundary
+The automated validator runs the same path and checks both `--selftest` and
+`--products` from the extracted release folder:
 
-The release-hardening slice implements:
-
-- `resources/license_public_key.pem` inclusion.
-- `resources/public_kenyan_legal_docs.json` inclusion.
-- Native `--providers` status command with redacted API-key state.
-- Native `--public-kenya-e2e` verification command.
-- Public Kenyan document downloader for manual/legal-field validation.
-- RAG answer confidence in citation packets.
-- Windows distribution checklist in `17-windows-distribution-release-checklist.md`.
-- Release ZIP validation for required resources and safety boundaries.
-
-Installer wrapping, code signing, automatic updates, Wakili-Mkononi integration, and hosted AI remain later commercial slices.
-
-## F14 Implementation Boundary
-
-The portable-install smoke slice implements:
-
-- Safe extraction of the checked release ZIP into `test-output/portable-install`.
-- Path traversal protection before ZIP extraction.
-- Frozen executable `--selftest` from the extracted release folder.
-- Frozen executable `--products` from the extracted release folder.
-- Validation that the three published products survive release ZIP extraction.
-- CI execution of `tests/validate_portable_install.py` after release-bundle validation.
-
-Installer wrapping, code signing, bundled Tesseract binary provenance, and clean-machine VM acceptance remain later distribution hardening slices.
-
-## Verification
-
-`tests/validate_package.py` checks the spec, confirms no private/secret/credential terms are embedded in packaging config, runs `main.py --selftest`, and verifies PyInstaller is callable.
-
-`tests/validate_frozen_build.py` performs the full local one-folder PyInstaller build and runs the frozen executable selftest.
-
-`tests/validate_release_bundle.py` creates the checked release ZIP and sidecar manifest, verifies the ZIP hash, confirms the three published products and required resources are present, and checks release file-name safety boundaries.
-
-`tests/validate_portable_install.py` extracts that checked release ZIP to an isolated local folder and runs the frozen executable smoke paths from the extracted install.
+```powershell
+python tests\validate_portable_install.py
+```

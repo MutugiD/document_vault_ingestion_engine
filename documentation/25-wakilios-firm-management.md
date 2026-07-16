@@ -18,6 +18,27 @@ The first release is intentionally narrow:
 
 ## Architecture
 
+### Solo Mode (default)
+
+The UI calls `wakilios.core` directly in-process. No server needed. The user clicks
+"Start Solo" on the Dashboard, which initializes a local `WakiliOSBackend` with
+SQLite storage in their app data directory.
+
+### Multi-Seat Mode
+
+For firms with 2–5 advocates sharing matters, the optional FastAPI server
+(`wakilios.api`) runs on one machine and other desktops connect via
+`WakiliOSClient` (urllib-based, no extra HTTP deps for Windows).
+
+### UI Tabs
+
+| Tab | Contents |
+| --- | --- |
+| **Dashboard** | BackendConnectionDialog (Start Solo / Connect), Firm setup, License activation, Vault initialization |
+| **Workspace** | Matter list + 8 sub-tabs (Summary, Parties, Activities, Lodgings, Court Decisions, Fees, Receipts, Documents) |
+| **Settings** | Document Import, Search & RAG, AI Keys, Backup/Restore, Admin & Audit Log |
+| **About** | Module cards, release info, native workflow button |
+
 ### In-process (solo mode)
 
 The desktop app runs as a single process. The UI (`ui/app.py`) calls `wakilios.core` directly:
