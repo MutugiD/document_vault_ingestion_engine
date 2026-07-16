@@ -124,6 +124,67 @@ class WakiliOSClient:
     def offline_cache(self) -> dict[str, Any]:
         return self._get("/offline-cache")
 
+    def upload_document(self, matter_id: str, file_path: str, title: str = "", document_type: str = "general") -> dict[str, Any]:
+        """Upload a document to a matter using multipart form-data."""
+        import mimetypes
+        from urllib.request import Request
+        from pathlib import Path as PPath
+        import uuid
+
+        path = PPath(file_path)
+        filename = path.name
+        mime = mimetypes.guess_type(str(path))[0] or "application/octet-stream"
+        content = path.read_bytes()
+
+        boundary = uuid.uuid4().hex
+        lines: list[bytes] = []
+        lines.append(f"--{boundary}".encode())
+        lines.append(f'Content-Disposition: form-data; name="title"'.encode())
+        lines.append(b"")
+        lines.append(title.encode() or filename.encode())
+        lines.append(f"--{boundary}".encode())
+        lines.append(f'Content-Disposition: form-data; name="document_type"'.encode())
+        lines.append(b"")
+        lines.append(document_type.encode())
+        lines.append(f"--{boundary}".encode())
+        lines.append(f'Content-Disposition: form-data; name="file"; filename="{filename}"'.encode())
+        lines.append(f"Content-Type: {mime}".encode())
+        lines.append(b"")
+        lines.append(content)
+        lines.append(f"--{boundary}--".encode())
+        body = b"\r\n".join(lines)
+
+        url = f"{self.config.base_url.rstrip('/')}/matters/{matter_id}/documents"
+        headers = self._headers()
+        headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
+        headers["Content-Length"] = str(len(body))
+        req = Request(url, data=body, headers=headers, method="POST")
+        try:
+            with urlopen(req) as response:
+                raw = response.read().decode("utf-8")
+                return json.loads(raw) if raw else {}
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            try:
+                parsed = json.loads(detail)
+                raise WakiliOSClientError(exc.code, parsed.get("detail", detail)) from exc
+            except json.JSONDecodeError:
+                raise WakiliOSClientError(exc.code, detail) from exc
+        except URLError as exc:
+            raise WakiliOSConnectionError(str(exc)) from exc
+
+    def download_document(self, matter_id: str, document_id: str) -> dict[str, Any]:
+        """Download a document's metadata from a matter."""
+        return self._get(f"/matters/{matter_id}/documents/{document_id}")
+
+    def list_fees(self, matter_id: str) -> list[dict[str, Any]]:
+        result = self._get(f"/matters/{matter_id}/workspace")
+        return list(result.get("fees", []))
+
+    def list_receipts(self, matter_id: str) -> list[dict[str, Any]]:
+        result = self._get(f"/matters/{matter_id}/workspace")
+        return list(result.get("receipts", []))
+
     def audit_log(self) -> dict[str, Any]:
         return self._get("/audit")
 
