@@ -289,22 +289,29 @@ class MainWindow(QMainWindow):
             if button is not None:
                 button.clicked.connect(handler)
 
-        for tab_name, button_suffix, handler in [
-            ("Summary", "AddButton", self._on_update_summary),
-            ("Parties", "AddButton", self._on_add_party),
-            ("Activities", "AddButton", self._on_add_activity),
-            ("Lodgings", "AddButton", self._on_add_lodging),
-            ("Court Decisions", "AddButton", self._on_add_court_decision),
-            ("Fees", "AddButton", self._on_add_fee),
-            ("Receipts", "AddButton", self._on_add_receipt),
+        for tab_object_name, handler in [
+            ("summaryTab", self._on_update_summary),
+            ("partiesTab", self._on_add_party),
+            ("activitiesTab", self._on_add_activity),
+            ("lodgingsTab", self._on_add_lodging),
+            ("courtDecisionsTab", self._on_add_court_decision),
+            ("feesTab", self._on_add_fee),
+            ("receiptsTab", self._on_add_receipt),
         ]:
-            object_name = f"{tab_name.lower().replace(' ', '')}{button_suffix}" if tab_name != "Summary" else f"summary{button_suffix}"
+            object_name = f"{tab_object_name}AddButton"
             button = self.findChild(QPushButton, object_name)
-            if button is None:
-                object_name = f"{tab_name.replace(' ', '').lower()}{button_suffix}"
-                button = self.findChild(QPushButton, object_name)
             if button is not None:
                 button.clicked.connect(handler)
+
+        # Document upload
+        upload_btn = self.findChild(QPushButton, "uploadDocumentButton")
+        if upload_btn is not None:
+            upload_btn.clicked.connect(self._on_upload_document)
+
+        # Audit log refresh
+        audit_btn = self.findChild(QPushButton, "refreshAuditLogButton")
+        if audit_btn is not None:
+            audit_btn.clicked.connect(self._on_refresh_audit_log)
 
     @Slot(str, str, str)
     def _on_backend_login(self, token: str, username: str, role: str) -> None:
@@ -367,12 +374,18 @@ class MainWindow(QMainWindow):
         if new_matter is not None:
             new_matter.setEnabled(can_write)
 
+    def _solo_token(self) -> str:
+        """Get a session token for solo mode operations."""
+        if self._backend_local is not None:
+            session = self._backend_local.login(self._current_username, "admin-pass")
+            return session.token
+        return ""
+
     def _backend_create_matter(self, **fields: str) -> dict:
         """Create a matter via local backend or HTTP client."""
         if self._backend_local is not None:
             return self._backend_local.create_litigation_matter(
-                self._backend_local.require_authenticated(self._backend_local.login(self._current_username, "admin-pass").token),
-                **fields,
+                self._solo_token(), **fields,
             )
         if self._backend_client is not None:
             return self._backend_client.create_matter(**fields)
@@ -381,9 +394,9 @@ class MainWindow(QMainWindow):
     def _backend_list_matters(self) -> list:
         """List matters via local backend or HTTP client."""
         if self._backend_local is not None:
-            token = self._backend_local.login(self._current_username, "admin-pass").token
-            result = self._backend_local.list_matters(token)
-            return list(result.get("matters", []))
+            token = self._solo_token()
+            cache = self._backend_local.build_offline_cache(token)
+            return list(cache.matters)
         if self._backend_client is not None:
             return self._backend_client.list_matters()
         return []
@@ -391,80 +404,70 @@ class MainWindow(QMainWindow):
     def _backend_workspace(self, matter_id: str) -> dict:
         """Get workspace via local backend or HTTP client."""
         if self._backend_local is not None:
-            token = self._backend_local.login(self._current_username, "admin-pass").token
-            return self._backend_local.workspace(token, matter_id)
+            return self._backend_local.workspace(self._solo_token(), matter_id)
         if self._backend_client is not None:
             return self._backend_client.workspace(matter_id)
         return {}
 
     def _backend_add_party(self, matter_id: str, **fields: str) -> dict:
         if self._backend_local is not None:
-            token = self._backend_local.login(self._current_username, "admin-pass").token
-            return self._backend_local.add_party(token, matter_id, **fields)
+            return self._backend_local.add_party(self._solo_token(), matter_id, **fields)
         if self._backend_client is not None:
             return self._backend_client.add_party(matter_id, **fields)
         return {}
 
     def _backend_add_activity(self, matter_id: str, **fields: object) -> dict:
         if self._backend_local is not None:
-            token = self._backend_local.login(self._current_username, "admin-pass").token
-            return self._backend_local.add_activity(token, matter_id, **fields)
+            return self._backend_local.add_activity(self._solo_token(), matter_id, **fields)
         if self._backend_client is not None:
             return self._backend_client.add_activity(matter_id, **fields)
         return {}
 
     def _backend_add_lodging(self, matter_id: str, **fields: str) -> dict:
         if self._backend_local is not None:
-            token = self._backend_local.login(self._current_username, "admin-pass").token
-            return self._backend_local.add_lodging(token, matter_id, **fields)
+            return self._backend_local.add_lodging(self._solo_token(), matter_id, **fields)
         if self._backend_client is not None:
             return self._backend_client.add_lodging(matter_id, **fields)
         return {}
 
     def _backend_add_court_decision(self, matter_id: str, **fields: str) -> dict:
         if self._backend_local is not None:
-            token = self._backend_local.login(self._current_username, "admin-pass").token
-            return self._backend_local.add_court_decision(token, matter_id, **fields)
+            return self._backend_local.add_court_decision(self._solo_token(), matter_id, **fields)
         if self._backend_client is not None:
             return self._backend_client.add_court_decision(matter_id, **fields)
         return {}
 
     def _backend_add_fee(self, matter_id: str, **fields: object) -> dict:
         if self._backend_local is not None:
-            token = self._backend_local.login(self._current_username, "admin-pass").token
-            return self._backend_local.add_fee(token, matter_id, **fields)
+            return self._backend_local.add_fee(self._solo_token(), matter_id, **fields)
         if self._backend_client is not None:
             return self._backend_client.add_fee(matter_id, **fields)
         return {}
 
     def _backend_add_receipt(self, matter_id: str, **fields: object) -> dict:
         if self._backend_local is not None:
-            token = self._backend_local.login(self._current_username, "admin-pass").token
-            return self._backend_local.add_receipt(token, matter_id, **fields)
+            return self._backend_local.add_receipt(self._solo_token(), matter_id, **fields)
         if self._backend_client is not None:
             return self._backend_client.add_receipt(matter_id, **fields)
         return {}
 
     def _backend_update_summary(self, matter_id: str, summary: str) -> dict:
         if self._backend_local is not None:
-            token = self._backend_local.login(self._current_username, "admin-pass").token
-            return self._backend_local.update_matter_summary(token, matter_id, summary)
+            return self._backend_local.update_matter_summary(self._solo_token(), matter_id, summary)
         if self._backend_client is not None:
             return self._backend_client.update_matter_summary(matter_id, summary)
         return {}
 
     def _backend_export_calendar(self, matter_id: str) -> str:
         if self._backend_local is not None:
-            token = self._backend_local.login(self._current_username, "admin-pass").token
-            return self._backend_local.export_calendar_ics(token, matter_id)
+            return self._backend_local.export_calendar_ics(self._solo_token(), matter_id)
         if self._backend_client is not None:
             return self._backend_client.export_calendar(matter_id)
         return ""
 
     def _backend_audit_log(self) -> dict:
         if self._backend_local is not None:
-            token = self._backend_local.login(self._current_username, "admin-pass").token
-            events = self._backend_local.audit_events(token)
+            events = self._backend_local.audit_events(self._solo_token())
             return {"events": events}
         if self._backend_client is not None:
             return self._backend_client.audit_log()
@@ -587,7 +590,7 @@ class MainWindow(QMainWindow):
         if (self._backend_local is None and self._backend_client is None) or not self._current_matter_id:
             return
         try:
-            self._backend_add_receipt(self._current_matter_id, receipt_number="NEW-RCT", amount=0)
+            self._backend_add_receipt(self._current_matter_id, receipt_number="NEW-RCT", amount=0, receipt_date="2026-07-16")
             self.status_label.setText("Receipt added")
             self._on_refresh_fee_receipt_view()
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
@@ -680,10 +683,10 @@ class MainWindow(QMainWindow):
             if audit_list is not None:
                 audit_list.clear()
                 for event in result.get("events", []):
-                    timestamp = event.get("timestamp", "")
-                    action = event.get("action", "")
-                    user = event.get("username", "")
-                    audit_list.addItem(f"{timestamp} | {user} | {action}")
+                    timestamp = event.get("created_at", event.get("timestamp", ""))
+                    action = event.get("event_type", event.get("action", ""))
+                    actor = event.get("actor_id", event.get("username", ""))
+                    audit_list.addItem(f"{timestamp} | {actor} | {action}")
             self.status_label.setText(f"Audit log: {len(result.get('events', []))} events")
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Failed to load audit log: {exc}")
