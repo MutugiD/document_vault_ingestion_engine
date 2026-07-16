@@ -1,0 +1,337 @@
+/*
+ * WakiliOS Professional Stylesheet
+ * Clean, modern dark-themed legal practice management UI
+ */
+
+/* ── Global ── */
+QMainWindow {
+    background-color: #1a1a2e;
+}
+
+QWidget {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    color: #e0e0e0;
+}
+
+QLabel {
+    color: #c0c0d0;
+    background: transparent;
+}
+
+/* ── Heading ── */
+QLabel#heading {
+    font-size: 28px;
+    font-weight: 700;
+    color: #ffffff;
+    padding: 4px 0px;
+    background: transparent;
+}
+
+QLabel#subtitle {
+    font-size: 13px;
+    color: #8888aa;
+    padding: 0px 0px 8px 0px;
+    background: transparent;
+}
+
+/* ── Tab Widget ── */
+QTabWidget::pane {
+    border: 1px solid #2d2d44;
+    border-radius: 6px;
+    background-color: #16213e;
+    padding: 4px;
+}
+
+QTabBar::tab {
+    background-color: #1a1a2e;
+    color: #8888aa;
+    padding: 8px 18px;
+    margin-right: 2px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border: 1px solid #2d2d44;
+    border-bottom: none;
+    font-weight: 500;
+}
+
+QTabBar::tab:selected {
+    background-color: #0f3460;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+QTabBar::tab:hover:!selected {
+    background-color: #222244;
+    color: #b0b0cc;
+}
+
+/* ── Buttons ── */
+QPushButton {
+    background-color: #0f3460;
+    color: #e0e0f0;
+    border: 1px solid #1a4a7a;
+    border-radius: 5px;
+    padding: 7px 16px;
+    font-weight: 500;
+    min-height: 28px;
+}
+
+QPushButton:hover {
+    background-color: #1a4a7a;
+    border-color: #2a6aaa;
+}
+
+QPushButton:pressed {
+    background-color: #0a2540;
+}
+
+QPushButton:disabled {
+    background-color: #1a1a2e;
+    color: #555566;
+    border-color: #2d2d44;
+}
+
+QPushButton#connectButton,
+QPushButton#startSoloButton {
+    background-color: #1a6b3c;
+    border-color: #228b4e;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 9px 20px;
+    min-height: 32px;
+}
+
+QPushButton#connectButton:hover,
+QPushButton#startSoloButton:hover {
+    background-color: #228b4e;
+}
+
+QPushButton#newMatterButton {
+    background-color: #1a6b3c;
+    border-color: #228b4e;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+QPushButton#newMatterButton:hover {
+    background-color: #228b4e;
+}
+
+QPushButton#exportCalendarButton,
+QPushButton#refreshMatterListButton,
+QPushButton#uploadDocumentButton,
+QPushButton#refreshAuditLogButton {
+    background-color: #2d4a7a;
+    border-color: #3a5a9a;
+}
+
+QPushButton#exportCalendarButton:hover,
+QPushButton#refreshMatterListButton:hover,
+QPushButton#uploadDocumentButton:hover,
+QPushButton#refreshAuditLogButton:hover {
+    background-color: #3a5a9a;
+}
+
+/* ── Line Edits ── */
+QLineEdit {
+    background-color: #16213e;
+    color: #e0e0f0;
+    border: 1px solid #2d2d44;
+    border-radius: 4px;
+    padding: 6px 10px;
+    selection-background-color: #0f3460;
+}
+
+QLineEdit:focus {
+    border-color: #4a7aaa;
+}
+
+QLineEdit:read-only {
+    background-color: #111828;
+    color: #888899;
+}
+
+/* ── Text Edits ── */
+QTextEdit {
+    background-color: #16213e;
+    color: #e0e0f0;
+    border: 1px solid #2d2d44;
+    border-radius: 4px;
+    padding: 4px;
+    selection-background-color: #0f3460;
+}
+
+/* ── List Widgets ── */
+QListWidget {
+    background-color: #16213e;
+    color: #d0d0e0;
+    border: 1px solid #2d2d44;
+    border-radius: 4px;
+    padding: 2px;
+    outline: none;
+}
+
+QListWidget::item {
+    padding: 5px 8px;
+    border-bottom: 1px solid #1e2d44;
+}
+
+QListWidget::item:selected {
+    background-color: #0f3460;
+    color: #ffffff;
+}
+
+QListWidget::item:hover:!selected {
+    background-color: #1e2d50;
+}
+
+/* ── Checkboxes ── */
+QCheckBox {
+    color: #c0c0d0;
+    spacing: 8px;
+}
+
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #4a4a6a;
+    border-radius: 3px;
+    background-color: #16213e;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #0f3460;
+    border-color: #4a8aaa;
+}
+
+/* ── Combo Boxes ── */
+QComboBox {
+    background-color: #16213e;
+    color: #e0e0f0;
+    border: 1px solid #2d2d44;
+    border-radius: 4px;
+    padding: 5px 10px;
+}
+
+QComboBox:hover {
+    border-color: #4a7aaa;
+}
+
+QComboBox::drop-down {
+    border: none;
+    background: #1a1a2e;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #16213e;
+    color: #e0e0f0;
+    selection-background-color: #0f3460;
+}
+
+/* ── Form Layout ── */
+QFormLayout {
+    spacing: 6px;
+}
+
+/* ── Module Cards ── */
+QFrame#moduleCard {
+    background-color: #16213e;
+    border: 1px solid #2d2d44;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+QLabel#moduleName {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    background: transparent;
+}
+
+QLabel#moduleStatus {
+    font-size: 12px;
+    color: #4a8aaa;
+    background: transparent;
+}
+
+/* ── Status Labels ── */
+QLabel#statusLabel {
+    font-size: 12px;
+    color: #6a8aaa;
+    padding: 2px;
+    background: transparent;
+}
+
+QLabel#roleStatusLabel {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a9a6a;
+    background: transparent;
+}
+
+QLabel#backendStatusLabel {
+    color: #8888aa;
+    font-size: 12px;
+    background: transparent;
+}
+
+/* ── Backend Connection Dialog ── */
+QFrame#backendConnectionDialog {
+    background-color: #16213e;
+    border: 1px solid #2d2d44;
+    border-radius: 6px;
+    padding: 8px;
+}
+
+/* ── Scrollbars ── */
+QScrollBar:vertical {
+    background-color: #1a1a2e;
+    width: 10px;
+    border: none;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #3a3a5a;
+    border-radius: 4px;
+    min-height: 20px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: #4a4a7a;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+/* ── Footer ── */
+QPushButton#runSelftestButton,
+QPushButton#runNativeWorkflowButton {
+    background-color: #2d2d44;
+    border-color: #3d3d5a;
+    color: #8888aa;
+    font-size: 11px;
+    padding: 5px 12px;
+}
+
+QPushButton#runSelftestButton:hover,
+QPushButton#runNativeWorkflowButton:hover {
+    background-color: #3d3d5a;
+    color: #b0b0cc;
+}
+
+/* ── Release Info ── */
+QLabel#releaseInfoLabel {
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    padding: 8px;
+    background: transparent;
+}
+
+/* ── About Page Grid ── */
+QGridLayout {
+    spacing: 8px;
+}
