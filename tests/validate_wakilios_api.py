@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from starlette.testclient import TestClient  # noqa: E402
+
 from wakilios.api import create_app  # noqa: E402
 
 
@@ -43,7 +44,12 @@ def main() -> None:
         # Create user
         resp = client.post(
             "/users",
-            json={"username": "advocate1", "password": "pass123", "role": "advocate", "display_name": "Advocate One"},
+            json={
+                "username": "advocate1",
+                "password": "pass123",
+                "role": "advocate",
+                "display_name": "Advocate One",
+            },
             headers={"Authorization": f"Bearer {token}"},
         )
         assert resp.status_code == 200
@@ -80,7 +86,9 @@ def main() -> None:
         matter_id = resp.json()["matter_id"]
 
         # Get matter
-        resp = client.get(f"/matters/{matter_id}", headers={"Authorization": f"Bearer {advocate_token}"})
+        resp = client.get(
+            f"/matters/{matter_id}", headers={"Authorization": f"Bearer {advocate_token}"}
+        )
         assert resp.status_code == 200
         assert resp.json()["internal_reference"] == "API-001"
 
@@ -96,7 +104,11 @@ def main() -> None:
         # Add party
         resp = client.post(
             f"/matters/{matter_id}/parties",
-            json={"name": "Test Client", "party_role": "Claimant", "representative": "Advocate One"},
+            json={
+                "name": "Test Client",
+                "party_role": "Claimant",
+                "representative": "Advocate One",
+            },
             headers={"Authorization": f"Bearer {advocate_token}"},
         )
         assert resp.status_code == 200
@@ -105,7 +117,11 @@ def main() -> None:
         # Add activity
         resp = client.post(
             f"/matters/{matter_id}/activities",
-            json={"activity_type": "mention", "title": "Directions hearing", "starts_at": "2026-08-01T10:00:00Z"},
+            json={
+                "activity_type": "mention",
+                "title": "Directions hearing",
+                "starts_at": "2026-08-01T10:00:00Z",
+            },
             headers={"Authorization": f"Bearer {advocate_token}"},
         )
         assert resp.status_code == 200
@@ -113,7 +129,11 @@ def main() -> None:
         # Add lodging
         resp = client.post(
             f"/matters/{matter_id}/lodgings",
-            json={"document_kind": "Notice of Motion", "party": "Claimant", "due_date": "2026-08-10"},
+            json={
+                "document_kind": "Notice of Motion",
+                "party": "Claimant",
+                "due_date": "2026-08-10",
+            },
             headers={"Authorization": f"Bearer {advocate_token}"},
         )
         assert resp.status_code == 200
@@ -121,7 +141,11 @@ def main() -> None:
         # Add court decision
         resp = client.post(
             f"/matters/{matter_id}/court-decisions",
-            json={"decision_type": "Ruling", "decision_date": "2026-07-20", "outcome": "Application allowed"},
+            json={
+                "decision_type": "Ruling",
+                "decision_date": "2026-07-20",
+                "outcome": "Application allowed",
+            },
             headers={"Authorization": f"Bearer {advocate_token}"},
         )
         assert resp.status_code == 200
@@ -129,7 +153,12 @@ def main() -> None:
         # Create accounts user
         resp = client.post(
             "/users",
-            json={"username": "accounts1", "password": "pass123", "role": "accounts", "display_name": "Accounts One"},
+            json={
+                "username": "accounts1",
+                "password": "pass123",
+                "role": "accounts",
+                "display_name": "Accounts One",
+            },
             headers={"Authorization": f"Bearer {token}"},
         )
         assert resp.status_code == 200
@@ -142,7 +171,13 @@ def main() -> None:
         # Add fee
         resp = client.post(
             f"/matters/{matter_id}/fees",
-            json={"fee_type": "Filing fee", "amount": 2000, "paid_by": "Client", "paid_to": "Court", "status": "paid"},
+            json={
+                "fee_type": "Filing fee",
+                "amount": 2000,
+                "paid_by": "Client",
+                "paid_to": "Court",
+                "status": "paid",
+            },
             headers={"Authorization": f"Bearer {accounts_token}"},
         )
         assert resp.status_code == 200
@@ -151,25 +186,47 @@ def main() -> None:
         # Add receipt linked to fee
         resp = client.post(
             f"/matters/{matter_id}/receipts",
-            json={"receipt_number": "RCT-API-001", "issuer": "Court", "payer": "Client", "amount": 2000, "receipt_date": "2026-07-16", "linked_fee_id": fee_id},
+            json={
+                "receipt_number": "RCT-API-001",
+                "issuer": "Court",
+                "payer": "Client",
+                "amount": 2000,
+                "receipt_date": "2026-07-16",
+                "linked_fee_id": fee_id,
+            },
             headers={"Authorization": f"Bearer {accounts_token}"},
         )
         assert resp.status_code == 200
         assert resp.json()["linked_fee_id"] == fee_id
 
         # Workspace endpoint
-        resp = client.get(f"/matters/{matter_id}/workspace", headers={"Authorization": f"Bearer {advocate_token}"})
+        resp = client.get(
+            f"/matters/{matter_id}/workspace", headers={"Authorization": f"Bearer {advocate_token}"}
+        )
         assert resp.status_code == 200
         workspace = resp.json()
-        assert all(key in workspace for key in (
-            "matter", "parties", "activities", "lodgings", "court_decisions",
-            "fees", "receipts", "documents", "summaries",
-        ))
+        assert all(
+            key in workspace
+            for key in (
+                "matter",
+                "parties",
+                "activities",
+                "lodgings",
+                "court_decisions",
+                "fees",
+                "receipts",
+                "documents",
+                "summaries",
+            )
+        )
         assert len(workspace["parties"]) >= 1
         assert len(workspace["activities"]) >= 1
 
         # Calendar export
-        resp = client.get(f"/matters/{matter_id}/calendar.ics", headers={"Authorization": f"Bearer {advocate_token}"})
+        resp = client.get(
+            f"/matters/{matter_id}/calendar.ics",
+            headers={"Authorization": f"Bearer {advocate_token}"},
+        )
         assert resp.status_code == 200
         assert "VCALENDAR" in resp.text
         assert "Directions hearing" in resp.text
@@ -191,7 +248,12 @@ def main() -> None:
         # Permission denied: read_only user cannot create fees
         resp = client.post(
             "/users",
-            json={"username": "readonly1", "password": "pass123", "role": "read_only", "display_name": "Read Only"},
+            json={
+                "username": "readonly1",
+                "password": "pass123",
+                "role": "read_only",
+                "display_name": "Read Only",
+            },
             headers={"Authorization": f"Bearer {token}"},
         )
         assert resp.status_code == 200
@@ -211,7 +273,12 @@ def main() -> None:
         for i in range(5, 100):
             resp = client.post(
                 "/users",
-                json={"username": f"extra{i}", "password": "pass123", "role": "clerk", "display_name": f"Extra {i}"},
+                json={
+                    "username": f"extra{i}",
+                    "password": "pass123",
+                    "role": "clerk",
+                    "display_name": f"Extra {i}",
+                },
                 headers={"Authorization": f"Bearer {token}"},
             )
             if resp.status_code == 409:

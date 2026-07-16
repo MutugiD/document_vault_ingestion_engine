@@ -7,7 +7,10 @@ import importlib
 import json
 import sys
 import tempfile
+from datetime import UTC
 from pathlib import Path
+
+from ui import APP_VERSION
 
 CORE_MODULES = (
     "ai",
@@ -47,16 +50,50 @@ def run_selftest() -> int:
     except Exception as exc:  # pragma: no cover - deliberately broad for frozen selftest
         failures.append(f"licensing selftest: {exc}")
 
+    try:
+        from datetime import datetime
+
+        from licensing import InMemoryStore, check_clock
+
+        store = InMemoryStore()
+        ok, reason = check_clock(store, now=datetime(2026, 1, 1, tzinfo=UTC))
+        if not ok:
+            failures.append(f"clock guard: {reason}")
+    except Exception as exc:  # pragma: no cover
+        failures.append(f"clockguard selftest: {exc}")
+
     if failures:
         print("SELFTEST FAIL")
         for failure in failures:
             print(f"- {failure}")
+        _write_selftest_result("FAIL", failures)
         return 1
 
     print("SELFTEST PASS")
     print(f"Imported modules: {', '.join(CORE_MODULES)}")
     print("Licensing installation identity check: pass")
+    print("Clock guard check: pass")
+    print(f"App version: {APP_VERSION}")
+    _write_selftest_result("PASS", [])
     return 0
+
+
+def _write_selftest_result(status: str, failures: list[str]) -> None:
+    """Write selftest result to a temp file for the release workflow gate.
+
+    The release CI runs the frozen bundle with --selftest and gates on this
+    file because the GUI-subsystem exe (console=False) doesn't pipe stdout.
+    """
+    import tempfile as _tf
+
+    result_path = Path(_tf.gettempdir()) / "WakiliOS_selftest.txt"
+    lines = [f"SELFTEST {status}"]
+    for f in failures:
+        lines.append(f"- {f}")
+    try:
+        result_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    except OSError:
+        pass  # degrade gracefully, never crash at launch
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:

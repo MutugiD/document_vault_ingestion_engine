@@ -1,0 +1,80 @@
+name: Release
+
+# Cut a release by pushing a version tag, e.g. git tag v0.1.0 && git push origin v0.1.0
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write  # create the GitHub Release + upload assets
+
+jobs:
+  release:
+    name: Build & publish Windows bundle
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install cython
+
+      - name: Verify tag matches the app version
+        shell: pwsh
+        run: |
+          $ver = (python -c "import ui; print(ui.APP_VERSION)").Trim()
+          $tag = "${{ github.ref_name }}".TrimStart("v")
+          Write-Host "tag=$tag  APP_VERSION=$ver"
+          if ($ver -ne $tag) { Write-Error "tag '$tag' != ui.APP_VERSION '$ver'"; exit 1 }
+
+      # Obfuscate the licensing modules (spec §6.3) BEFORE the build, so the bundle ships
+      # licensing/*.pyd (native) instead of decompilable .pyc — and the §6.2 hard-coded public key is
+      # compiled into core.pyd. Runs on this fresh checkout; it removes the licensing .py sources.
+      # Cython is a build-time tool (not shipped), installed here; windows-latest already has MSVC.
+      - name: Install Cython (obfuscation build tool)
+        run: pip install "cython>=3,<4"
+
+      - name: Obfuscate licensing (Cython -> .pyd)
+        run: python scripts/obfuscate_licensing.py
+
+      - name: Build bundle
+        run: pyinstaller main.spec --noconfirm --clean
+
+      # The bundle is a console=False (GUI-subsystem) exe: its --selftest output doesn't reach a
+      # captured pipe, so it writes the result to %TEMP%\WakiliOS_selftest.txt (main.py).
+      # First run of a fresh unsigned exe is slow (AV first-scan), hence the wait.
+      - name: Self-test bundle (gate on the result file)
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          Remove-Item "$env:TEMP\WakiliOS_selftest.txt" -ErrorAction SilentlyContinue
+          dist\WakiliOS\WakiliOS.exe --selftest
+          $f = "$env:TEMP\WakiliOS_selftest.txt"
+          for ($i = 0; $i -lt 30 -and -not (Test-Path $f); $i++) { Start-Sleep -Seconds 2 }
+          if (-not (Test-Path $f)) { Write-Error "selftest produced no result"; exit 1 }
+          Get-Content $f
+          # Check for pass/fail
+          $content = Get-Content $f -Raw
+          if ($content -notmatch "PASS") { Write-Error "selftest did not pass"; exit 1 }
+
+      - name: Package bundle
+        shell: pwsh
+        run: |
+          $zip = "WakiliOS-${{ github.ref_name }}-win64.zip"
+          Compress-Archive -Path dist\WakiliOS\* -DestinationPath $zip -Force
+          (Get-FileHash -Algorithm SHA256 $zip).Hash + "  $zip" | Out-File "$zip.sha256" -Encoding ascii
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: WakiliOS ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            WakiliOS-${{ github.ref_name }}-win64.zip
+            WakiliOS-${{ github.ref_name }}-win64.zip.sha256

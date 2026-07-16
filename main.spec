@@ -1,5 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 # PyInstaller one-folder spec. Build with: pyinstaller main.spec
+#
+# For release builds, run scripts/obfuscate_licensing.py FIRST to compile
+# the licensing modules to .pyd (spec §6.3). Then run pyinstaller.
 
 from PyInstaller.utils.hooks import collect_submodules
 from pathlib import Path
@@ -26,6 +29,7 @@ datas = [
     ("products/product_catalog.json", "products"),
     ("resources/license_public_key.pem", "resources"),
     ("resources/public_kenyan_legal_docs.json", "resources"),
+    ("ui/wakilios.qss", "ui"),
 ]
 tesseract_runtime = Path("runtime") / "tesseract"
 if tesseract_runtime.exists():
@@ -47,7 +51,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="DocumentVaultIngestionEngine",
+    name="WakiliOS",
     debug=False,
     strip=False,
     upx=False,
@@ -59,5 +63,5 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=False,
-    name="DocumentVaultIngestionEngine",
+    name="WakiliOS",
 )

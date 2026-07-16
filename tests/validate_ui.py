@@ -14,7 +14,12 @@ sys.path.insert(0, str(ROOT))
 from PySide6.QtCore import QEventLoop, QObject, QTimer  # noqa: E402
 from PySide6.QtWidgets import QLabel, QLineEdit, QPushButton, QTabWidget, QTextEdit  # noqa: E402
 
-from ui import DEFAULT_MODULES, BackgroundWorker, BackendConnectionDialog, MainWindow, create_app  # noqa: E402
+from ui import (  # noqa: E402
+    DEFAULT_MODULES,
+    BackgroundWorker,
+    MainWindow,
+    create_app,
+)
 
 
 def main() -> None:
@@ -98,9 +103,7 @@ def main() -> None:
 
     matter_workspace = window.findChild(QTabWidget, "matterWorkspaceTabs")
     assert matter_workspace is not None
-    assert [
-        matter_workspace.tabText(index) for index in range(matter_workspace.count())
-    ] == [
+    assert [matter_workspace.tabText(index) for index in range(matter_workspace.count())] == [
         "Summary",
         "Parties",
         "Activities",

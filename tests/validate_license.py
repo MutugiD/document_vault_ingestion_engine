@@ -156,8 +156,69 @@ def main() -> None:
             active_result,
         )
         _validate_payment_entitlements(active_result)
+        _validate_clockguard()
 
     print("LICENSE VALIDATION PASS")
+
+
+def _validate_clockguard() -> None:
+    """Validate clock-rollback detection logic (spec §6.2)."""
+    from licensing import FileStore, InMemoryStore, check_clock
+
+    # Normal forward clock: should pass
+    store = InMemoryStore()
+    ok, reason = check_clock(store, now=datetime(2026, 6, 25, tzinfo=UTC))
+    assert ok, f"first check should pass: {reason}"
+
+    # Same time: should pass (not backward)
+    ok, reason = check_clock(store, now=datetime(2026, 6, 25, tzinfo=UTC))
+    assert ok, f"same-time check should pass: {reason}"
+
+    # Forward: should pass
+    ok, reason = check_clock(store, now=datetime(2026, 6, 26, tzinfo=UTC))
+    assert ok, f"forward check should pass: {reason}"
+
+    # Rollback: should fail
+    ok, reason = check_clock(store, now=datetime(2026, 6, 24, tzinfo=UTC))
+    assert not ok, "rollback should be detected"
+    assert "tampered" in reason.lower() or "revoked" in reason.lower(), (
+        f"unexpected reason: {reason}"
+    )
+
+    # NTP cross-check: system clock far behind NTP
+    store2 = InMemoryStore()
+    ok, reason = check_clock(
+        store2,
+        now=datetime(2026, 6, 1, tzinfo=UTC),
+        ntp=datetime(2026, 6, 30, tzinfo=UTC),
+        ntp_tolerance_days=1,
+    )
+    assert not ok, "clock behind NTP should be detected"
+    assert "tampered" in reason.lower() or "revoked" in reason.lower(), (
+        f"unexpected reason: {reason}"
+    )
+
+    # NTP within tolerance: should pass
+    store3 = InMemoryStore()
+    ok, reason = check_clock(
+        store3,
+        now=datetime(2026, 6, 25, tzinfo=UTC),
+        ntp=datetime(2026, 6, 25, 12, 0, tzinfo=UTC),
+        ntp_tolerance_days=1,
+    )
+    assert ok, f"clock within NTP tolerance should pass: {reason}"
+
+    # FileStore test
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as td:
+        fs = FileStore(Path(td) / "clock.json")
+        ok, reason = check_clock(fs, now=datetime(2026, 6, 25, tzinfo=UTC))
+        assert ok, f"file store first check should pass: {reason}"
+        ok, reason = check_clock(fs, now=datetime(2026, 6, 26, tzinfo=UTC))
+        assert ok, f"file store forward check should pass: {reason}"
+
+    print("  clockguard: all checks pass")
 
 
 def _validate_admin_license_sync_boundary(

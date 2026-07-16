@@ -28,3 +28,6 @@ local-vault/
 test-output/
 release-output/
 evidence/
+
+# Vendor private keys (never commit)
+_vendor/

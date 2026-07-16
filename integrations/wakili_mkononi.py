@@ -50,9 +50,7 @@ class WakiliIntegrationDecision:
         if not self.user_approved:
             raise WakiliIntegrationError("Wakili-Mkononi handoff requires user approval")
         if not self.enabled:
-            raise WakiliIntegrationError(
-                self.reason or "Wakili-Mkononi integration is not enabled"
-            )
+            raise WakiliIntegrationError(self.reason or "Wakili-Mkononi integration is not enabled")
 
 
 @dataclass(frozen=True)

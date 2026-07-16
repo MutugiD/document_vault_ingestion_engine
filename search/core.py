@@ -236,10 +236,11 @@ def _sanitize_fts_query(query: str) -> str:
     Strip or escape them to avoid query errors.
     """
     import re
+
     # Remove characters that break FTS5 syntax
-    sanitized = re.sub(r'[^a-zA-Z0-9\s]', ' ', query)
+    sanitized = re.sub(r"[^a-zA-Z0-9\s]", " ", query)
     # Collapse multiple spaces
-    sanitized = re.sub(r'\s+', ' ', sanitized).strip()
+    sanitized = re.sub(r"\s+", " ", sanitized).strip()
     # Wrap each token in quotes for exact matching
     tokens = sanitized.split()
     if not tokens:

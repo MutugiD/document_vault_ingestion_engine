@@ -34,4 +34,9 @@ __all__ = [
     "initialize_firm_backend",
 ]
 
-from wakilios.client import WakiliOSClient, WakiliOSClientConfig, WakiliOSClientError, WakiliOSConnectionError
+from wakilios.client import (
+    WakiliOSClient,
+    WakiliOSClientConfig,
+    WakiliOSClientError,
+    WakiliOSConnectionError,
+)

@@ -48,9 +48,7 @@ class AdminLicensePaymentResponse:
         _assert_admin_response_privacy(value)
         return cls(
             license_sync=LicenseSyncResponse.from_mapping(dict(value["license_sync"])),
-            payment_entitlement=PaymentEntitlement.from_mapping(
-                dict(value["payment_entitlement"])
-            ),
+            payment_entitlement=PaymentEntitlement.from_mapping(dict(value["payment_entitlement"])),
         )
 
     def to_mapping(self) -> dict[str, object]:
@@ -161,9 +159,7 @@ def evaluate_admin_license_payment_boundary(
         and bool(final_features.intersection(ONLINE_FEATURES))
     )
     reason = "; ".join(
-        reason
-        for reason in (sync_effective.reason, payment_effective.reason)
-        if reason
+        reason for reason in (sync_effective.reason, payment_effective.reason) if reason
     )
     return AdminBoundaryDecision(
         installation_status=sync_effective.status,
@@ -172,12 +168,10 @@ def evaluate_admin_license_payment_boundary(
         paid_features_enabled=paid_enabled,
         online_features_enabled=online_enabled,
         local_export_allowed=(
-            sync_effective.allows_local_data_access
-            and payment_effective.allows_local_data_access
+            sync_effective.allows_local_data_access and payment_effective.allows_local_data_access
         ),
         local_restore_allowed=(
-            sync_effective.allows_local_data_access
-            and payment_effective.allows_local_data_access
+            sync_effective.allows_local_data_access and payment_effective.allows_local_data_access
         ),
         cloud_backup_enabled=online_enabled and "cloud_backup" in final_features,
         matter_rag_enabled=paid_enabled and "matter_rag" in final_features,

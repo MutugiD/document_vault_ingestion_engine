@@ -1,4 +1,17 @@
-"""Offline license validation and feature gate decisions."""
+"""Offline license validation and feature gate decisions.
+
+License = JSON {installation_id, license_id, firm_display_name,
+plan, features, expiry, issued_at, signature}.
+The signature is over a CANONICAL serialization (sorted keys, no
+whitespace) using PSS + SHA-256 with the vendor's RSA private key.
+The public key is HARD-CODED below (spec §6.2), not read from a
+swappable file. In a release build this module is Cython-compiled
+to licensing/core.pyd (scripts/obfuscate_licensing.py), so the key
+lives in native machine code. This closes the key-substitution
+bypass — an attacker can no longer replace a loose
+public_key.pem on disk to self-sign licenses; forging one still
+requires the vendor private key.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +26,25 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
+
+# Spec §6.2: the RSA public key is HARD-CODED here, not read from a swappable file.
+# In a release build this module is Cython-compiled to licensing/core.pyd, so the key lives
+# in native machine code. This closes the key-substitution bypass.
+_PUBLIC_KEY_PEM = b"""-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAstGureWyW6PRLX8sWJWu
+jalNZbWl7J8vbvAo1bkIQBo4PnEHV2LjFHt/SvnD6aknIjA22v/4nNtJsUIJ5+SA
+xWcHSilw0OrWNKXTwYXsRS78mGVpV9AC74uYjuzU+CNT/T4IrILcQZJsvazoyywc
+4xxaJ0cUbQr9f0s+nbrGKENx9Jw1n2kKhfthLxtaFHtA1SjBG3oP4Nq6EP+XrPKe
+/RFYJknIRezAwsUvZkGsecDXVR2V/hh/zHclaCN+FwoOksb5+9L7g2Ljy/bvRsPw
+tNxvLKBgZwApR6cramhmjVHd4lmfsZzMpKITZlm05XulRE7V3tBtEjXq7ZpKw4G4
+nldUhOh+aSXOnDtMC9Q6+qT7fLbvNh7eP5RzFAGFgB2PsoOmuTNP4RJd/hQtrRRC
+x/DHd6DD4gr/gWivio8jNG4WdcbPufIFlqpAM/0eCaOVMwYPJBPqZm22lZhMO1vY
+Xvo8eHT0oXSVimzQQ3VxlfwmsBY8RMUhzdGKnzjapbD33/ztflNwSDR19qGiP+Z5
+Fe8eXJh7vS18an79THRxt/h37udbTtMtqbmhHf52WLthFhbYLDwYidFPYQjQ1u0Y
+AC61un38pE/JCn3Hc9OvkzlOc2MUQiEZ5mld24RtD9LhtIfpq5wL/qO7l5iOGi2A
+JjF70s+9STGxwS3ghFsv8z0CAwEAAQ==
+-----END PUBLIC KEY-----
+"""
 
 ACTIVE_STATUS = "active"
 DISABLED_STATUS = "disabled"

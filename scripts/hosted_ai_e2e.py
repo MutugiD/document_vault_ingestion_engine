@@ -148,9 +148,7 @@ def run_hosted_ai_e2e(workspace: Path | None = None) -> dict[str, object]:
         "request_provider": request.provider,
         "request_citation_count": len(request.citation_ids),
         "prompt_contains_context": "Cited local context:" in request.prompt,
-        "prompt_contains_provider_key": provider_environment[
-            "DOCUMENT_VAULT_OPENAI_API_KEY"
-        ]
+        "prompt_contains_provider_key": provider_environment["DOCUMENT_VAULT_OPENAI_API_KEY"]
         in request.prompt,
         "provider_configured": health.configured,
         "provider_redacted_value": health.redacted_value,

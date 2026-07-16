@@ -1,6 +1,8 @@
 """User interface package for PySide6 windows and workers."""
 
-from ui.app import (
+APP_VERSION = "0.1.0"  # noqa: E305
+
+from ui.app import (  # noqa: E402
     DEFAULT_MODULES,
     BackendConnectionDialog,
     BackgroundWorker,

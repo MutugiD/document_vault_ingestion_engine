@@ -37,8 +37,7 @@ def main() -> None:
     assert any(item.path == "_internal/products/product_catalog.json" for item in manifest.files)
     assert any(item.path == "_internal/resources/license_public_key.pem" for item in manifest.files)
     assert any(
-        item.path == "_internal/resources/public_kenyan_legal_docs.json"
-        for item in manifest.files
+        item.path == "_internal/resources/public_kenyan_legal_docs.json" for item in manifest.files
     )
 
     sidecar_payload = json.loads(release_bundle.manifest_path.read_text(encoding="utf-8"))

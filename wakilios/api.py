@@ -1,9 +1,6 @@
 """FastAPI boundary for the firm-hosted WakiliOS backend."""
 
-import asyncio
-import tempfile
 from pathlib import Path
-from typing import Annotated, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, UploadFile
 from pydantic import BaseModel, Field
@@ -131,7 +128,7 @@ def create_app(
     )
     app = FastAPI(title="WakiliOS Firm Backend", version="0.1.0")
 
-    def token_from_header(authorization: Optional[str] = Header(default=None)) -> str:
+    def token_from_header(authorization: str | None = Header(default=None)) -> str:
         if not authorization or not authorization.lower().startswith("bearer "):
             raise HTTPException(status_code=401, detail="missing bearer token")
         return authorization.split(" ", 1)[1]
@@ -297,7 +294,7 @@ def create_app(
         token: str = Depends(token_from_header),
         title: str = "",
         document_type: str = "general",
-        file: Optional[UploadFile] = None,
+        file: UploadFile | None = None,
     ) -> dict[str, object]:
         try:
             content = b""
@@ -305,7 +302,9 @@ def create_app(
                 content = await file.read()
             extracted_text = content.decode("utf-8", errors="replace")
             original_name = file.filename if file else "upload.txt"
-            content_type = file.content_type if file and file.content_type else "application/octet-stream"
+            content_type = (
+                file.content_type if file and file.content_type else "application/octet-stream"
+            )
             return backend.upload_document(
                 token,
                 matter_id,

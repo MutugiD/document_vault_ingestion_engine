@@ -144,9 +144,7 @@ def main() -> None:
             raise AssertionError("forbidden client metadata was accepted")
 
         try:
-            assert_no_long_lived_credentials(
-                {"grant": {"aws_secret_access_key": "do-not-store"}}
-            )
+            assert_no_long_lived_credentials({"grant": {"aws_secret_access_key": "do-not-store"}})
         except CloudBoundaryError:
             pass
         else:

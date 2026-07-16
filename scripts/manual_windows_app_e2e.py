@@ -66,9 +66,7 @@ def run_manual_windows_app_e2e(input_root: Path) -> dict[str, Any]:
         object_files = list((workspace / "app-workspace" / "vault" / "objects").rglob("*.vaultobj"))
         plaintext_probe = b"manual corpus topic 17"
         plaintext_probe_found = any(plaintext_probe in path.read_bytes() for path in object_files)
-        source_copies_preserved = all(
-            result.source_copy_preserved for result in import_results
-        )
+        source_copies_preserved = all(result.source_copy_preserved for result in import_results)
 
         report = {
             "input_documents": len(source_paths),
