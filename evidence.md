@@ -66,6 +66,22 @@ Branch: `main` (post-merge of PRs #39-#46)
 - Vendor keygen (`tools/keygen.py`) and license signing (`tools/sign_license.py`)
 - `_vendor/` in `.gitignore` (private keys never committed)
 
+## UI Redesign (PR #48, 2026-07-17)
+
+- **Sidebar layout**: Dark charcoal (#3B2F2F) sidebar with gold (#D4A017) accent border, "THE JUDICIARY" branding, nav buttons synced with tabs
+- **Dashboard stat cards**: Total Payable / Paid / Balance Due with colored left borders (green, blue, gold)
+- **Kenya Judiciary color scheme**: Primary green #006B3F, gold #D4A017, dark green #004D2B, white cards on #F5F5F5
+- **All objectNames preserved**: validate_ui.py passes without modification
+- **Evidence**: Offscreen screenshots in evidence/wakilios_redesigned_*.png
+
+| Tab | Screenshot |
+| --- | --- |
+| Dashboard | evidence/wakilios_redesigned_dashboard.png |
+| Workspace | evidence/wakilios_redesigned_workspace.png |
+| Settings | evidence/wakilios_redesigned_settings.png |
+| About | evidence/wakilios_redesigned_about.png |
+| Full window | evidence/wakilios_redesigned_full.png |
+
 ## Known Issues
 
 - CodeQL scanning needs to be enabled in GitHub repo Settings > Code security (manual step)
