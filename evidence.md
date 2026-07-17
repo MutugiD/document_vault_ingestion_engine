@@ -82,6 +82,75 @@ Branch: `main` (post-merge of PRs #39-#46)
 | About | evidence/wakilios_redesigned_about.png |
 | Full window | evidence/wakilios_redesigned_full.png |
 
+## Comprehensive E2E Evidence (2026-07-17)
+
+Full evidence JSON: `evidence/e2e_evidence_redesign.json`
+
+### Phase 1: License & Key Bundling (7/7 PASS)
+- 4096-bit RSA PSS + SHA-256 license signing/verification
+- Installation identity generated, all feature entitlements verified (document_intake, cloud_backup, managed_restore, matter_rag)
+- License status: active
+
+### Phase 2: Vault Initialization (1/1 PASS)
+- AES-GCM encrypted vault initialized with recovery key
+
+### Phase 3: Multi-Format Document Intake (6/6 PASS)
+| Format | Status | Extracted |
+| --- | --- | --- |
+| PDF | accepted | 92 chars |
+| DOCX | accepted | 150 chars |
+| TXT | rejected (unsupported format, by design) | 0 chars |
+| Image-based PDF | accepted | 77 chars |
+| Duplicate PDF | detected as duplicate | N/A |
+
+### Phase 4: Matter Creation & Search (5/5 PASS)
+- Litigation matter created: E2E-EVIDENCE-001, Amani Traders Ltd v Umoja Supplies
+- Document linked to matter with vault object reference
+- FTS5 search: "invoice default", "injunction", "dissipation" all return results
+
+### Phase 5: RAG Performance (5/5 PASS)
+| Query | Citations | Confidence | Time |
+| --- | --- | --- | --- |
+| What supports the injunction? | 1 | 0.27 | 2.1ms |
+| What evidence for invoice default? | 1 | 0.42 | 2.5ms |
+| What is the risk? | 1 | 0.20 | 2.5ms |
+| **Average** | **1.0** | **0.30** | **2.4ms** |
+
+### Phase 6: Backup & Restore (6/6 PASS)
+- Create local backup: 44,973 bytes, snapshot encrypted
+- Encryption verification: no plaintext in backup (firm name, PDF text both absent)
+- Upload encrypted snapshot to in-memory grant backend
+- Restore from backup: 102.1ms, data integrity verified (byte-exact match)
+- Wrong key rejection: exception raised as expected
+
+### Phase 7: WakiliOS Backend Solo Mode (7/7 PASS)
+- Solo login as admin
+- Create matter, add party, add fee (KES 15,000), add receipt
+- Offline cache: 1 matter, read_only mode
+- Audit log: 5 events
+
+### Phase 8: Bundle Selftest (1/1 PASS)
+- `./dist/WakiliOS/WakiliOS --selftest` → SELFTEST PASS
+
+### All Validation Suites (2026-07-17)
+
+| Suite | Result |
+| --- | --- |
+| validate_vault | PASS |
+| validate_intake | PASS |
+| validate_search | PASS |
+| validate_rag | PASS |
+| validate_backup | PASS |
+| validate_e2e | PASS |
+| validate_ui | PASS |
+| validate_license | PASS |
+| validate_wakilios_backend | PASS |
+| validate_wakilios_api | PASS |
+| validate_security_scan | PASS |
+| validate_products | PASS |
+| validate_admin_license_payment_boundary | PASS |
+| Bundle selftest | PASS |
+
 ## Known Issues
 
 - CodeQL scanning needs to be enabled in GitHub repo Settings > Code security (manual step)

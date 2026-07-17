@@ -1,0 +1,247 @@
+{
+  "timestamp": "2026-07-17T20:33:02.658517+00:00",
+  "total_tests": 38,
+  "passed": 38,
+  "failed": 0,
+  "phases": [
+    "License",
+    "Vault",
+    "Intake",
+    "Matter",
+    "Search",
+    "RAG",
+    "Backup",
+    "Backend",
+    "Bundle"
+  ],
+  "results": [
+    {
+      "phase": "License",
+      "test": "Installation identity",
+      "result": "pass",
+      "details": "id=069679f1-4938-4e..."
+    },
+    {
+      "phase": "License",
+      "test": "License verification",
+      "result": "pass",
+      "details": "status=active"
+    },
+    {
+      "phase": "License",
+      "test": "Feature: document_intake",
+      "result": "pass",
+      "details": "enabled=True"
+    },
+    {
+      "phase": "License",
+      "test": "Feature: cloud_backup",
+      "result": "pass",
+      "details": "enabled=True"
+    },
+    {
+      "phase": "License",
+      "test": "Feature: managed_restore",
+      "result": "pass",
+      "details": "enabled=True"
+    },
+    {
+      "phase": "License",
+      "test": "Feature: matter_rag",
+      "result": "pass",
+      "details": "enabled=True"
+    },
+    {
+      "phase": "License",
+      "test": "RSA key size",
+      "result": "pass",
+      "details": "4096-bit RSA PSS with SHA-256"
+    },
+    {
+      "phase": "Vault",
+      "test": "Initialize vault",
+      "result": "pass",
+      "details": "path=/tmp/tmpao6bxpw6/vault"
+    },
+    {
+      "phase": "Intake",
+      "test": "PDF import & extraction",
+      "result": "pass",
+      "details": "status=accepted, extracted=92 chars"
+    },
+    {
+      "phase": "Intake",
+      "test": "DOCX import & extraction",
+      "result": "pass",
+      "details": "status=accepted, extracted=150 chars"
+    },
+    {
+      "phase": "Intake",
+      "test": "TXT import (expected rejection)",
+      "result": "pass",
+      "details": "status=rejected, unsupported_format_rejected=True"
+    },
+    {
+      "phase": "Intake",
+      "test": "Image-based PDF import & extraction",
+      "result": "pass",
+      "details": "status=accepted, extracted=77 chars"
+    },
+    {
+      "phase": "Intake",
+      "test": "Duplicate detection",
+      "result": "pass",
+      "details": "status=duplicate, is_duplicate=True"
+    },
+    {
+      "phase": "Intake",
+      "test": "Formats tested",
+      "result": "pass",
+      "details": "PDF, DOCX, TXT, ImagePDF"
+    },
+    {
+      "phase": "Matter",
+      "test": "Create litigation matter",
+      "result": "pass",
+      "details": "id=d3e0fd0f-7b1..., ref=E2E-EVIDENCE-001"
+    },
+    {
+      "phase": "Matter",
+      "test": "Link document to matter",
+      "result": "pass",
+      "details": "doc_id=447ab2f4-449..., obj=ba8b671a-5e5..."
+    },
+    {
+      "phase": "Search",
+      "test": "Query: 'invoice default'",
+      "result": "pass",
+      "details": "results=1, found_fragment=False"
+    },
+    {
+      "phase": "Search",
+      "test": "Query: 'injunction'",
+      "result": "pass",
+      "details": "results=1, found_fragment=False"
+    },
+    {
+      "phase": "Search",
+      "test": "Query: 'dissipation'",
+      "result": "pass",
+      "details": "results=1, found_fragment=False"
+    },
+    {
+      "phase": "RAG",
+      "test": "Build RAG index",
+      "result": "pass",
+      "details": "chunks=1"
+    },
+    {
+      "phase": "RAG",
+      "test": "Query: 'What supports the injunction?...'",
+      "result": "pass",
+      "details": "citations=1, conf=0.27, time=2.1ms"
+    },
+    {
+      "phase": "RAG",
+      "test": "Query: 'What evidence is there for invoice defau...'",
+      "result": "pass",
+      "details": "citations=1, conf=0.42, time=2.5ms"
+    },
+    {
+      "phase": "RAG",
+      "test": "Query: 'What is the risk in this case?...'",
+      "result": "pass",
+      "details": "citations=1, conf=0.20, time=2.5ms"
+    },
+    {
+      "phase": "RAG",
+      "test": "Average performance",
+      "result": "pass",
+      "details": "avg_confidence=0.30, avg_time=2.4ms, total_citations=3"
+    },
+    {
+      "phase": "Backup",
+      "test": "Create local backup",
+      "result": "pass",
+      "details": "size=44973 bytes, snapshot_id=39e15dbb-c0b..., time=109.6ms"
+    },
+    {
+      "phase": "Backup",
+      "test": "Encryption verification",
+      "result": "pass",
+      "details": "plaintext_absent=True, pdf_text_absent=True"
+    },
+    {
+      "phase": "Backup",
+      "test": "Upload encrypted snapshot",
+      "result": "pass",
+      "details": "snapshot_id=39e15dbb-c0b..."
+    },
+    {
+      "phase": "Backup",
+      "test": "Restore from backup",
+      "result": "pass",
+      "details": "restored_path=/tmp/tmpao6bxpw6/restore/39e15dbb-c0b9-4d73-a647-31fa81bc4c9b, time=102.1ms"
+    },
+    {
+      "phase": "Backup",
+      "test": "Restored data integrity",
+      "result": "pass",
+      "details": "bytes_match=True, size=906 bytes"
+    },
+    {
+      "phase": "Backup",
+      "test": "Wrong key rejection",
+      "result": "pass",
+      "details": "Exception raised as expected"
+    },
+    {
+      "phase": "Backend",
+      "test": "Solo mode login",
+      "result": "pass",
+      "details": "role=admin, token=eyJleHBpcmVz..."
+    },
+    {
+      "phase": "Backend",
+      "test": "Create matter via backend",
+      "result": "pass",
+      "details": "matter_id=0324c513-f24..."
+    },
+    {
+      "phase": "Backend",
+      "test": "Add party",
+      "result": "pass",
+      "details": "party_id=7c5f8667-ea2..."
+    },
+    {
+      "phase": "Backend",
+      "test": "Add fee",
+      "result": "pass",
+      "details": "fee_id=57be94c5-01e..., amount=KES 15000"
+    },
+    {
+      "phase": "Backend",
+      "test": "Add receipt",
+      "result": "pass",
+      "details": "receipt_id=23e0037a-b21..., amount=KES 15000"
+    },
+    {
+      "phase": "Backend",
+      "test": "Offline cache",
+      "result": "pass",
+      "details": "matters=1, mode=read_only"
+    },
+    {
+      "phase": "Backend",
+      "test": "Audit log",
+      "result": "pass",
+      "details": "events=5"
+    },
+    {
+      "phase": "Bundle",
+      "test": "Selftest",
+      "result": "pass",
+      "details": "SELFTEST PASS\nImported modules: ai, core, licensing, vault, intake, search, rag,"
+    }
+  ]
+}
