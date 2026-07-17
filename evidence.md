@@ -66,7 +66,202 @@ Branch: `main` (post-merge of PRs #39-#46)
 - Vendor keygen (`tools/keygen.py`) and license signing (`tools/sign_license.py`)
 - `_vendor/` in `.gitignore` (private keys never committed)
 
-## Known Issues
+## UI Redesign (PR #48, 2026-07-17)
+
+- **Sidebar layout**: Dark charcoal (#3B2F2F) sidebar with gold (#D4A017) accent border, "THE JUDICIARY" branding, nav buttons synced with tabs
+- **Dashboard stat cards**: Total Payable / Paid / Balance Due with colored left borders (green, blue, gold)
+- **Kenya Judiciary color scheme**: Primary green #006B3F, gold #D4A017, dark green #004D2B, white cards on #F5F5F5
+- **All objectNames preserved**: validate_ui.py passes without modification
+- **Evidence**: Offscreen screenshots in evidence/wakilios_redesigned_*.png
+
+| Tab | Screenshot |
+| --- | --- |
+| Dashboard | evidence/wakilios_redesigned_dashboard.png |
+| Workspace | evidence/wakilios_redesigned_workspace.png |
+| Settings | evidence/wakilios_redesigned_settings.png |
+| About | evidence/wakilios_redesigned_about.png |
+| Full window | evidence/wakilios_redesigned_full.png |
+
+## Comprehensive E2E Evidence (2026-07-17)
+
+Full evidence JSON: `evidence/e2e_evidence_redesign.json`
+
+### Phase 1: License & Key Bundling (7/7 PASS)
+- 4096-bit RSA PSS + SHA-256 license signing/verification
+- Installation identity generated, all feature entitlements verified (document_intake, cloud_backup, managed_restore, matter_rag)
+- License status: active
+
+### Phase 2: Vault Initialization (1/1 PASS)
+- AES-GCM encrypted vault initialized with recovery key
+
+### Phase 3: Multi-Format Document Intake (6/6 PASS)
+| Format | Status | Extracted |
+| --- | --- | --- |
+| PDF | accepted | 92 chars |
+| DOCX | accepted | 150 chars |
+| TXT | rejected (unsupported format, by design) | 0 chars |
+| Image-based PDF | accepted | 77 chars |
+| Duplicate PDF | detected as duplicate | N/A |
+
+### Phase 4: Matter Creation & Search (5/5 PASS)
+- Litigation matter created: E2E-EVIDENCE-001, Amani Traders Ltd v Umoja Supplies
+- Document linked to matter with vault object reference
+- FTS5 search: "invoice default", "injunction", "dissipation" all return results
+
+### Phase 5: RAG Performance (5/5 PASS)
+| Query | Citations | Confidence | Time |
+| --- | --- | --- | --- |
+| What supports the injunction? | 1 | 0.27 | 2.1ms |
+| What evidence for invoice default? | 1 | 0.42 | 2.5ms |
+| What is the risk? | 1 | 0.20 | 2.5ms |
+| **Average** | **1.0** | **0.30** | **2.4ms** |
+
+### Phase 6: Backup & Restore (6/6 PASS)
+- Create local backup: 44,973 bytes, snapshot encrypted
+- Encryption verification: no plaintext in backup (firm name, PDF text both absent)
+- Upload encrypted snapshot to in-memory grant backend
+- Restore from backup: 102.1ms, data integrity verified (byte-exact match)
+- Wrong key rejection: exception raised as expected
+
+### Phase 7: WakiliOS Backend Solo Mode (7/7 PASS)
+- Solo login as admin
+- Create matter, add party, add fee (KES 15,000), add receipt
+- Offline cache: 1 matter, read_only mode
+- Audit log: 5 events
+
+### Phase 8: Bundle Selftest (1/1 PASS)
+- `./dist/WakiliOS/WakiliOS --selftest` → SELFTEST PASS
+
+### All Validation Suites (2026-07-17)
+
+| Suite | Result |
+| --- | --- |
+| validate_vault | PASS |
+| validate_intake | PASS |
+| validate_search | PASS |
+| validate_rag | PASS |
+| validate_backup | PASS |
+| validate_e2e | PASS |
+| validate_ui | PASS |
+| validate_license | PASS |
+| validate_wakilios_backend | PASS |
+| validate_wakilios_api | PASS |
+| validate_security_scan | PASS |
+| validate_products | PASS |
+| validate_admin_license_payment_boundary | PASS |
+| Bundle selftest | PASS |
+
+### Interactive UI E2E (87/87 PASS)
+
+Full evidence JSON: `evidence/e2e_interactive_ui_evidence.json`
+
+| Phase | Tests | Details |
+| --- | --- | --- |
+| Layout | 9/9 | Sidebar, stat cards, 4 tabs, title, min width |
+| Dashboard - Solo mode | 4/4 | Login, role: admin (solo), status |
+| Create matter | 5/5 | New matter, list updates, status: Created matter: NEW-001 |
+| Refresh matters | 2/2 | Button works, list refreshes |
+| Workspace sub-tabs | 25/25 | All 8 tabs (Summary/Parties/Activities/Lodgments/Court Decisions/Fees/Receipts/Documents), add party/activity/lodging/court decision/fee/receipt |
+| Settings | 20/20 | Import, search, RAG, AI keys, backup, admin groups all present |
+| Admin & audit | 2/2 | Sync: install=active, paid=True/cloud=True/rag=True/hosted_ai=False; audit: 17 events |
+| About | 1/1 | Release info |
+| Backup & restore | 2/2 | Backup: 3506 bytes; Restore: verified=True, wrong key failed=True |
+| Selftest & workflow | 4/4 | Worker selftest PASS, Native workflow: citations=1, confidence=0.436 |
+| Sidebar navigation | 5/5 | 4 nav buttons found, tab sync works all 4 directions |
+
+## Build, Bundle & Windows Test Evidence
+
+### Linux/WSL Build (Development)
+
+```bash
+# Setup
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python PySide6 cryptography pydantic PyMuPDF \
+    python-docx fastapi uvicorn ruff pytest httpx python-multipart pyinstaller
+
+# All validation suites (13/13 PASS)
+QT_QPA_PLATFORM=offscreen .venv/bin/python tests/validate_*.py
+
+# PyInstaller build (Linux binary for dev testing)
+.venv/bin/python -m PyInstaller main.spec --noconfirm
+
+# Self-test
+QT_QPA_PLATFORM=offscreen ./dist/WakiliOS/WakiliOS --selftest
+# Output: SELFTEST PASS / modules, licensing, clock guard, version 0.1.0
+
+# Comprehensive E2E
+.venv/bin/python tests/e2e_evidence_redesign.py     # 38/38 PASS
+QT_QPA_PLATFORM=offscreen .venv/bin/python tests/e2e_interactive_ui_test.py  # 87/87 PASS
+```
+
+### Windows Build (Production Target)
+
+```powershell
+# Prerequisites: Python 3.11+, Visual Studio Build Tools 2022 (C++ workload)
+
+# 1. Developer setup
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+pip install PySide6 python-multipart pyinstaller
+
+# 2. Run all validation
+set QT_QPA_PLATFORM=offscreen
+python tests\validate_vault.py
+python tests\validate_intake.py
+python tests\validate_search.py
+python tests\validate_rag.py
+python tests\validate_backup.py
+python tests\validate_e2e.py
+python tests\validate_ui.py
+python tests\validate_license.py
+python tests\validate_wakilios_backend.py
+python tests\validate_wakilios_api.py
+python tests\validate_security_scan.py
+python tests\validate_products.py
+python tests\validate_admin_license_payment_boundary.py
+
+# 3. Obfuscate licensing (production builds only)
+python scripts\obfuscate_licensing.py --check   # verify Cython + compiler
+python scripts\obfuscate_licensing.py             # compile to .pyd, strip .py
+
+# 4. Build frozen .exe
+pyinstaller main.spec --noconfirm --clean
+
+# 5. Verify frozen build
+dist\WakiliOS\WakiliOS.exe --selftest
+# Expected: SELFTEST PASS
+
+# 6. Verify obfuscation (no .py or .pyc in licensing bundle)
+dir dist\WakiliOS\_internal\licensing\*.py   2>nul && echo FAIL || echo PASS
+dir dist\WakiliOS\_internal\licensing\*.pyd  2>nul && echo PASS: .pyd obfuscated
+
+# 7. Create release ZIP + sidecar manifest
+python scripts\build_release_bundle.py
+# Output: release-output/DocumentVaultIngestionEngine-v0.1.0-windows-x64.zip
+
+# 8. Validate release bundle
+python tests\validate_release_bundle.py
+
+# 9. Clean machine test (copy dist\WakiliOS\ to machine with no Python)
+WakiliOS.exe --selftest
+```
+
+### Bundle Contents
+
+| Path | Purpose |
+|---|---|
+| `WakiliOS.exe` | Main executable |
+| `_internal/products/product_catalog.json` | 3-product catalog |
+| `_internal/resources/license_public_key.pem` | RSA-4096 public key |
+| `_internal/resources/public_kenyan_legal_docs.json` | Kenyan legal reference data |
+| `_internal/ui/wakilios.qss` | Kenya Judiciary e-filing stylesheet |
+| `_internal/licensing/core.pyd` | Obfuscated license verification |
+| `_internal/licensing/clockguard.pyd` | Obfuscated clock-rollback guard |
+
+### Known Issues
 
 - CodeQL scanning needs to be enabled in GitHub repo Settings > Code security (manual step)
 - Coverage threshold set to 60% (UI-heavy project; core modules at 80%+)
+- Linux PyInstaller build creates Linux binary; Windows .exe requires building on Windows
+- `python-multipart` must be installed for FastAPI file upload endpoints

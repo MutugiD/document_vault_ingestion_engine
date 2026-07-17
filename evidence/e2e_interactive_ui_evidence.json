@@ -1,0 +1,551 @@
+{
+  "timestamp": "2026-07-17T20:39:34.979127+00:00",
+  "total_tests": 87,
+  "passed": 87,
+  "failed": 0,
+  "phases": [
+    "Layout",
+    "Dashboard",
+    "Workspace",
+    "Summary",
+    "Parties",
+    "Activities",
+    "Lodgings",
+    "Court Decisions",
+    "Fees",
+    "Receipts",
+    "Documents",
+    "Settings",
+    "Admin",
+    "About",
+    "Backup",
+    "Selftest",
+    "Workflow",
+    "Sidebar",
+    "Screenshot"
+  ],
+  "results": [
+    {
+      "phase": "Layout",
+      "test": "Window title",
+      "result": "pass",
+      "details": "WakiliOS"
+    },
+    {
+      "phase": "Layout",
+      "test": "Min width >= 900",
+      "result": "pass",
+      "details": "minWidth=920"
+    },
+    {
+      "phase": "Layout",
+      "test": "Tab count = 4",
+      "result": "pass",
+      "details": "count=4"
+    },
+    {
+      "phase": "Layout",
+      "test": "Tab names",
+      "result": "pass",
+      "details": "Dashboard, Workspace, Settings, About"
+    },
+    {
+      "phase": "Layout",
+      "test": "Sidebar frame",
+      "result": "pass",
+      "details": "found"
+    },
+    {
+      "phase": "Layout",
+      "test": "Stat card: Total Payable",
+      "result": "pass",
+      "details": "found"
+    },
+    {
+      "phase": "Layout",
+      "test": "Stat card: Paid",
+      "result": "pass",
+      "details": "found"
+    },
+    {
+      "phase": "Layout",
+      "test": "Stat card: Balance Due",
+      "result": "pass",
+      "details": "found"
+    },
+    {
+      "phase": "Dashboard",
+      "test": "Status label exists",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Dashboard",
+      "test": "Start solo button exists",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Dashboard",
+      "test": "Solo mode connection",
+      "result": "pass",
+      "details": "Running in solo mode as admin (admin)"
+    },
+    {
+      "phase": "Dashboard",
+      "test": "Role status label",
+      "result": "pass",
+      "details": "Role: admin (solo)"
+    },
+    {
+      "phase": "Workspace",
+      "test": "Matter list exists",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Workspace",
+      "test": "Initial matter list",
+      "result": "pass",
+      "details": "items=1"
+    },
+    {
+      "phase": "Workspace",
+      "test": "New matter button exists",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Workspace",
+      "test": "Create new matter",
+      "result": "pass",
+      "details": "items_before=1, items_after=4"
+    },
+    {
+      "phase": "Workspace",
+      "test": "Create matter status",
+      "result": "pass",
+      "details": "Created matter: NEW-001"
+    },
+    {
+      "phase": "Workspace",
+      "test": "Refresh matters button exists",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Workspace",
+      "test": "Refresh matters list",
+      "result": "pass",
+      "details": "items_after_refresh=4"
+    },
+    {
+      "phase": "Workspace",
+      "test": "Matter workspace tabs exist",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Workspace",
+      "test": "Sub-tab count",
+      "result": "pass",
+      "details": "8 tabs: Summary, Parties, Activities, Lodgings, Court Decisions, Fees, Receipts, Documents"
+    },
+    {
+      "phase": "Workspace",
+      "test": "Sub-tab names match",
+      "result": "pass",
+      "details": "expected=['Summary', 'Parties', 'Activities', 'Lodgings', 'Court Decisions', 'Fees', 'Receipts', 'Documents'], actual=['Summary', 'Parties', 'Activities', 'Lodgings', 'Court Decisions', 'Fees', 'Receipts', 'Documents']"
+    },
+    {
+      "phase": "Summary",
+      "test": "Summary tab exists",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Summary",
+      "test": "Case information input",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Summary",
+      "test": "Matter status label",
+      "result": "pass",
+      "details": "Active - filed"
+    },
+    {
+      "phase": "Summary",
+      "test": "AI summary output",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Summary",
+      "test": "Update summary button",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Summary",
+      "test": "Update summary action",
+      "result": "pass",
+      "details": "Created matter: NEW-001"
+    },
+    {
+      "phase": "Parties",
+      "test": "Parties tab exists",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Parties",
+      "test": "Parties list widget",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Parties",
+      "test": "Add party button",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Parties",
+      "test": "Add party action",
+      "result": "pass",
+      "details": "Party added"
+    },
+    {
+      "phase": "Activities",
+      "test": "Add activity button",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Activities",
+      "test": "Add activity action",
+      "result": "pass",
+      "details": "Activity added"
+    },
+    {
+      "phase": "Lodgings",
+      "test": "Add lodging button",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Lodgings",
+      "test": "Add lodging action",
+      "result": "pass",
+      "details": "Lodging added"
+    },
+    {
+      "phase": "Court Decisions",
+      "test": "Add court decision button",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Court Decisions",
+      "test": "Add court decision action",
+      "result": "pass",
+      "details": "Court decision added"
+    },
+    {
+      "phase": "Fees",
+      "test": "Add fee button",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Fees",
+      "test": "Add fee button enabled",
+      "result": "pass",
+      "details": "enabled=True"
+    },
+    {
+      "phase": "Fees",
+      "test": "Add fee action",
+      "result": "pass",
+      "details": "Fee added"
+    },
+    {
+      "phase": "Receipts",
+      "test": "Add receipt button",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Receipts",
+      "test": "Add receipt button enabled",
+      "result": "pass",
+      "details": "enabled=True"
+    },
+    {
+      "phase": "Receipts",
+      "test": "Add receipt action",
+      "result": "pass",
+      "details": "Receipt added"
+    },
+    {
+      "phase": "Documents",
+      "test": "Upload document button",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Documents",
+      "test": "Document list widget",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "Import group exists",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "Document review queue",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "Add files button",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "OCR status label",
+      "result": "pass",
+      "details": "OCR: idle"
+    },
+    {
+      "phase": "Settings",
+      "test": "Duplicate status label",
+      "result": "pass",
+      "details": "Duplicates: none"
+    },
+    {
+      "phase": "Settings",
+      "test": "Search group exists",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "Matter search input",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "RAG question input",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "RAG output area",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "Ask RAG button",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "AI keys group exists",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "OpenAI key input",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "Anthropic key input",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "Provider key status",
+      "result": "pass",
+      "details": "Provider keys are local settings"
+    },
+    {
+      "phase": "Settings",
+      "test": "Save provider settings button",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "Backup group exists",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "Create backup button",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "Restore drill button",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "Backup status label",
+      "result": "pass",
+      "details": "No backup yet"
+    },
+    {
+      "phase": "Settings",
+      "test": "Admin group exists",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "Admin sync button",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "Audit log list",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Settings",
+      "test": "Refresh audit log button",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Admin",
+      "test": "Admin sync completed",
+      "result": "pass",
+      "details": "install=active, entitlement=paid=True; cloud=True; rag=True; hosted_ai=False"
+    },
+    {
+      "phase": "Admin",
+      "test": "Audit log refreshed",
+      "result": "pass",
+      "details": "events=17"
+    },
+    {
+      "phase": "About",
+      "test": "Release info label",
+      "result": "pass",
+      "details": "WakiliOS multi-seat litigation management"
+    },
+    {
+      "phase": "Backup",
+      "test": "Create backup",
+      "result": "pass",
+      "details": "Backup bytes: 3506"
+    },
+    {
+      "phase": "Backup",
+      "test": "Restore drill",
+      "result": "pass",
+      "details": "Restore verified: True; wrong key failed: True"
+    },
+    {
+      "phase": "Selftest",
+      "test": "Selftest button exists",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Selftest",
+      "test": "Worker selftest",
+      "result": "pass",
+      "details": "Worker selftest pass"
+    },
+    {
+      "phase": "Workflow",
+      "test": "Workflow button exists",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "phase": "Workflow",
+      "test": "Native workflow check",
+      "result": "pass",
+      "details": "Native workflow pass: citations=1, confidence=0.436"
+    },
+    {
+      "phase": "Sidebar",
+      "test": "Sidebar nav buttons found",
+      "result": "pass",
+      "details": "count=4"
+    },
+    {
+      "phase": "Sidebar",
+      "test": "Dashboard tab via sidebar",
+      "result": "pass",
+      "details": "index=0"
+    },
+    {
+      "phase": "Sidebar",
+      "test": "Workspace tab via sidebar",
+      "result": "pass",
+      "details": "index=1"
+    },
+    {
+      "phase": "Sidebar",
+      "test": "Settings tab via sidebar",
+      "result": "pass",
+      "details": "index=2"
+    },
+    {
+      "phase": "Sidebar",
+      "test": "About tab via sidebar",
+      "result": "pass",
+      "details": "index=3"
+    },
+    {
+      "phase": "Screenshot",
+      "test": "Dashboard screenshot",
+      "result": "pass",
+      "details": "saved"
+    },
+    {
+      "phase": "Screenshot",
+      "test": "Workspace screenshot",
+      "result": "pass",
+      "details": "saved"
+    },
+    {
+      "phase": "Screenshot",
+      "test": "Settings screenshot",
+      "result": "pass",
+      "details": "saved"
+    },
+    {
+      "phase": "Screenshot",
+      "test": "About screenshot",
+      "result": "pass",
+      "details": "saved"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-"""WakiliOS desktop shell with in-process and multi-seat connectivity."""
+"""WakiliOS desktop shell with e-filing sidebar layout and in-process/multi-seat connectivity."""
 
 from __future__ import annotations
 
@@ -62,7 +62,6 @@ DEFAULT_MODULES = (
 class WorkerSignals(QObject):
     completed = Signal(object)
     failed = Signal(str)
-
 
 class BackgroundWorker(QRunnable):
     """Run a callable outside the UI thread and emit completion/failure."""
@@ -158,7 +157,7 @@ class BackendConnectionDialog(QFrame):
 
 
 class MainWindow(QMainWindow):
-    """Production-oriented V1 desktop workbench."""
+    """Production-oriented V1 desktop workbench with e-filing sidebar layout."""
 
     def __init__(
         self,
@@ -176,30 +175,87 @@ class MainWindow(QMainWindow):
         self._current_username: str = ""
         self._current_matter_id: str = ""
 
-        root = QWidget()
-        root_layout = QVBoxLayout(root)
-        root_layout.setContentsMargins(16, 16, 16, 16)
-        root_layout.setSpacing(12)
+        # ── Main layout: sidebar + content ──
+        central = QWidget()
+        main_layout = QHBoxLayout(central)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        # ── Sidebar ──
+        sidebar = QFrame()
+        sidebar.setObjectName("sidebarFrame")
+        sidebar.setFixedWidth(200)
+        sidebar_layout = QVBoxLayout(sidebar)
+        sidebar_layout.setContentsMargins(0, 12, 0, 12)
+        sidebar_layout.setSpacing(4)
+
+        branding = QLabel("THE JUDICIARY")
+        branding.setObjectName("sidebarBranding")
+        branding.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        branding.setStyleSheet("font-size: 16px; font-weight: 700; color: #D4A017; padding: 8px;")
+        sidebar_layout.addWidget(branding)
+
+        subtitle = QLabel("Republic of Kenya")
+        subtitle.setObjectName("sidebarSubtitle")
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setStyleSheet("font-size: 10px; color: #A09888; padding: 0px 0px 12px 0px;")
+        sidebar_layout.addWidget(subtitle)
+
+        # Sidebar nav buttons
+        nav_items = ["Dashboard", "Workspace", "Settings", "About"]
+        self._sidebar_buttons: list[QPushButton] = []
+        for item in nav_items:
+            btn = QPushButton(item)
+            btn.setObjectName("sidebarNavButton")
+            btn.setCheckable(True)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self._sidebar_buttons.append(btn)
+            sidebar_layout.addWidget(btn)
+
+        # Set first button checked by default
+        self._sidebar_buttons[0].setChecked(True)
+
+        # Wire sidebar buttons to tab switching
+        for idx, btn in enumerate(self._sidebar_buttons):
+            btn.clicked.connect(lambda checked, i=idx: self._on_sidebar_nav(i))
+
+        sidebar_layout.addStretch(1)
+
+        # Version label at bottom of sidebar
+        version_label = QLabel("WakiliOS v0.1.0")
+        version_label.setObjectName("sidebarVersionLabel")
+        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        version_label.setStyleSheet("font-size: 10px; color: #807868; padding: 8px;")
+        sidebar_layout.addWidget(version_label)
+
+        main_layout.addWidget(sidebar)
+
+        # ── Content area ──
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(16, 16, 16, 16)
+        content_layout.setSpacing(12)
 
         heading = QLabel("WakiliOS")
         heading.setObjectName("heading")
         heading.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        root_layout.addWidget(heading)
+        content_layout.addWidget(heading)
 
-        subtitle = QLabel(
+        subtitle2 = QLabel(
             "Multi-seat litigation management, encrypted custody, search, and firm workflows."
         )
-        subtitle.setObjectName("subtitle")
-        root_layout.addWidget(subtitle)
+        subtitle2.setObjectName("subtitle")
+        content_layout.addWidget(subtitle2)
 
         self.tabs = QTabWidget()
         self.tabs.setObjectName("workflowTabs")
-        self.tabs.addTab(_dashboard_page(), "Dashboard")
+        self.tabs.addTab(_dashboard_page(modules), "Dashboard")
         self.tabs.addTab(_workspace_page(), "Workspace")
         self.tabs.addTab(_settings_page(), "Settings")
         self.tabs.addTab(_about_page(modules), "About")
-        root_layout.addWidget(self.tabs, stretch=1)
+        content_layout.addWidget(self.tabs, stretch=1)
 
+        # Footer
         footer = QHBoxLayout()
         footer.setSpacing(10)
         self.status_label = QLabel("Ready")
@@ -215,9 +271,11 @@ class MainWindow(QMainWindow):
         self.workflow_button.setObjectName("runNativeWorkflowButton")
         self.workflow_button.clicked.connect(self.run_native_workflow_check)
         footer.addWidget(self.workflow_button)
-        root_layout.addLayout(footer)
+        content_layout.addLayout(footer)
 
-        self.setCentralWidget(root)
+        main_layout.addWidget(content, stretch=1)
+
+        self.setCentralWidget(central)
         self.thread_pool = QThreadPool.globalInstance()
         self.provider_environment = _provider_environment_from_os()
         self.manual_session = ManualAppSession(
@@ -225,6 +283,20 @@ class MainWindow(QMainWindow):
         )
         self._connect_workflow_controls()
         self._connect_backend_controls()
+
+        # Sync sidebar with tab changes
+        self.tabs.currentChanged.connect(self._on_tab_changed)
+
+    def _on_sidebar_nav(self, index: int) -> None:
+        """Switch tab when sidebar button clicked."""
+        self.tabs.setCurrentIndex(index)
+        for i, btn in enumerate(self._sidebar_buttons):
+            btn.setChecked(i == index)
+
+    def _on_tab_changed(self, index: int) -> None:
+        """Sync sidebar buttons when tab changes."""
+        for i, btn in enumerate(self._sidebar_buttons):
+            btn.setChecked(i == index)
 
     def _connect_workflow_controls(self) -> None:
         """Wire up the existing workflow control buttons."""
@@ -898,7 +970,7 @@ def create_app(argv: list[str] | None = None) -> QApplication:
     if isinstance(app, QApplication):
         return app
     app = QApplication(list(sys.argv if argv is None else argv))
-    # Load professional stylesheet
+    # Load e-filing stylesheet
     stylesheet_path = Path(__file__).parent / "wakilios.qss"
     if stylesheet_path.exists():
         app.setStyleSheet(stylesheet_path.read_text(encoding="utf-8"))
@@ -928,11 +1000,37 @@ def _module_card(module: ModuleStatus) -> QFrame:
     return frame
 
 
-def _dashboard_page() -> QWidget:
-    """Dashboard: setup, connection, license, and vault in one view."""
+def _stat_card(label_text: str, value_text: str, object_name: str) -> QFrame:
+    """Create a stat card (Total Payable, Paid, Balance Due)."""
+    card = QFrame()
+    card.setObjectName(object_name)
+    card.setFrameShape(QFrame.Shape.StyledPanel)
+    card.setFixedHeight(80)
+    layout = QVBoxLayout(card)
+    layout.setContentsMargins(16, 12, 16, 12)
+    label = QLabel(label_text)
+    label.setObjectName("statLabel")
+    value = QLabel(value_text)
+    value.setObjectName("statValue")
+    layout.addWidget(label)
+    layout.addWidget(value)
+    layout.addStretch(1)
+    return card
+
+
+def _dashboard_page(modules: tuple[ModuleStatus, ...]) -> QWidget:
+    """Dashboard: setup, connection, license, vault, and e-filing stat cards."""
     page = QWidget()
     page.setObjectName("dashboardPage")
     layout = QVBoxLayout(page)
+
+    # --- Stat cards row (e-filing style) ---
+    stats_row = QHBoxLayout()
+    stats_row.setSpacing(12)
+    stats_row.addWidget(_stat_card("Total Payable", "KES 0", "statCardTotal"))
+    stats_row.addWidget(_stat_card("Paid", "KES 0", "statCardPaid"))
+    stats_row.addWidget(_stat_card("Balance Due", "KES 0", "statCardBalance"))
+    layout.addLayout(stats_row)
 
     # --- Connection section ---
     connection_group = QFrame()
