@@ -169,7 +169,99 @@ Full evidence JSON: `evidence/e2e_interactive_ui_evidence.json`
 | Selftest & workflow | 4/4 | Worker selftest PASS, Native workflow: citations=1, confidence=0.436 |
 | Sidebar navigation | 5/5 | 4 nav buttons found, tab sync works all 4 directions |
 
-## Known Issues
+## Build, Bundle & Windows Test Evidence
+
+### Linux/WSL Build (Development)
+
+```bash
+# Setup
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python PySide6 cryptography pydantic PyMuPDF \
+    python-docx fastapi uvicorn ruff pytest httpx python-multipart pyinstaller
+
+# All validation suites (13/13 PASS)
+QT_QPA_PLATFORM=offscreen .venv/bin/python tests/validate_*.py
+
+# PyInstaller build (Linux binary for dev testing)
+.venv/bin/python -m PyInstaller main.spec --noconfirm
+
+# Self-test
+QT_QPA_PLATFORM=offscreen ./dist/WakiliOS/WakiliOS --selftest
+# Output: SELFTEST PASS / modules, licensing, clock guard, version 0.1.0
+
+# Comprehensive E2E
+.venv/bin/python tests/e2e_evidence_redesign.py     # 38/38 PASS
+QT_QPA_PLATFORM=offscreen .venv/bin/python tests/e2e_interactive_ui_test.py  # 87/87 PASS
+```
+
+### Windows Build (Production Target)
+
+```powershell
+# Prerequisites: Python 3.11+, Visual Studio Build Tools 2022 (C++ workload)
+
+# 1. Developer setup
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+pip install PySide6 python-multipart pyinstaller
+
+# 2. Run all validation
+set QT_QPA_PLATFORM=offscreen
+python tests\validate_vault.py
+python tests\validate_intake.py
+python tests\validate_search.py
+python tests\validate_rag.py
+python tests\validate_backup.py
+python tests\validate_e2e.py
+python tests\validate_ui.py
+python tests\validate_license.py
+python tests\validate_wakilios_backend.py
+python tests\validate_wakilios_api.py
+python tests\validate_security_scan.py
+python tests\validate_products.py
+python tests\validate_admin_license_payment_boundary.py
+
+# 3. Obfuscate licensing (production builds only)
+python scripts\obfuscate_licensing.py --check   # verify Cython + compiler
+python scripts\obfuscate_licensing.py             # compile to .pyd, strip .py
+
+# 4. Build frozen .exe
+pyinstaller main.spec --noconfirm --clean
+
+# 5. Verify frozen build
+dist\WakiliOS\WakiliOS.exe --selftest
+# Expected: SELFTEST PASS
+
+# 6. Verify obfuscation (no .py or .pyc in licensing bundle)
+dir dist\WakiliOS\_internal\licensing\*.py   2>nul && echo FAIL || echo PASS
+dir dist\WakiliOS\_internal\licensing\*.pyd  2>nul && echo PASS: .pyd obfuscated
+
+# 7. Create release ZIP + sidecar manifest
+python scripts\build_release_bundle.py
+# Output: release-output/DocumentVaultIngestionEngine-v0.1.0-windows-x64.zip
+
+# 8. Validate release bundle
+python tests\validate_release_bundle.py
+
+# 9. Clean machine test (copy dist\WakiliOS\ to machine with no Python)
+WakiliOS.exe --selftest
+```
+
+### Bundle Contents
+
+| Path | Purpose |
+|---|---|
+| `WakiliOS.exe` | Main executable |
+| `_internal/products/product_catalog.json` | 3-product catalog |
+| `_internal/resources/license_public_key.pem` | RSA-4096 public key |
+| `_internal/resources/public_kenyan_legal_docs.json` | Kenyan legal reference data |
+| `_internal/ui/wakilios.qss` | Kenya Judiciary e-filing stylesheet |
+| `_internal/licensing/core.pyd` | Obfuscated license verification |
+| `_internal/licensing/clockguard.pyd` | Obfuscated clock-rollback guard |
+
+### Known Issues
 
 - CodeQL scanning needs to be enabled in GitHub repo Settings > Code security (manual step)
 - Coverage threshold set to 60% (UI-heavy project; core modules at 80%+)
+- Linux PyInstaller build creates Linux binary; Windows .exe requires building on Windows
+- `python-multipart` must be installed for FastAPI file upload endpoints
