@@ -151,6 +151,24 @@ Full evidence JSON: `evidence/e2e_evidence_redesign.json`
 | validate_admin_license_payment_boundary | PASS |
 | Bundle selftest | PASS |
 
+### Interactive UI E2E (87/87 PASS)
+
+Full evidence JSON: `evidence/e2e_interactive_ui_evidence.json`
+
+| Phase | Tests | Details |
+| --- | --- | --- |
+| Layout | 9/9 | Sidebar, stat cards, 4 tabs, title, min width |
+| Dashboard - Solo mode | 4/4 | Login, role: admin (solo), status |
+| Create matter | 5/5 | New matter, list updates, status: Created matter: NEW-001 |
+| Refresh matters | 2/2 | Button works, list refreshes |
+| Workspace sub-tabs | 25/25 | All 8 tabs (Summary/Parties/Activities/Lodgments/Court Decisions/Fees/Receipts/Documents), add party/activity/lodging/court decision/fee/receipt |
+| Settings | 20/20 | Import, search, RAG, AI keys, backup, admin groups all present |
+| Admin & audit | 2/2 | Sync: install=active, paid=True/cloud=True/rag=True/hosted_ai=False; audit: 17 events |
+| About | 1/1 | Release info |
+| Backup & restore | 2/2 | Backup: 3506 bytes; Restore: verified=True, wrong key failed=True |
+| Selftest & workflow | 4/4 | Worker selftest PASS, Native workflow: citations=1, confidence=0.436 |
+| Sidebar navigation | 5/5 | 4 nav buttons found, tab sync works all 4 directions |
+
 ## Known Issues
 
 - CodeQL scanning needs to be enabled in GitHub repo Settings > Code security (manual step)
