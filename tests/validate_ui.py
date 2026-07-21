@@ -28,8 +28,24 @@ def main() -> None:
     assert window.windowTitle() == "WakiliOS"
     assert window.minimumWidth() >= 900
     assert len(DEFAULT_MODULES) >= 7
-    assert window.tabs.count() == 4  # Dashboard, Workspace, Settings, About
+    assert window.tabs.count() == 5  # License, Dashboard, Workspace, Settings, About
+    assert [window.tabs.tabText(index) for index in range(window.tabs.count())] == [
+        "License",
+        "Dashboard",
+        "Workspace",
+        "Settings",
+        "About",
+    ]
+    assert window.tabs.isTabEnabled(0)
+    assert not window.tabs.isTabEnabled(1)
+    assert not window.tabs.isTabEnabled(2)
+    assert not window.tabs.isTabEnabled(3)
     expected_widgets = (
+        "licensePage",
+        "licenseGroup",
+        "licenseFileInput",
+        "licenseStatusLabel",
+        "licenseInstallationLabel",
         "dashboardPage",
         "connectionGroup",
         "setupGroup",
@@ -37,9 +53,6 @@ def main() -> None:
         "primaryUserInput",
         "deviceNicknameInput",
         "recoveryKeyConfirmedCheck",
-        "licenseGroup",
-        "licenseFileInput",
-        "licenseStatusLabel",
         "vaultGroup",
         "vaultPathInput",
         "recoveryKeyInput",
@@ -100,6 +113,11 @@ def main() -> None:
     )
     for object_name in expected_widgets:
         assert window.findChild(QObject, object_name) is not None, object_name
+
+    window._set_license_state(True, "Active: validation")
+    assert window.tabs.isTabEnabled(1)
+    assert window.tabs.isTabEnabled(2)
+    assert window.tabs.isTabEnabled(3)
 
     matter_workspace = window.findChild(QTabWidget, "matterWorkspaceTabs")
     assert matter_workspace is not None

@@ -135,4 +135,7 @@ jobs:
         if: steps.spec.outputs.present == 'true'
         env:
           QT_QPA_PLATFORM: offscreen
-        run: dist\WakiliOS\WakiliOS.exe --selftest
+        shell: pwsh
+        run: |
+          & ".\dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe" --selftest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

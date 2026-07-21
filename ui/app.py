@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QMainWindow,
     QPushButton,
+    QScrollArea,
     QTabWidget,
     QTextEdit,
     QVBoxLayout,
@@ -175,6 +176,7 @@ class MainWindow(QMainWindow):
         self._current_role: str = ""
         self._current_username: str = ""
         self._current_matter_id: str = ""
+        self._license_active = False
 
         root = QWidget()
         root_layout = QVBoxLayout(root)
@@ -194,9 +196,10 @@ class MainWindow(QMainWindow):
 
         self.tabs = QTabWidget()
         self.tabs.setObjectName("workflowTabs")
-        self.tabs.addTab(_dashboard_page(), "Dashboard")
-        self.tabs.addTab(_workspace_page(), "Workspace")
-        self.tabs.addTab(_settings_page(), "Settings")
+        self.tabs.addTab(_scroll_page(_license_page()), "License")
+        self.tabs.addTab(_scroll_page(_dashboard_page()), "Dashboard")
+        self.tabs.addTab(_scroll_page(_workspace_page()), "Workspace")
+        self.tabs.addTab(_scroll_page(_settings_page()), "Settings")
         self.tabs.addTab(_about_page(modules), "About")
         root_layout.addWidget(self.tabs, stretch=1)
 
@@ -220,17 +223,73 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
         self.thread_pool = QThreadPool.globalInstance()
         self.provider_environment = _provider_environment_from_os()
+        self._initialize_license_identity()
         self.manual_session = ManualAppSession(
             workspace or Path(tempfile.gettempdir()) / "document-vault-manual-app-session"
         )
         self._connect_workflow_controls()
         self._connect_backend_controls()
+        self._set_license_state(False, "Not activated")
+
+    def _initialize_license_identity(self) -> None:
+        from licensing.installation import ensure_installation_identity
+
+        app_data = Path(os.environ.get("APPDATA", tempfile.gettempdir()))
+        identity_path = app_data / "WakiliOS" / "settings" / "installation.json"
+        identity = ensure_installation_identity(identity_path)
+        installation_label = self.findChild(QLabel, "licenseInstallationLabel")
+        if installation_label is not None:
+            installation_label.setText(f"Installation ID: {identity.installation_id}")
+
+    def _set_license_state(self, active: bool, status: str) -> None:
+        self._license_active = active
+        status_label = self.findChild(QLabel, "licenseStatusLabel")
+        if status_label is not None:
+            status_label.setText(status)
+        for index in (1, 2, 3):
+            self.tabs.setTabEnabled(index, active)
+        self.tabs.setCurrentIndex(1 if active else 0)
+
+    @Slot()
+    def activate_license(self) -> None:
+        from licensing.core import (
+            embedded_public_key_pem,
+            read_license_file,
+            verify_license_document,
+        )
+        from licensing.installation import ensure_installation_identity
+
+        license_input = self.findChild(QLineEdit, "licenseFileInput")
+        license_path = Path(license_input.text().strip()) if license_input else Path()
+        if not license_path.is_file():
+            self._set_license_state(False, "License file not found")
+            self.status_label.setText("Select a valid license file first")
+            return
+        try:
+            app_data = Path(os.environ.get("APPDATA", tempfile.gettempdir()))
+            identity_path = app_data / "WakiliOS" / "settings" / "installation.json"
+            identity = ensure_installation_identity(identity_path)
+            document = read_license_file(license_path)
+            result = verify_license_document(
+                document,
+                embedded_public_key_pem(),
+                identity.installation_id,
+            )
+        except Exception as exc:
+            self._set_license_state(False, "Invalid license file")
+            self.status_label.setText(f"License activation failed: {exc}")
+            return
+        if not result.is_active:
+            self._set_license_state(False, f"License {result.status}: {result.reason}")
+            self.status_label.setText("License activation rejected")
+            return
+        self._set_license_state(True, f"Active: {document.firm_display_name} ({document.plan})")
+        self.status_label.setText("License activated; dashboard unlocked")
 
     def _connect_workflow_controls(self) -> None:
         """Wire up the existing workflow control buttons."""
         button_actions = {
             "completeSetupButton": "Setup complete",
-            "activateLicenseButton": "License activation checked",
             "initializeVaultButton": "Vault initialization checked",
             "newMatterButton": "WakiliOS matter workflow checked",
             "exportCalendarButton": "Matter calendar export checked",
@@ -242,6 +301,10 @@ class MainWindow(QMainWindow):
                 button.clicked.connect(
                     lambda _checked=False, text=message: self.status_label.setText(text)
                 )
+
+        activate_button = self.findChild(QPushButton, "activateLicenseButton")
+        if activate_button is not None:
+            activate_button.clicked.connect(self.activate_license)
 
         save_provider_button = self.findChild(QPushButton, "saveProviderSettingsButton")
         if save_provider_button is not None:
@@ -928,6 +991,60 @@ def _module_card(module: ModuleStatus) -> QFrame:
     return frame
 
 
+def _scroll_page(page: QWidget) -> QScrollArea:
+    scroll = QScrollArea()
+    scroll.setObjectName(f"{page.objectName()}ScrollArea")
+    scroll.setWidgetResizable(True)
+    scroll.setFrameShape(QFrame.Shape.NoFrame)
+    scroll.setWidget(page)
+    return scroll
+
+
+def _license_page() -> QWidget:
+    page = QWidget()
+    page.setObjectName("licensePage")
+    layout = QVBoxLayout(page)
+    layout.setContentsMargins(24, 24, 24, 24)
+    layout.setSpacing(16)
+
+    title = QLabel("Activate WakiliOS")
+    title.setObjectName("licensePageTitle")
+    layout.addWidget(title)
+    explanation = QLabel(
+        "A valid signed license is required before the Dashboard, Workspace, or Settings "
+        "are available."
+    )
+    explanation.setObjectName("licensePageExplanation")
+    explanation.setWordWrap(True)
+    layout.addWidget(explanation)
+
+    license_group = QFrame()
+    license_group.setObjectName("licenseGroup")
+    license_layout = QFormLayout(license_group)
+    license_file = QLineEdit()
+    license_file.setObjectName("licenseFileInput")
+    license_file.setPlaceholderText("Path to license.key")
+    installation = QLabel("Preparing installation identity...")
+    installation.setObjectName("licenseInstallationLabel")
+    installation.setWordWrap(True)
+    status = QLabel("Not activated")
+    status.setObjectName("licenseStatusLabel")
+    status.setWordWrap(True)
+    activate = QPushButton("Activate license")
+    activate.setObjectName("activateLicenseButton")
+    license_layout.addRow("License file", license_file)
+    license_layout.addRow("Installation", installation)
+    license_layout.addRow("Status", status)
+    license_layout.addRow("", activate)
+    layout.addWidget(license_group)
+
+    locked = QLabel("Dashboard locked until license activation")
+    locked.setObjectName("licenseLockMessage")
+    layout.addWidget(locked)
+    layout.addStretch(1)
+    return page
+
+
 def _dashboard_page() -> QWidget:
     """Dashboard: setup, connection, license, and vault in one view."""
     page = QWidget()
@@ -966,21 +1083,6 @@ def _dashboard_page() -> QWidget:
     setup_layout.addRow("", recovery_confirmed)
     setup_layout.addRow("", setup_button)
     layout.addWidget(setup_group)
-
-    # --- License section ---
-    license_group = QFrame()
-    license_group.setObjectName("licenseGroup")
-    license_layout = QFormLayout(license_group)
-    license_file = QLineEdit()
-    license_file.setObjectName("licenseFileInput")
-    license_status = QLabel("Not activated")
-    license_status.setObjectName("licenseStatusLabel")
-    activate = QPushButton("Activate license")
-    activate.setObjectName("activateLicenseButton")
-    license_layout.addRow("License file", license_file)
-    license_layout.addRow("Status", license_status)
-    license_layout.addRow("", activate)
-    layout.addWidget(license_group)
 
     # --- Vault section ---
     vault_group = QFrame()

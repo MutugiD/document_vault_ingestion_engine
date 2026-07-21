@@ -114,7 +114,7 @@ pyinstaller main.spec
 The packaged executable must pass:
 
 ```powershell
-dist\WakiliOS\WakiliOS.exe --selftest
+dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe --selftest
 ```
 
 The automated frozen-build validator runs the same path:
