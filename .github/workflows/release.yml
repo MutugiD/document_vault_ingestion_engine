@@ -54,7 +54,7 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           Remove-Item "$env:TEMP\WakiliOS_selftest.txt" -ErrorAction SilentlyContinue
-          dist\WakiliOS\WakiliOS.exe --selftest
+          & ".\dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe" --selftest
           $f = "$env:TEMP\WakiliOS_selftest.txt"
           for ($i = 0; $i -lt 30 -and -not (Test-Path $f); $i++) { Start-Sleep -Seconds 2 }
           if (-not (Test-Path $f)) { Write-Error "selftest produced no result"; exit 1 }
@@ -66,8 +66,8 @@ jobs:
       - name: Package bundle
         shell: pwsh
         run: |
-          $zip = "WakiliOS-${{ github.ref_name }}-win64.zip"
-          Compress-Archive -Path dist\WakiliOS\* -DestinationPath $zip -Force
+          $zip = "DocumentVaultIngestionEngine-${{ github.ref_name }}-win64.zip"
+          Compress-Archive -Path dist\DocumentVaultIngestionEngine\* -DestinationPath $zip -Force
           (Get-FileHash -Algorithm SHA256 $zip).Hash + "  $zip" | Out-File "$zip.sha256" -Encoding ascii
 
       - name: Publish GitHub Release
@@ -76,5 +76,5 @@ jobs:
           name: WakiliOS ${{ github.ref_name }}
           generate_release_notes: true
           files: |
-            WakiliOS-${{ github.ref_name }}-win64.zip
-            WakiliOS-${{ github.ref_name }}-win64.zip.sha256
+            DocumentVaultIngestionEngine-${{ github.ref_name }}-win64.zip
+            DocumentVaultIngestionEngine-${{ github.ref_name }}-win64.zip.sha256

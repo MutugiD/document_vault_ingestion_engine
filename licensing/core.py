@@ -171,6 +171,12 @@ def load_public_key(public_key_pem: bytes) -> RSAPublicKey:
     return key
 
 
+def embedded_public_key_pem() -> bytes:
+    """Return the vendor public key embedded in the licensing module."""
+
+    return _PUBLIC_KEY_PEM
+
+
 def verify_license_document(
     document: LicenseDocument,
     public_key_pem: bytes,

@@ -20,6 +20,61 @@ pip install -r requirements.txt
 pip install ruff pytest coverage
 ```
 
+## Start Testing Locally
+
+Run these commands from the repository root in PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python main.py --selftest
+$env:QT_QPA_PLATFORM = "offscreen"
+python tests\validate_ui.py
+python scripts\create_manual_e2e_corpus.py --output test-output\manual-source-documents
+python tests\validate_manual_windows_app_e2e.py
+python tests\validate_manual_ingest_smoke.py
+```
+
+The generated corpus is synthetic and safe for UI testing; it intentionally includes duplicate,
+empty, corrupt, and legacy files so the review queue can be exercised. For the standalone ingest
+smoke runner, point `--input` at a folder containing at least one valid text-bearing PDF, one DOCX,
+one valid scanned/image-only PDF, and one legacy `.doc` file:
+
+```powershell
+python scripts\manual_ingest_smoke.py --input D:\private-vault-test-documents --workspace D:\private-vault-test-run
+```
+
+The runner copies files into quarantine and an encrypted local vault; it does not modify or upload
+the source folder. Keep private test folders outside the repository and do not commit generated
+vaults, backups, or documents.
+
+## Build and Verify the Local Bundle End to End
+
+The following sequence creates the Windows one-folder executable, runs its frozen smoke suite,
+creates the release ZIP, and verifies a portable extraction:
+
+```powershell
+python tests\validate_frozen_build.py
+python scripts\build_release_bundle.py
+python tests\validate_release_bundle.py
+python tests\validate_installer_publishing.py
+python tests\validate_portable_install.py
+```
+
+The verified bundle is written to
+`dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe` and the release archive is
+written to `release-output\DocumentVaultIngestionEngine-0.1.0-windows-x64.zip`.
+
+For the interactive desktop app:
+
+```powershell
+python main.py --gui
+```
+
+Use the Dashboard/Workspace import controls to add documents one at a time. The application keeps
+the original source file in place, copies it to intake quarantine, extracts text locally, indexes
+the matter, and stores encrypted vault objects. Configure a real private-document folder only when
+you are ready to test with client data.
+
 ## Validation
 
 ```powershell
@@ -59,7 +114,7 @@ pyinstaller main.spec
 The packaged executable must pass:
 
 ```powershell
-dist\WakiliOS\WakiliOS.exe --selftest
+dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe --selftest
 ```
 
 The automated frozen-build validator runs the same path:

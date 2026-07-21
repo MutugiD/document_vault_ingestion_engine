@@ -6,8 +6,8 @@ Releases are built and published automatically by `.github/workflows/release.yml
 
 | Asset | Notes |
 |-------|-------|
-| `WakiliOS-vX.Y.Z-win64.zip` | The one-folder app. Ships with licence modules Cython-compiled to `.pyd` with the hard-coded public key baked in. Includes WakiliOS solo mode, multi-seat backend, RAG, vault, and all litigation management features. |
-| `WakiliOS-vX.Y.Z-win64.zip.sha256` | SHA256 checksum sidecar. |
+| `DocumentVaultIngestionEngine-vX.Y.Z-win64.zip` | The one-folder app. Ships with licence modules Cython-compiled to `.pyd` with the hard-coded public key baked in. Includes WakiliOS solo mode, multi-seat backend, RAG, vault, and all litigation management features. |
+| `DocumentVaultIngestionEngine-vX.Y.Z-win64.zip.sha256` | SHA256 checksum sidecar. |
 
 Self-contained — unzip and run `WakiliOS.exe` (no Python required).
 
@@ -32,7 +32,7 @@ Build + package a bundle exactly as CI does, to validate the packaging step:
 python scripts\obfuscate_licensing.py --check   # verify Cython + compiler
 python scripts\obfuscate_licensing.py             # compile licensing to .pyd
 pyinstaller main.spec --noconfirm --clean
-dist\WakiliOS\WakiliOS.exe --selftest            # should print: SELFTEST PASS
+dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe --selftest            # should print: SELFTEST PASS
 ```
 
 ## Obfuscated production build (licensing hardening, free — no PyArmor)
@@ -53,9 +53,9 @@ The resulting bundle ships compiled `licensing\*.pyd` (no licence `.py`/`.pyc`);
 ## Verifying a download
 
 ```powershell
-Get-FileHash -Algorithm SHA256 WakiliOS-v0.1.0-win64.zip
+Get-FileHash -Algorithm SHA256 DocumentVaultIngestionEngine-v0.1.0-win64.zip
 # compare against the .sha256 file
-.\WakiliOS\WakiliOS.exe --selftest   # should print: SELFTEST PASS
+.\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe --selftest   # should print: SELFTEST PASS
 ```
 
 ## Vendor license key generation
