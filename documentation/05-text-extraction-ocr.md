@@ -169,6 +169,8 @@ The validation sequence is:
 ```powershell
 python -m pip install -r requirements-dev.txt
 python tests\validate_docling_runtime.py
+python tests\validate_ocr_runtime.py
+python tests\validate_ocr_execution.py
 python tests\validate_extraction.py
 python tests\validate_document_upload_evidence.py
 python tests\validate_docs.py
