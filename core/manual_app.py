@@ -186,6 +186,8 @@ class ManualAppSession:
                 extracted_text=extracted_text,
                 structured_object_id=structured_object_id,
                 lifecycle_status=FILED_STATUS,
+                extraction_status=extraction_status,
+                extraction_retryable=not text_available,
             )
             build_rag_index(self.vault_root, matter_id=self.matter.matter_id)
         elif record.status in {DUPLICATE_STATUS, REJECTED_STATUS}:

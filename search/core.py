@@ -64,6 +64,8 @@ class DocumentVersionRecord:
     structured_object_id: str | None
     lifecycle_status: str
     created_at: datetime
+    extraction_status: str = "completed"
+    extraction_retryable: bool = False
 
 
 @dataclass(frozen=True)
@@ -184,6 +186,8 @@ def add_document_version(
     extracted_text: str,
     structured_object_id: str | None = None,
     lifecycle_status: str,
+    extraction_status: str = "completed",
+    extraction_retryable: bool = False,
 ) -> DocumentVersionRecord:
     now = _utc_now()
     with _connect(_database_path(vault_root)) as connection:
@@ -200,14 +204,17 @@ def add_document_version(
             structured_object_id=structured_object_id,
             lifecycle_status=lifecycle_status,
             created_at=now,
+            extraction_status=extraction_status,
+            extraction_retryable=extraction_retryable,
         )
         connection.execute(
             """
             INSERT INTO document_versions (
                 version_id, document_id, version_number, object_id, source_sha256,
-                extracted_text, structured_object_id, lifecycle_status, created_at
+                extracted_text, structured_object_id, lifecycle_status, created_at,
+                extraction_status, extraction_retryable
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 version.version_id,
@@ -219,6 +226,8 @@ def add_document_version(
                 version.structured_object_id,
                 version.lifecycle_status,
                 _datetime_to_text(version.created_at),
+                version.extraction_status,
+                int(version.extraction_retryable),
             ),
         )
         connection.execute(
@@ -349,6 +358,8 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             structured_object_id TEXT,
             lifecycle_status TEXT NOT NULL,
             created_at TEXT NOT NULL,
+            extraction_status TEXT NOT NULL DEFAULT 'completed',
+            extraction_retryable INTEGER NOT NULL DEFAULT 0,
             UNIQUE(document_id, version_number)
         );
 
@@ -370,6 +381,16 @@ def _create_schema(connection: sqlite3.Connection) -> None:
     }
     if "structured_object_id" not in columns:
         connection.execute("ALTER TABLE document_versions ADD COLUMN structured_object_id TEXT")
+    if "extraction_status" not in columns:
+        connection.execute(
+            "ALTER TABLE document_versions ADD COLUMN extraction_status TEXT NOT NULL "
+            "DEFAULT 'completed'"
+        )
+    if "extraction_retryable" not in columns:
+        connection.execute(
+            "ALTER TABLE document_versions ADD COLUMN extraction_retryable INTEGER NOT NULL "
+            "DEFAULT 0"
+        )
 
 
 def _index_version(
