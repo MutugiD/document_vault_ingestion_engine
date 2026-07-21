@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 
 from ai import configured_provider_statuses, provider_env_var, supported_providers
 from core import ManualAppSession
+from intake.docling_runtime import DocumentUnderstanding
 from wakilios.client import (
     WakiliOSClient,
     WakiliOSClientConfig,
@@ -165,6 +166,7 @@ class MainWindow(QMainWindow):
         modules: tuple[ModuleStatus, ...] = DEFAULT_MODULES,
         *,
         workspace: Path | None = None,
+        document_understanding: DocumentUnderstanding | None = None,
     ) -> None:
         super().__init__()
         self.setWindowTitle("WakiliOS")
@@ -221,7 +223,8 @@ class MainWindow(QMainWindow):
         self.thread_pool = QThreadPool.globalInstance()
         self.provider_environment = _provider_environment_from_os()
         self.manual_session = ManualAppSession(
-            workspace or Path(tempfile.gettempdir()) / "document-vault-manual-app-session"
+            workspace or Path(tempfile.gettempdir()) / "document-vault-manual-app-session",
+            document_understanding=document_understanding,
         )
         self._connect_workflow_controls()
         self._connect_backend_controls()
