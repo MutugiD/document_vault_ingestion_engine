@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT))
 
 import fitz  # noqa: E402
 from docx import Document  # noqa: E402
+from fixture_document_understanding import FixtureDocumentUnderstanding  # noqa: E402
 from PySide6.QtWidgets import QListWidget  # noqa: E402
 
 from ui import MainWindow, create_app  # noqa: E402
@@ -30,7 +31,10 @@ def main() -> None:
         _write_docx(docx, "Registry letter evidence for Nairobi matter 001")
 
         app = create_app(["validate_document_upload_evidence"])
-        window = MainWindow(workspace=root / "app-workspace")
+        window = MainWindow(
+            workspace=root / "app-workspace",
+            document_understanding=FixtureDocumentUnderstanding(),
+        )
         window.import_files([pdf, docx])
         app.processEvents()
 
@@ -45,7 +49,7 @@ def main() -> None:
         assert all(result.text_available for result in results)
 
         object_files = list((root / "app-workspace" / "vault" / "objects").rglob("*.vaultobj"))
-        assert len(object_files) == 2
+        assert len(object_files) == 4
         source_bytes = {pdf.read_bytes(), docx.read_bytes()}
         assert all(path.read_bytes() not in source_bytes for path in object_files)
         assert all(

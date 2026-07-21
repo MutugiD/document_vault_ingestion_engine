@@ -25,6 +25,8 @@ from intake.extraction import (
     OCR_PENDING,
     ExtractionError,
     ExtractionResult,
+    PageResult,
+    PasswordProvider,
     extract_document,
     extract_text,
 )
@@ -53,6 +55,8 @@ __all__ = [
     "extract_document",
     "DoclingBlock",
     "DoclingTable",
+    "PageResult",
+    "PasswordProvider",
     "DoclingConversion",
     "DoclingDocumentUnderstanding",
     "DoclingRuntimeError",

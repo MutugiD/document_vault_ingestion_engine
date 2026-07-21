@@ -61,6 +61,7 @@ class DocumentVersionRecord:
     object_id: str
     source_sha256: str
     extracted_text: str
+    structured_object_id: str | None
     lifecycle_status: str
     created_at: datetime
 
@@ -181,6 +182,7 @@ def add_document_version(
     object_id: str,
     source_sha256: str,
     extracted_text: str,
+    structured_object_id: str | None = None,
     lifecycle_status: str,
 ) -> DocumentVersionRecord:
     now = _utc_now()
@@ -195,6 +197,7 @@ def add_document_version(
             object_id=object_id,
             source_sha256=source_sha256,
             extracted_text=extracted_text,
+            structured_object_id=structured_object_id,
             lifecycle_status=lifecycle_status,
             created_at=now,
         )
@@ -202,9 +205,9 @@ def add_document_version(
             """
             INSERT INTO document_versions (
                 version_id, document_id, version_number, object_id, source_sha256,
-                extracted_text, lifecycle_status, created_at
+                extracted_text, structured_object_id, lifecycle_status, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 version.version_id,
@@ -213,6 +216,7 @@ def add_document_version(
                 version.object_id,
                 version.source_sha256,
                 version.extracted_text,
+                version.structured_object_id,
                 version.lifecycle_status,
                 _datetime_to_text(version.created_at),
             ),
@@ -342,6 +346,7 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             object_id TEXT NOT NULL,
             source_sha256 TEXT NOT NULL,
             extracted_text TEXT NOT NULL,
+            structured_object_id TEXT,
             lifecycle_status TEXT NOT NULL,
             created_at TEXT NOT NULL,
             UNIQUE(document_id, version_number)
@@ -359,6 +364,12 @@ def _create_schema(connection: sqlite3.Connection) -> None:
         );
         """
     )
+    columns = {
+        str(row["name"])
+        for row in connection.execute("PRAGMA table_info(document_versions)")
+    }
+    if "structured_object_id" not in columns:
+        connection.execute("ALTER TABLE document_versions ADD COLUMN structured_object_id TEXT")
 
 
 def _index_version(

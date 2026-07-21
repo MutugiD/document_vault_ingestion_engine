@@ -22,6 +22,7 @@ def main() -> None:
         model_path = models / "layout-model.bin"
         model_path.write_bytes(b"deterministic docling model fixture")
         manifest = {
+            "manifest_format_version": 1,
             "provider": "docling",
             "version": "2.41.0-test",
             "files": [

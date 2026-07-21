@@ -20,7 +20,7 @@ from backup import (
     restore_backup_package,
     upload_encrypted_snapshot,
 )
-from intake import ACCEPTED_STATUS, DUPLICATE_STATUS, extract_text, import_document
+from intake import ACCEPTED_STATUS, DUPLICATE_STATUS, extract_document, import_document
 from licensing import (
     ACTIVE_STATUS,
     FeatureEntitlements,
@@ -126,7 +126,7 @@ def run_native_app_workflow(
     if duplicate_record.status != DUPLICATE_STATUS:
         raise NativeWorkflowError("duplicate import was not detected")
 
-    extraction = extract_text(intake_record.quarantine_path)
+    extraction = extract_document(intake_record.quarantine_path)
     if "invoice default evidence" not in extraction.text:
         raise NativeWorkflowError("expected extracted text was not available")
 

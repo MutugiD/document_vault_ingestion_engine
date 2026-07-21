@@ -41,11 +41,13 @@ datas = [
 ]
 datas += docling_datas
 docling_runtime = Path("runtime") / "docling"
-if docling_runtime.exists():
-    datas.append((str(docling_runtime), "runtime/docling"))
+if not (docling_runtime / "docling-runtime.json").exists():
+    raise RuntimeError("prepared Docling runtime is required; run scripts/prepare_document_runtime.py")
+datas.append((str(docling_runtime), "runtime/docling"))
 tesseract_runtime = Path("runtime") / "tesseract"
-if tesseract_runtime.exists():
-    datas.append((str(tesseract_runtime), "runtime/tesseract"))
+if not (tesseract_runtime / "tesseract-runtime.json").exists():
+    raise RuntimeError("prepared Tesseract runtime is required; run scripts/prepare_document_runtime.py")
+datas.append((str(tesseract_runtime), "runtime/tesseract"))
 
 a = Analysis(
     ["main.py"],

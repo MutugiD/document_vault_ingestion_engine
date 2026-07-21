@@ -119,6 +119,16 @@ jobs:
           pip install -r requirements.txt
           pip install cython
 
+      - name: Prepare verified document runtime
+        env:
+          TESSERACT_RUNTIME_URL: ${{ secrets.TESSERACT_RUNTIME_URL }}
+          TESSERACT_RUNTIME_SHA256: ${{ secrets.TESSERACT_RUNTIME_SHA256 }}
+          TESSERACT_RUNTIME_VERSION: ${{ secrets.TESSERACT_RUNTIME_VERSION }}
+        shell: pwsh
+        run: |
+          if (-not $env:TESSERACT_RUNTIME_URL -or -not $env:TESSERACT_RUNTIME_SHA256 -or -not $env:TESSERACT_RUNTIME_VERSION) { throw "Pinned Tesseract runtime secrets are required" }
+          python scripts/prepare_document_runtime.py --tesseract-url $env:TESSERACT_RUNTIME_URL --tesseract-sha256 $env:TESSERACT_RUNTIME_SHA256 --tesseract-version $env:TESSERACT_RUNTIME_VERSION
+
       - name: Install Cython (obfuscation build tool)
         if: steps.spec.outputs.present == 'true'
         run: pip install "cython>=3,<4"
@@ -135,4 +145,4 @@ jobs:
         if: steps.spec.outputs.present == 'true'
         env:
           QT_QPA_PLATFORM: offscreen
-        run: dist\WakiliOS\WakiliOS.exe --selftest
+        run: dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe --selftest
