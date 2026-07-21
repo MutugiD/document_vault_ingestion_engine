@@ -114,7 +114,7 @@ The frozen bundle must include:
 
 Startup validation must reject missing files, absolute paths, path traversal, runtime-root escapes, duplicate paths, wrong platform/architecture, size mismatches, hash mismatches, unsupported model versions, and missing language data. The application must not silently download models or OCR data at runtime.
 
-The packaged application must provide a health check that loads the Docling converter and verifies a bundled deterministic sample, and executes a bundled Tesseract sample when OCR assets are present. Health-check errors must identify the failed runtime boundary without exposing document text.
+The packaged application must provide a health check that loads the Docling converter and verifies a bundled deterministic sample, and executes a bundled Tesseract sample. Health-check errors must identify the failed runtime boundary without exposing document text.
 
 ## Implementation Slices
 
@@ -169,8 +169,8 @@ The validation sequence is:
 ```powershell
 python -m pip install -r requirements-dev.txt
 python tests\validate_docling_runtime.py
-python tests\validate_ocr_runtime.py
 python tests\validate_extraction.py
+python tests\validate_document_upload_evidence.py
 python tests\validate_docs.py
 python tests\validate_security_scan.py
 python tests\validate_e2e.py
@@ -182,12 +182,12 @@ python tests\validate_portable_install.py
 ruff check .
 ```
 
-Public Kenyan Judiciary and Supreme Court documents are downloaded only to `test-output\public-kenyan-documents`. The test process identifies image-only pages and may create local rasterized derivatives outside Git. No legal documents, derivatives, or generated output are committed.
+Public Kenyan Judiciary and Supreme Court documents are downloaded only to `test-output\public-kenyan-documents`. The document-extraction and OCR PRs validate searchable and scanned Kenyan uploads, UI intake, vault storage, OCR, and restore evidence. No legal documents, derivatives, or generated output are committed.
 
-The acceptance gate requires searchable documents to produce native text plus Docling structure, scanned Kenyan documents to produce OCR text with page/block provenance and confidence, tables to preserve relationships, runtime tampering to fail clearly, and the frozen executable to run without Python installed.
+The acceptance gate requires searchable documents to produce native text plus Docling structure, scanned Kenyan documents to produce OCR text with page/block provenance and confidence, uploaded documents to be preserved through UI intake and encrypted vault storage, tables to preserve relationships, runtime tampering to fail clearly, and the frozen executable to run without Python installed.
 
 ## Current Boundaries and Compatibility
 
 The first documentation/packaging PR establishes the mandatory runtime and result contract. The dependent document-extraction PR implements the Docling adapter and structured result fields. Existing flat `ExtractionResult` callers remain supported through additive fields and compatibility projections until all consumers use structured artifacts.
 
-No cloud OCR, cloud parsing, runtime model download, machine-wide PATH dependency, or user-installed Python is permitted.
+No cloud OCR, cloud parsing, runtime model download, machine-wide PATH dependency, or user-installed Python is permitted. The document-extraction and OCR implementation PRs remain separate, but both runtime paths must be bundled into the current Windows application before release.
