@@ -969,12 +969,33 @@ def create_app(argv: list[str] | None = None) -> QApplication:
 
 
 def run_gui(argv: list[str] | None = None, *, smoke_ms: int | None = None) -> int:
-    app = create_app(argv)
-    window = MainWindow()
-    window.show()
-    if smoke_ms is not None:
-        QTimer.singleShot(smoke_ms, app.quit)
-    return app.exec()
+    try:
+        app = create_app(argv)
+        window = MainWindow()
+        window.showNormal()
+        window.raise_()
+        window.activateWindow()
+        if smoke_ms is not None:
+            result_path = Path(tempfile.gettempdir()) / "WakiliOS_gui_smoke.txt"
+            result_path.write_text(
+                "GUI START PASS\n"
+                f"visible={window.isVisible()}\n"
+                f"window_id={int(window.winId())}\n"
+                f"platform={app.platformName()}\n",
+                encoding="utf-8",
+            )
+            QTimer.singleShot(smoke_ms, app.quit)
+        return app.exec()
+    except Exception as exc:
+        result_path = Path(tempfile.gettempdir()) / "WakiliOS_gui_smoke.txt"
+        try:
+            result_path.write_text(
+                f"GUI START FAIL\n{type(exc).__name__}: {exc}\n",
+                encoding="utf-8",
+            )
+        except OSError:
+            pass
+        return 1
 
 
 def _module_card(module: ModuleStatus) -> QFrame:
