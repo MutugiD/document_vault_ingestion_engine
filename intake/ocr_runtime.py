@@ -28,6 +28,7 @@ class OcrRuntimeFile:
 
 @dataclass(frozen=True)
 class TesseractRuntimeManifest:
+    manifest_format_version: int
     provider: str
     version: str
     platform: str
@@ -51,13 +52,20 @@ class OcrRecognition:
     language: str
     engine_version: str
     duration_ms: int
+    page_confidence: tuple[tuple[int, float], ...] = ()
 
 
 class TesseractOcrEngine:
     """Subprocess-backed OCR adapter for a validated Tesseract runtime."""
 
-    def __init__(self, runtime: TesseractRuntime) -> None:
+    def __init__(
+        self,
+        runtime: TesseractRuntime,
+        *,
+        timeout_seconds: int = DEFAULT_OCR_TIMEOUT_SECONDS,
+    ) -> None:
         self.runtime = runtime
+        self.timeout_seconds = timeout_seconds
 
     def recognize_image(
         self,
@@ -77,35 +85,35 @@ class TesseractOcrEngine:
         environment = os.environ.copy()
         environment["TESSDATA_PREFIX"] = str(self.runtime.root / "tessdata")
         started = time.perf_counter()
+        command = [
+            str(self.runtime.executable), str(image_path), "stdout", "tsv",
+            "-l", language_arg, "--psm", "6",
+        ]
+        process = subprocess.Popen(
+            command,
+            cwd=self.runtime.root,
+            env=environment,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            shell=False,
+        )
         try:
-            result = subprocess.run(
-                [
-                    str(self.runtime.executable),
-                    str(image_path),
-                    "stdout",
-                    "-l",
-                    language_arg,
-                    "--psm",
-                    "6",
-                ],
-                cwd=self.runtime.root,
-                env=environment,
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=DEFAULT_OCR_TIMEOUT_SECONDS,
-            )
+            stdout, stderr = process.communicate(timeout=self.timeout_seconds)
         except subprocess.TimeoutExpired as exc:
+            process.kill()
+            process.communicate()
             raise OcrRuntimeError("Tesseract OCR timed out") from exc
-        if result.returncode != 0:
-            raise OcrRuntimeError(result.stderr.strip() or "Tesseract OCR failed")
-        text = result.stdout.strip()
+        if process.returncode != 0:
+            raise OcrRuntimeError(stderr.strip() or "Tesseract OCR failed")
+        text, confidence, page_confidence = _parse_tsv(stdout)
         return OcrRecognition(
             text=text,
-            confidence=_estimate_confidence(text),
+            confidence=confidence,
             language=language_arg,
             engine_version=self.runtime.version,
             duration_ms=int((time.perf_counter() - started) * 1000),
+            page_confidence=page_confidence,
         )
 
 
@@ -135,6 +143,7 @@ def discover_tesseract_runtime(
 def load_tesseract_manifest(manifest_path: Path) -> TesseractRuntimeManifest:
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     return TesseractRuntimeManifest(
+        manifest_format_version=int(payload.get("manifest_format_version", 0)),
         provider=str(payload["provider"]),
         version=str(payload["version"]),
         platform=str(payload["platform"]),
@@ -159,6 +168,8 @@ def validate_tesseract_runtime(bundle_root: Path, manifest_path: Path) -> Tesser
         raise OcrRuntimeError(f"unsupported OCR platform: {manifest.platform}")
     if not manifest.languages:
         raise OcrRuntimeError("OCR runtime manifest must list at least one language")
+    if manifest.manifest_format_version != 1:
+        raise OcrRuntimeError("unsupported OCR runtime manifest format")
 
     bundle_root = bundle_root.resolve()
     executable = _resolve_bundle_path(bundle_root, manifest.executable)
@@ -172,6 +183,8 @@ def validate_tesseract_runtime(bundle_root: Path, manifest_path: Path) -> Tesser
         *(f"tessdata/{language}.traineddata" for language in manifest.languages),
     }
     manifest_paths = {item.relative_path for item in manifest.files}
+    if len(manifest_paths) != len(manifest.files):
+        raise OcrRuntimeError("duplicate OCR runtime paths")
     missing_declared_paths = required_paths - manifest_paths
     if missing_declared_paths:
         raise OcrRuntimeError(f"OCR manifest is missing required files: {missing_declared_paths}")
@@ -220,6 +233,7 @@ def create_tesseract_manifest(
             }
         )
     return {
+        "manifest_format_version": 1,
         "provider": "tesseract",
         "version": version,
         "platform": "windows-x64",
@@ -246,14 +260,37 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _estimate_confidence(text: str) -> float | None:
-    """Return a conservative signal for legacy stdout OCR adapters."""
-
-    if not text:
-        return None
-    words = text.split()
-    if len(words) >= 8:
-        return 0.90
-    if len(words) >= 3:
-        return 0.75
-    return 0.50
+def _parse_tsv(tsv: str) -> tuple[str, float | None, tuple[tuple[int, float], ...]]:
+    lines = tsv.splitlines()
+    if not lines:
+        return "", None, ()
+    header = lines[0].split("\t")
+    indexes = {name: index for index, name in enumerate(header)}
+    required = {"page_num", "conf", "text"}
+    if not required.issubset(indexes):
+        raise OcrRuntimeError("Tesseract TSV output is missing required columns")
+    words: list[str] = []
+    confidences: list[float] = []
+    pages: dict[int, list[float]] = {}
+    for line in lines[1:]:
+        fields = line.split("\t")
+        if len(fields) <= max(indexes.values()):
+            continue
+        word = fields[indexes["text"]].strip()
+        try:
+            confidence = float(fields[indexes["conf"]])
+            page = int(fields[indexes["page_num"]])
+        except ValueError:
+            continue
+        if confidence < 0:
+            continue
+        confidences.append(confidence)
+        pages.setdefault(page, []).append(confidence)
+        if word:
+            words.append(word)
+    aggregate = sum(confidences) / len(confidences) / 100 if confidences else None
+    page_confidence = tuple(
+        (page, sum(values) / len(values) / 100)
+        for page, values in sorted(pages.items())
+    )
+    return " ".join(words), aggregate, page_confidence

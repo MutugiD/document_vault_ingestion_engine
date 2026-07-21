@@ -25,22 +25,48 @@ def main() -> None:
         image.write_bytes(b"image")
         engine = TesseractOcrEngine(runtime)
 
-        completed = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="Kenyan registry application evidence", stderr=""
+        tsv = (
+            "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n"
+            "5\t1\t1\t1\t1\t1\t0\t0\t10\t10\t75.0\tKenyan\n"
+            "5\t1\t1\t1\t1\t2\t0\t0\t10\t10\t85.0\tregistry\n"
+            "5\t1\t1\t1\t1\t3\t0\t0\t10\t10\t65.0\tapplication\n"
+            "5\t1\t1\t1\t1\t4\t0\t0\t10\t10\t75.0\tevidence\n"
         )
-        with patch("intake.ocr_runtime.subprocess.run", return_value=completed):
+
+        class FakeProcess:
+            returncode = 0
+
+            def communicate(self, timeout=None):
+                return tsv, ""
+
+            def kill(self):
+                raise AssertionError("unexpected kill")
+
+        with patch("intake.ocr_runtime.subprocess.Popen", return_value=FakeProcess()):
             result = engine.recognize_image_with_metadata(image)
         assert isinstance(result, OcrRecognition)
         assert "Kenyan registry" in result.text
         assert result.confidence == 0.75
         assert result.language == "eng"
         assert result.engine_version == "5.5.0-test"
-        with patch("intake.ocr_runtime.subprocess.run", return_value=completed):
+        with patch("intake.ocr_runtime.subprocess.Popen", return_value=FakeProcess()):
             assert engine.recognize_image(image) == result.text
 
+        class TimeoutProcess(FakeProcess):
+            timed_out = False
+
+            def communicate(self, timeout=None):
+                if self.timed_out:
+                    return "", ""
+                self.timed_out = True
+                raise subprocess.TimeoutExpired(cmd="tesseract", timeout=120)
+
+            def kill(self):
+                self.returncode = -9
+
         with patch(
-            "intake.ocr_runtime.subprocess.run",
-            side_effect=subprocess.TimeoutExpired(cmd="tesseract", timeout=120),
+            "intake.ocr_runtime.subprocess.Popen",
+            return_value=TimeoutProcess(),
         ):
             try:
                 engine.recognize_image(image)
@@ -49,10 +75,13 @@ def main() -> None:
             else:
                 raise AssertionError("OCR timeout was not reported")
 
-        failed = subprocess.CompletedProcess(
-            args=[], returncode=1, stdout="", stderr="missing traineddata"
-        )
-        with patch("intake.ocr_runtime.subprocess.run", return_value=failed):
+        class FailedProcess(FakeProcess):
+            returncode = 1
+
+            def communicate(self, timeout=None):
+                return "", "missing traineddata"
+
+        with patch("intake.ocr_runtime.subprocess.Popen", return_value=FailedProcess()):
             try:
                 engine.recognize_image(image)
             except OcrRuntimeError as exc:
