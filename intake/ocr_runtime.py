@@ -92,8 +92,14 @@ class TesseractOcrEngine:
         started = time.perf_counter()
         working_image = _preprocess_image(image_path) if self.preprocess else image_path
         command = [
-            str(self.runtime.executable), str(working_image), "stdout", "tsv",
-            "-l", language_arg, "--psm", str(self.page_segmentation_mode),
+            str(self.runtime.executable),
+            str(working_image),
+            "stdout",
+            "tsv",
+            "-l",
+            language_arg,
+            "--psm",
+            str(self.page_segmentation_mode),
         ]
         try:
             process = subprocess.Popen(
@@ -300,8 +306,7 @@ def _parse_tsv(tsv: str) -> tuple[str, float | None, tuple[tuple[int, float], ..
             words.append(word)
     aggregate = sum(confidences) / len(confidences) / 100 if confidences else None
     page_confidence = tuple(
-        (page, sum(values) / len(values) / 100)
-        for page, values in sorted(pages.items())
+        (page, sum(values) / len(values) / 100) for page, values in sorted(pages.items())
     )
     return " ".join(words), aggregate, page_confidence
 
