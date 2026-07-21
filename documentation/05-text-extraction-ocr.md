@@ -116,6 +116,60 @@ Startup validation must reject missing files, absolute paths, path traversal, ru
 
 The packaged application must provide a health check that loads the Docling converter and verifies a bundled deterministic sample, and executes a bundled Tesseract sample. Health-check errors must identify the failed runtime boundary without exposing document text.
 
+### Tesseract CI runtime pin
+
+The build job requires these repository Actions secrets:
+
+```text
+TESSERACT_RUNTIME_URL
+TESSERACT_RUNTIME_SHA256
+TESSERACT_RUNTIME_VERSION
+```
+
+`TESSERACT_RUNTIME_URL` must be a direct HTTPS URL to an approved Windows x64
+portable ZIP containing `tesseract.exe` and the required
+`tessdata/*.traineddata` files. It must not be an installer or a runtime
+download performed by the end-user application.
+
+Create the hash from the exact bytes uploaded to artifact storage:
+
+```powershell
+Get-FileHash .\tesseract-runtime-win64.zip -Algorithm SHA256
+& .\staged\tesseract.exe --version
+```
+
+Use the resulting hash as `TESSERACT_RUNTIME_SHA256` and the executable's
+reported version as `TESSERACT_RUNTIME_VERSION`. Add all three values under
+`Settings → Secrets and variables → Actions → New repository secret`.
+
+The controlled build validates the download and stages it with:
+
+```powershell
+python scripts/prepare_document_runtime.py `
+  --tesseract-url $env:TESSERACT_RUNTIME_URL `
+  --tesseract-sha256 $env:TESSERACT_RUNTIME_SHA256 `
+  --tesseract-version $env:TESSERACT_RUNTIME_VERSION
+python tests/validate_ocr_runtime.py
+python tests/validate_ocr_execution.py
+```
+
+Local staging evidence from the Windows x64 installation validated on
+2026-07-22 is retained outside Git under `test-output`:
+
+```text
+version: 5.5.0.20241111
+archive size: 38,056,317 bytes
+archive SHA-256: B1B5038AF60C47BBB9939BD1D5B0A3210CBD26CF1AE917F701A518CB4066396A
+OCR text: Kenyan Judiciary OCR smoke test 2026
+aggregate confidence: 0.9646995817
+page confidence: 0.9646995817
+duration: 380 ms
+```
+
+That locally generated archive is evidence, not a CI URL. Upload it to
+approved artifact storage and hash the final uploaded bytes again before
+populating the repository secrets.
+
 ## Implementation Slices
 
 ### F05 - Native Extraction and Docling Normalization
