@@ -376,8 +376,7 @@ def _create_schema(connection: sqlite3.Connection) -> None:
         """
     )
     columns = {
-        str(row["name"])
-        for row in connection.execute("PRAGMA table_info(document_versions)")
+        str(row["name"]) for row in connection.execute("PRAGMA table_info(document_versions)")
     }
     if "structured_object_id" not in columns:
         connection.execute("ALTER TABLE document_versions ADD COLUMN structured_object_id TEXT")

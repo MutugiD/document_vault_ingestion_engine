@@ -46,7 +46,9 @@ def main() -> int:
         ],
         check=True,
     )
-    _write_notice(docling_root, "Docling CPU runtime", "2.41.0", "https://github.com/docling-project/docling")
+    _write_notice(
+        docling_root, "Docling CPU runtime", "2.41.0", "https://github.com/docling-project/docling"
+    )
     _write_manifest(
         docling_root,
         "docling",
