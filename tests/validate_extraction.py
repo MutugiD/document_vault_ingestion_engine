@@ -46,6 +46,15 @@ class FakeOcrEngine:
         return self.text
 
 
+class MemoryPasswordProvider:
+    def __init__(self, password: str | None) -> None:
+        self.password = password
+
+    def get_password(self, source_path: Path) -> str | None:
+        del source_path
+        return self.password
+
+
 class FakeDocumentUnderstanding:
     def convert(self, source_path: Path) -> DoclingConversion:
         return DoclingConversion(
@@ -85,6 +94,22 @@ def main() -> None:
         assert structured_result.blocks[0].block_type == "paragraph"
         assert structured_result.tables[0].rows == (("column",), ("value",))
         assert structured_result.model_version == "fixture-model"
+
+        encrypted_path = workspace / "encrypted.pdf"
+        _write_encrypted_pdf(encrypted_path, "Confidential Kenyan filing")
+        required = extract_text(encrypted_path)
+        assert required.status == "password_required"
+        assert required.retryable
+        invalid = extract_text(
+            encrypted_path,
+            password_provider=MemoryPasswordProvider("wrong"),
+        )
+        assert invalid.status == "invalid_password"
+        valid = extract_text(
+            encrypted_path,
+            password_provider=MemoryPasswordProvider("correct"),
+        )
+        assert "Confidential Kenyan filing" in valid.text
 
         image_path = workspace / "scan.png"
         image_path.write_bytes(b"\x89PNG\r\n\x1a\n" + b"scanned image bytes")
@@ -151,6 +176,19 @@ def _write_image_only_pdf(path: Path) -> None:
     pixmap.clear_with(230)
     page.insert_image(fitz.Rect(72, 120, 523, 320), pixmap=pixmap)
     document.save(path)
+    document.close()
+
+
+def _write_encrypted_pdf(path: Path, text: str) -> None:
+    document = fitz.open()
+    page = document.new_page()
+    page.insert_text((72, 72), text)
+    document.save(
+        path,
+        encryption=fitz.PDF_ENCRYPT_AES_256,
+        owner_pw="owner",
+        user_pw="correct",
+    )
     document.close()
 
 
