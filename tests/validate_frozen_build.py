@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +42,23 @@ def main() -> None:
         text=True,
     )
     assert frozen_selftest.returncode == 0, frozen_selftest.stdout + frozen_selftest.stderr
+
+    gui_smoke_result = Path(tempfile.gettempdir()) / "WakiliOS_gui_smoke.txt"
+    gui_smoke_result.unlink(missing_ok=True)
+    frozen_gui_smoke = subprocess.run(
+        [str(FROZEN_EXE), "--gui-smoke", "1000"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
+    )
+    assert frozen_gui_smoke.returncode == 0, frozen_gui_smoke.stdout + frozen_gui_smoke.stderr
+    assert gui_smoke_result.exists(), "frozen GUI smoke did not write a startup result"
+    gui_smoke_text = gui_smoke_result.read_text(encoding="utf-8")
+    assert "GUI START PASS" in gui_smoke_text, gui_smoke_text
+    assert "visible=True" in gui_smoke_text, gui_smoke_text
+    assert "window_id=0" not in gui_smoke_text, gui_smoke_text
 
     frozen_products = subprocess.run(
         [str(FROZEN_EXE), "--products"],
