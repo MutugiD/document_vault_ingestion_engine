@@ -51,7 +51,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="WakiliOS",
+    name="DocumentVaultIngestionEngine",
     debug=False,
     strip=False,
     upx=False,
@@ -63,5 +63,5 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=False,
-    name="WakiliOS",
+    name="DocumentVaultIngestionEngine",
 )

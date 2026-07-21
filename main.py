@@ -10,7 +10,7 @@ import tempfile
 from datetime import UTC
 from pathlib import Path
 
-from ui import APP_VERSION
+APP_VERSION = "0.1.0"
 
 CORE_MODULES = (
     "ai",
