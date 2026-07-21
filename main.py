@@ -244,8 +244,13 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"products": payload}, indent=2, sort_keys=True))
         return 0
 
-    print("Document Vault Ingestion Engine. Run with --gui, --products, or --selftest.")
-    return 0
+    # A Windows user launching the packaged application by double-clicking it
+    # supplies no command-line arguments.  The desktop product must open the
+    # GUI in that case; diagnostics remain available through their explicit
+    # flags above.
+    from ui import run_gui
+
+    return run_gui(sys.argv[:1])
 
 
 if __name__ == "__main__":

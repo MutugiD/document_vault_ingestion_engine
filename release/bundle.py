@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import tomllib
 import zipfile
 from dataclasses import asdict, dataclass
@@ -76,6 +77,14 @@ def create_release_bundle(
     version = manifest.version
     zip_path = output_dir / f"{APP_NAME}-{version}-{PLATFORM}.zip"
     manifest_path = output_dir / f"{APP_NAME}-{version}-{PLATFORM}.manifest.json"
+
+    # Keep the adjacent extracted release folder synchronized with the ZIP.
+    # This is the folder users commonly open after building locally; leaving a
+    # previous build there makes the visible EXE disagree with the new ZIP.
+    extracted_bundle_dir = output_dir / APP_NAME
+    if extracted_bundle_dir.exists():
+        shutil.rmtree(extracted_bundle_dir)
+    shutil.copytree(frozen_bundle_dir, extracted_bundle_dir)
 
     _write_zip(zip_path, frozen_bundle_dir, manifest)
     bundle_hash = _sha256_file(zip_path)

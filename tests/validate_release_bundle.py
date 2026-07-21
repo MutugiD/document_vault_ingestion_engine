@@ -27,6 +27,8 @@ def main() -> None:
 
     release_bundle = create_release_bundle(frozen_dir, ROOT / "release-output", ROOT)
     manifest = validate_release_bundle(release_bundle.zip_path, release_bundle.manifest_path)
+    extracted_exe = ROOT / "release-output" / APP_NAME / f"{APP_NAME}.exe"
+    assert extracted_exe.read_bytes() == (frozen_dir / f"{APP_NAME}.exe").read_bytes()
 
     assert manifest.app_name == APP_NAME
     assert manifest.platform == "windows-x64"
