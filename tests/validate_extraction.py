@@ -13,13 +13,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from intake import (  # noqa: E402
-    DoclingBlock,
-    DoclingConversion,
-    DoclingTable,
     OCR_COMPLETED,
     OCR_FAILED,
     OCR_NOT_REQUIRED,
     OCR_PENDING,
+    DoclingBlock,
+    DoclingConversion,
+    DoclingTable,
     extract_document,
     extract_text,
 )
