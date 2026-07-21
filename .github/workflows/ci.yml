@@ -146,3 +146,10 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe --selftest
+
+      - name: Validate bundled document runtimes
+        if: steps.spec.outputs.present == 'true'
+        run: |
+          python tests/validate_docling_runtime.py
+          python tests/validate_ocr_runtime.py
+          python tests/validate_package.py

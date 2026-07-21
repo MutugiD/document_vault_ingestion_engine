@@ -73,12 +73,21 @@ jobs:
           $content = Get-Content $f -Raw
           if ($content -notmatch "PASS") { Write-Error "selftest did not pass"; exit 1 }
 
-      - name: Package bundle
+      - name: Validate and package release bundle
         shell: pwsh
         run: |
-          $zip = "DocumentVaultIngestionEngine-${{ github.ref_name }}-win64.zip"
-          Compress-Archive -Path dist\DocumentVaultIngestionEngine\* -DestinationPath $zip -Force
-          (Get-FileHash -Algorithm SHA256 $zip).Hash + "  $zip" | Out-File "$zip.sha256" -Encoding ascii
+          python tests/validate_release_bundle.py
+          $release = Get-ChildItem release-output -Filter "DocumentVaultIngestionEngine-*.zip" | Select-Object -First 1
+          if (-not $release) { throw "release validator did not create a ZIP" }
+          $portable = Join-Path $env:RUNNER_TEMP "document-vault-portable"
+          Remove-Item $portable -Recurse -Force -ErrorAction SilentlyContinue
+          Expand-Archive -Path $release.FullName -DestinationPath $portable
+          $exe = Join-Path $portable "DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe"
+          if (-not (Test-Path $exe)) { throw "portable executable is missing" }
+          & $exe --selftest
+          if ($LASTEXITCODE -ne 0) { throw "portable self-test failed" }
+          Copy-Item $release.FullName .
+          (Get-FileHash -Algorithm SHA256 $release.FullName).Hash + "  " + $release.Name | Out-File ($release.Name + ".sha256") -Encoding ascii
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -86,5 +95,5 @@ jobs:
           name: DocumentVaultIngestionEngine ${{ github.ref_name }}
           generate_release_notes: true
           files: |
-            DocumentVaultIngestionEngine-${{ github.ref_name }}-win64.zip
-            DocumentVaultIngestionEngine-${{ github.ref_name }}-win64.zip.sha256
+            release-output/DocumentVaultIngestionEngine-*.zip
+            release-output/DocumentVaultIngestionEngine-*.manifest.json
