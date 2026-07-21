@@ -23,7 +23,7 @@ def main() -> None:
         runtime = TesseractRuntime(root, executable, ("eng",), "5.5.0-test")
         image = root / "scan.png"
         image.write_bytes(b"image")
-        engine = TesseractOcrEngine(runtime)
+        engine = TesseractOcrEngine(runtime, preprocess=False)
 
         tsv = (
             "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n"

@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -63,9 +64,13 @@ class TesseractOcrEngine:
         runtime: TesseractRuntime,
         *,
         timeout_seconds: int = DEFAULT_OCR_TIMEOUT_SECONDS,
+        preprocess: bool = True,
+        page_segmentation_mode: int = 6,
     ) -> None:
         self.runtime = runtime
         self.timeout_seconds = timeout_seconds
+        self.preprocess = preprocess
+        self.page_segmentation_mode = page_segmentation_mode
 
     def recognize_image(
         self,
@@ -85,28 +90,33 @@ class TesseractOcrEngine:
         environment = os.environ.copy()
         environment["TESSDATA_PREFIX"] = str(self.runtime.root / "tessdata")
         started = time.perf_counter()
+        working_image = _preprocess_image(image_path) if self.preprocess else image_path
         command = [
-            str(self.runtime.executable), str(image_path), "stdout", "tsv",
-            "-l", language_arg, "--psm", "6",
+            str(self.runtime.executable), str(working_image), "stdout", "tsv",
+            "-l", language_arg, "--psm", str(self.page_segmentation_mode),
         ]
-        process = subprocess.Popen(
-            command,
-            cwd=self.runtime.root,
-            env=environment,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            shell=False,
-        )
         try:
-            stdout, stderr = process.communicate(timeout=self.timeout_seconds)
-        except subprocess.TimeoutExpired as exc:
-            process.kill()
-            process.communicate()
-            raise OcrRuntimeError("Tesseract OCR timed out") from exc
-        if process.returncode != 0:
-            raise OcrRuntimeError(stderr.strip() or "Tesseract OCR failed")
-        text, confidence, page_confidence = _parse_tsv(stdout)
+            process = subprocess.Popen(
+                command,
+                cwd=self.runtime.root,
+                env=environment,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                shell=False,
+            )
+            try:
+                stdout, stderr = process.communicate(timeout=self.timeout_seconds)
+            except subprocess.TimeoutExpired as exc:
+                process.kill()
+                process.communicate()
+                raise OcrRuntimeError("Tesseract OCR timed out") from exc
+            if process.returncode != 0:
+                raise OcrRuntimeError(stderr.strip() or "Tesseract OCR failed")
+            text, confidence, page_confidence = _parse_tsv(stdout)
+        finally:
+            if working_image != image_path:
+                working_image.unlink(missing_ok=True)
         return OcrRecognition(
             text=text,
             confidence=confidence,
@@ -294,3 +304,20 @@ def _parse_tsv(tsv: str) -> tuple[str, float | None, tuple[tuple[int, float], ..
         for page, values in sorted(pages.items())
     )
     return " ".join(words), aggregate, page_confidence
+
+
+def _preprocess_image(image_path: Path) -> Path:
+    """Create an isolated grayscale/contrast derivative for OCR only."""
+
+    try:
+        from PIL import Image, ImageFilter, ImageOps
+
+        image = Image.open(image_path).convert("L")
+        image = ImageOps.autocontrast(image).filter(ImageFilter.MedianFilter(size=3))
+        temporary = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+        temporary_path = Path(temporary.name)
+        temporary.close()
+        image.save(temporary_path, format="PNG")
+        return temporary_path
+    except Exception as exc:
+        raise OcrRuntimeError(f"OCR preprocessing failed: {image_path.name}") from exc
