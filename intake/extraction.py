@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Protocol
 
@@ -11,6 +11,13 @@ import fitz
 from docx import Document
 
 from intake.core import detect_file_type
+from intake.docling_runtime import (
+    DoclingBlock,
+    DoclingDocumentUnderstanding,
+    DoclingRuntimeError,
+    DoclingTable,
+    DocumentUnderstanding,
+)
 from intake.ocr_runtime import OcrRuntimeError
 
 OCR_NOT_REQUIRED = "not_required"
@@ -43,6 +50,36 @@ class ExtractionResult:
     page_count: int
     ocr_status: str
     warnings: tuple[str, ...]
+    blocks: tuple[DoclingBlock, ...] = ()
+    tables: tuple[DoclingTable, ...] = ()
+    extractor_version: str = "native"
+    model_version: str = "not_loaded"
+
+
+def extract_document(
+    source_path: Path,
+    *,
+    ocr_engine: OcrEngine | None = None,
+    document_understanding: DocumentUnderstanding | None = None,
+) -> ExtractionResult:
+    """Run native extraction followed by the mandatory Docling boundary."""
+
+    native_result = extract_text(source_path, ocr_engine=ocr_engine)
+    understanding = document_understanding or DoclingDocumentUnderstanding()
+    try:
+        converted = understanding.convert(source_path)
+    except DoclingRuntimeError:
+        raise
+    return replace(
+        native_result,
+        text=converted.text or native_result.text,
+        page_count=max(native_result.page_count, converted.page_count),
+        warnings=tuple(dict.fromkeys((*native_result.warnings, *converted.warnings))),
+        blocks=converted.blocks,
+        tables=converted.tables,
+        extractor_version=converted.extractor_version,
+        model_version=converted.model_version,
+    )
 
 
 def extract_text(source_path: Path, *, ocr_engine: OcrEngine | None = None) -> ExtractionResult:

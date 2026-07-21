@@ -13,10 +13,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from intake import (  # noqa: E402
+    DoclingBlock,
+    DoclingConversion,
+    DoclingTable,
     OCR_COMPLETED,
     OCR_FAILED,
     OCR_NOT_REQUIRED,
     OCR_PENDING,
+    extract_document,
     extract_text,
 )
 
@@ -42,6 +46,18 @@ class FakeOcrEngine:
         return self.text
 
 
+class FakeDocumentUnderstanding:
+    def convert(self, source_path: Path) -> DoclingConversion:
+        return DoclingConversion(
+            text=f"Docling normalized {source_path.stem}",
+            blocks=(DoclingBlock("paragraph", "structured paragraph", 1, None, "#/texts/0"),),
+            tables=(DoclingTable(1, (("column",), ("value",)), "#/tables/0"),),
+            page_count=1,
+            extractor_version="2.41.0-test",
+            model_version="fixture-model",
+        )
+
+
 def main() -> None:
     with tempfile.TemporaryDirectory() as temporary_dir:
         workspace = Path(temporary_dir)
@@ -60,6 +76,15 @@ def main() -> None:
         assert docx_result.detected_file_type == "docx"
         assert docx_result.ocr_status == OCR_NOT_REQUIRED
         assert "commercial division" in docx_result.text
+
+        structured_result = extract_document(
+            pdf_path,
+            document_understanding=FakeDocumentUnderstanding(),
+        )
+        assert structured_result.text == "Docling normalized hearing-notice"
+        assert structured_result.blocks[0].block_type == "paragraph"
+        assert structured_result.tables[0].rows == (("column",), ("value",))
+        assert structured_result.model_version == "fixture-model"
 
         image_path = workspace / "scan.png"
         image_path.write_bytes(b"\x89PNG\r\n\x1a\n" + b"scanned image bytes")
