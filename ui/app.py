@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 import tempfile
@@ -262,29 +263,77 @@ class MainWindow(QMainWindow):
         license_input = self.findChild(QLineEdit, "licenseFileInput")
         license_path = Path(license_input.text().strip()) if license_input else Path()
         if not license_path.is_file():
-            self._set_license_state(False, "License file not found")
-            self.status_label.setText("Select a valid license file first")
+            message = "License file not found. Select a signed license.key file."
+            self._set_license_state(False, message)
+            self.status_label.setText(message)
             return
         try:
             app_data = Path(os.environ.get("APPDATA", tempfile.gettempdir()))
             identity_path = app_data / "WakiliOS" / "settings" / "installation.json"
             identity = ensure_installation_identity(identity_path)
+            raw_license = license_path.read_bytes()
+            if license_path.suffix.lower() == ".pem" or b"BEGIN PUBLIC KEY" in raw_license:
+                message = (
+                    "This is the public verification key, not a license. "
+                    "Select a vendor-issued signed license.key file."
+                )
+                self._set_license_state(False, message)
+                self.status_label.setText(message)
+                return
             document = read_license_file(license_path)
             result = verify_license_document(
                 document,
                 embedded_public_key_pem(),
                 identity.installation_id,
             )
-        except Exception as exc:
-            self._set_license_state(False, "Invalid license file")
-            self.status_label.setText(f"License activation failed: {exc}")
+        except json.JSONDecodeError:
+            message = "License file is not valid JSON. Select a vendor-issued signed license.key."
+            self._set_license_state(False, message)
+            self.status_label.setText(message)
+            return
+        except (KeyError, TypeError, ValueError):
+            message = "License file is malformed. Select a vendor-issued signed license.key."
+            self._set_license_state(False, message)
+            self.status_label.setText(message)
+            return
+        except Exception:
+            message = "License could not be read. Select a vendor-issued signed license.key."
+            self._set_license_state(False, message)
+            self.status_label.setText(message)
             return
         if not result.is_active:
-            self._set_license_state(False, f"License {result.status}: {result.reason}")
-            self.status_label.setText("License activation rejected")
+            messages = {
+                "bad_signature": "Invalid license - contact the license issuer.",
+                "installation_mismatch": (
+                    "This license is already bound to another installation. "
+                    "Request a license for this Installation ID."
+                ),
+                "expired": "Invalid license - contact the license issuer.",
+                "disabled": "This license is inactive or disabled. Contact the license issuer.",
+                "malformed": "Invalid license - contact the license issuer.",
+            }
+            message = messages.get(
+                result.status,
+                "Invalid license - contact the license issuer.",
+            )
+            self._set_license_state(False, message)
+            self.status_label.setText(message)
             return
         self._set_license_state(True, f"Active: {document.firm_display_name} ({document.plan})")
         self.status_label.setText("License activated; dashboard unlocked")
+
+    def browse_for_license(self) -> None:
+        selected, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select signed license",
+            "",
+            "License files (*.key *.json);;All files (*)",
+        )
+        if selected:
+            license_input = self.findChild(QLineEdit, "licenseFileInput")
+            if license_input is not None:
+                license_input.setText(selected)
+            self.status_label.setText("License file selected; click Activate license")
 
     def _connect_workflow_controls(self) -> None:
         """Wire up the existing workflow control buttons."""
@@ -305,6 +354,10 @@ class MainWindow(QMainWindow):
         activate_button = self.findChild(QPushButton, "activateLicenseButton")
         if activate_button is not None:
             activate_button.clicked.connect(self.activate_license)
+
+        browse_button = self.findChild(QPushButton, "browseLicenseButton")
+        if browse_button is not None:
+            browse_button.clicked.connect(self.browse_for_license)
 
         save_provider_button = self.findChild(QPushButton, "saveProviderSettingsButton")
         if save_provider_button is not None:
@@ -1045,6 +1098,8 @@ def _license_page() -> QWidget:
     license_file = QLineEdit()
     license_file.setObjectName("licenseFileInput")
     license_file.setPlaceholderText("Path to license.key")
+    browse = QPushButton("Browse")
+    browse.setObjectName("browseLicenseButton")
     installation = QLabel("Preparing installation identity...")
     installation.setObjectName("licenseInstallationLabel")
     installation.setWordWrap(True)
@@ -1053,7 +1108,10 @@ def _license_page() -> QWidget:
     status.setWordWrap(True)
     activate = QPushButton("Activate license")
     activate.setObjectName("activateLicenseButton")
-    license_layout.addRow("License file", license_file)
+    license_file_row = QHBoxLayout()
+    license_file_row.addWidget(license_file, stretch=1)
+    license_file_row.addWidget(browse)
+    license_layout.addRow("License file", license_file_row)
     license_layout.addRow("Installation", installation)
     license_layout.addRow("Status", status)
     license_layout.addRow("", activate)

@@ -45,6 +45,7 @@ def main() -> None:
         "licensePage",
         "licenseGroup",
         "licenseFileInput",
+        "browseLicenseButton",
         "licenseStatusLabel",
         "licenseInstallationLabel",
         "dashboardPage",
@@ -114,6 +115,17 @@ def main() -> None:
     )
     for object_name in expected_widgets:
         assert window.findChild(QObject, object_name) is not None, object_name
+
+    license_input = window.findChild(QLineEdit, "licenseFileInput")
+    activate_button = window.findChild(QPushButton, "activateLicenseButton")
+    license_status = window.findChild(QLabel, "licenseStatusLabel")
+    assert license_input is not None
+    assert activate_button is not None
+    assert license_status is not None
+    license_input.setText(str(ROOT / "resources" / "license_public_key.pem"))
+    activate_button.click()
+    assert "public verification key" in license_status.text()
+    assert "Expecting value" not in window.status_label.text()
 
     window._set_license_state(True, "Active: validation")
     assert window.tabs.isTabEnabled(1)

@@ -83,7 +83,13 @@ def create_release_bundle(
     # previous build there makes the visible EXE disagree with the new ZIP.
     extracted_bundle_dir = output_dir / APP_NAME
     if extracted_bundle_dir.exists():
-        shutil.rmtree(extracted_bundle_dir)
+        try:
+            shutil.rmtree(extracted_bundle_dir)
+        except PermissionError as exc:
+            raise ReleaseBundleError(
+                "cannot refresh the extracted release folder because the packaged EXE is "
+                "still in use; close DocumentVaultIngestionEngine and run the build again"
+            ) from exc
     shutil.copytree(frozen_bundle_dir, extracted_bundle_dir)
 
     _write_zip(zip_path, frozen_bundle_dir, manifest)

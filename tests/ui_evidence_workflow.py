@@ -136,7 +136,15 @@ def main() -> None:
         shot("license-locked")
         license_input = window.findChild(QLineEdit, "licenseFileInput")
         assert license_input is not None
-        license_input.setText(str(license_path))
+        original_license_picker = ui_app.QFileDialog.getOpenFileName
+        ui_app.QFileDialog.getOpenFileName = staticmethod(
+            lambda *args, **kwargs: (str(license_path), "")
+        )
+        try:
+            button("browseLicenseButton").click()
+        finally:
+            ui_app.QFileDialog.getOpenFileName = original_license_picker
+        assert license_input.text() == str(license_path)
         shot("license-file-selected")
         button("activateLicenseButton").click()
         app.processEvents()
