@@ -62,13 +62,27 @@ python tests\validate_portable_install.py
 
 The verified bundle is written to
 `dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe` and the release archive is
-written to `release-output\DocumentVaultIngestionEngine-0.1.0-windows-x64.zip`.
+written to `release-output\DocumentVaultIngestionEngine-0.1.0-windows-x64.zip`. The adjacent
+`release-output\DocumentVaultIngestionEngine\` folder is refreshed from the same build, so the
+EXE in that folder and the EXE inside the ZIP are identical.
 
 For the interactive desktop app:
 
 ```powershell
-python main.py --gui
+release-output\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe
 ```
+
+Double-clicking the packaged EXE launches the License screen. Activate a valid signed `license.key`
+there before Dashboard, Workspace, or Settings become available. The Dashboard contains setup and
+vault controls only; license activation is kept on the License screen.
+
+To run the scripted UI workflow and save 23 local screenshots without committing them:
+
+```powershell
+python tests\ui_evidence_workflow.py
+```
+
+Screenshots are written under `evidence\`, which is ignored by Git.
 
 Use the Dashboard/Workspace import controls to add documents one at a time. The application keeps
 the original source file in place, copies it to intake quarantine, extracts text locally, indexes

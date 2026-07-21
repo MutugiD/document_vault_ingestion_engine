@@ -40,6 +40,7 @@ def main() -> None:
     assert not window.tabs.isTabEnabled(1)
     assert not window.tabs.isTabEnabled(2)
     assert not window.tabs.isTabEnabled(3)
+    assert window.tabs.widget(1).findChild(QObject, "licenseGroup") is None
     expected_widgets = (
         "licensePage",
         "licenseGroup",

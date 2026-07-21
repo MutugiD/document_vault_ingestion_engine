@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,6 +34,22 @@ def main() -> None:
     assert build.returncode == 0, build.stdout + build.stderr
     assert FROZEN_EXE.exists(), f"missing frozen executable: {FROZEN_EXE}"
     assert (DIST_APP / "_internal").exists(), "missing PyInstaller one-folder internals"
+
+    default_gui = subprocess.Popen([str(FROZEN_EXE)], cwd=ROOT)
+    try:
+        time.sleep(2)
+        assert default_gui.poll() is None, (
+            f"double-click launch exited before opening the GUI: exit={default_gui.returncode}"
+        )
+    finally:
+        if default_gui.poll() is None:
+            default_gui.terminate()
+        try:
+            default_gui.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            default_gui.kill()
+            default_gui.wait(timeout=10)
+    print("DEFAULT GUI LAUNCH PASS")
 
     frozen_selftest = subprocess.run(
         [str(FROZEN_EXE), "--selftest"],
