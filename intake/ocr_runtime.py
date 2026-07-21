@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -43,6 +44,15 @@ class TesseractRuntime:
     version: str
 
 
+@dataclass(frozen=True)
+class OcrRecognition:
+    text: str
+    confidence: float | None
+    language: str
+    engine_version: str
+    duration_ms: int
+
+
 class TesseractOcrEngine:
     """Subprocess-backed OCR adapter for a validated Tesseract runtime."""
 
@@ -55,9 +65,18 @@ class TesseractOcrEngine:
         *,
         languages: tuple[str, ...] | None = None,
     ) -> str:
+        return self.recognize_image_with_metadata(image_path, languages=languages).text
+
+    def recognize_image_with_metadata(
+        self,
+        image_path: Path,
+        *,
+        languages: tuple[str, ...] | None = None,
+    ) -> OcrRecognition:
         language_arg = "+".join(languages or self.runtime.languages)
         environment = os.environ.copy()
         environment["TESSDATA_PREFIX"] = str(self.runtime.root / "tessdata")
+        started = time.perf_counter()
         try:
             result = subprocess.run(
                 [
@@ -80,7 +99,14 @@ class TesseractOcrEngine:
             raise OcrRuntimeError("Tesseract OCR timed out") from exc
         if result.returncode != 0:
             raise OcrRuntimeError(result.stderr.strip() or "Tesseract OCR failed")
-        return result.stdout.strip()
+        text = result.stdout.strip()
+        return OcrRecognition(
+            text=text,
+            confidence=_estimate_confidence(text),
+            language=language_arg,
+            engine_version=self.runtime.version,
+            duration_ms=int((time.perf_counter() - started) * 1000),
+        )
 
 
 def discover_tesseract_runtime(
@@ -218,3 +244,16 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _estimate_confidence(text: str) -> float | None:
+    """Return a conservative signal for legacy stdout OCR adapters."""
+
+    if not text:
+        return None
+    words = text.split()
+    if len(words) >= 8:
+        return 0.90
+    if len(words) >= 3:
+        return 0.75
+    return 0.50
