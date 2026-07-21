@@ -75,7 +75,8 @@ jobs:
             "tests/validate_backup.py",
             "tests/validate_wakilios_backend.py",
             "tests/validate_wakilios_api.py",
-            "tests/validate_e2e.py"
+            "tests/validate_e2e.py",
+            "tests/validate_ui.py"
           )
           foreach ($s in $suites) {
             Write-Host "=== $s ==="
