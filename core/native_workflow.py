@@ -20,7 +20,8 @@ from backup import (
     restore_backup_package,
     upload_encrypted_snapshot,
 )
-from intake import ACCEPTED_STATUS, DUPLICATE_STATUS, extract_text, import_document
+from intake import ACCEPTED_STATUS, DUPLICATE_STATUS, extract_document, import_document
+from intake.docling_runtime import DocumentUnderstanding
 from licensing import (
     ACTIVE_STATUS,
     FeatureEntitlements,
@@ -84,6 +85,7 @@ def run_native_app_workflow(
     workspace: Path | None = None,
     *,
     provider_environment: dict[str, str] | None = None,
+    document_understanding: DocumentUnderstanding | None = None,
 ) -> NativeWorkflowReport:
     """Run a redacted end-to-end local workflow for the native app boundary."""
 
@@ -92,6 +94,7 @@ def run_native_app_workflow(
             return run_native_app_workflow(
                 Path(temporary_dir),
                 provider_environment=provider_environment,
+                document_understanding=document_understanding,
             )
 
     workspace.mkdir(parents=True, exist_ok=True)
@@ -126,7 +129,10 @@ def run_native_app_workflow(
     if duplicate_record.status != DUPLICATE_STATUS:
         raise NativeWorkflowError("duplicate import was not detected")
 
-    extraction = extract_text(intake_record.quarantine_path)
+    extraction = extract_document(
+        intake_record.quarantine_path,
+        document_understanding=document_understanding,
+    )
     if "invoice default evidence" not in extraction.text:
         raise NativeWorkflowError("expected extracted text was not available")
 

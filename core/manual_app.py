@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from uuid import uuid4
 
@@ -12,10 +13,12 @@ from intake import (
     ACCEPTED_STATUS,
     DUPLICATE_STATUS,
     REJECTED_STATUS,
+    DoclingRuntimeError,
     ExtractionError,
-    extract_text,
+    extract_document,
     import_document,
 )
+from intake.docling_runtime import DocumentUnderstanding
 from rag import build_answer_packet, build_rag_index
 from search import (
     FILED_STATUS,
@@ -93,12 +96,14 @@ class ManualAppSession:
         workspace: Path,
         *,
         vault_passphrase: str = "manual app session passphrase",
+        document_understanding: DocumentUnderstanding | None = None,
     ) -> None:
         self.workspace = workspace
         self.vault_root = workspace / "vault"
         self.backup_path = workspace / "backups" / "manual-session.wakilibak"
         self.restore_root = workspace / "restore"
         self.vault_passphrase = vault_passphrase
+        self.document_understanding = document_understanding
         self.installation_id = f"manual-session-{uuid4()}"
         self.workspace.mkdir(parents=True, exist_ok=True)
         self.vault_session = initialize_vault(self.vault_root, self.vault_passphrase)
@@ -128,17 +133,18 @@ class ManualAppSession:
 
         if record.status == ACCEPTED_STATUS:
             try:
-                extraction = extract_text(
+                extraction = extract_document(
                     record.quarantine_path,
                     ocr_engine=_sidecar_ocr_engine(source_path),
+                    document_understanding=self.document_understanding,
                 )
                 extraction_status = extraction.ocr_status
                 page_count = extraction.page_count
                 extracted_text = extraction.text
                 text_available = bool(extracted_text.strip())
                 warnings = record.warnings
-            except ExtractionError:
-                extraction_status = "failed"
+            except (ExtractionError, DoclingRuntimeError) as exc:
+                extraction_status = _runtime_failure_status(exc)
                 page_count = 0
                 extracted_text = ""
                 text_available = False
@@ -151,6 +157,20 @@ class ManualAppSession:
             )
             self.stored_object_ids.append(stored_object.object_id)
             vault_object_created = True
+            structured_object_id = None
+            if text_available:
+                structured_payload = json.dumps(
+                    _structured_payload(extraction),
+                    ensure_ascii=False,
+                    sort_keys=True,
+                ).encode("utf-8")
+                structured_object = self.vault_session.write_object(
+                    structured_payload,
+                    original_name=f"{source_path.name}.extraction.json",
+                    content_type="application/json",
+                    actor="manual-app-session",
+                )
+                structured_object_id = structured_object.object_id
             document = create_document(
                 self.vault_root,
                 matter_id=self.matter.matter_id,
@@ -164,7 +184,10 @@ class ManualAppSession:
                 object_id=stored_object.object_id,
                 source_sha256=stored_object.sha256,
                 extracted_text=extracted_text,
+                structured_object_id=structured_object_id,
                 lifecycle_status=FILED_STATUS,
+                extraction_status=extraction_status,
+                extraction_retryable=not text_available,
             )
             build_rag_index(self.vault_root, matter_id=self.matter.matter_id)
         elif record.status in {DUPLICATE_STATUS, REJECTED_STATUS}:
@@ -286,3 +309,18 @@ def _display_title(source_path: Path) -> str:
 
 def _elapsed_ms(start: float) -> int:
     return int((time.perf_counter() - start) * 1000)
+
+
+def _structured_payload(extraction: object) -> dict[str, object]:
+    payload = asdict(extraction)
+    payload["source_path"] = str(payload["source_path"])
+    return payload
+
+
+def _runtime_failure_status(error: Exception) -> str:
+    message = str(error).lower()
+    if "docling" in message or "model" in message:
+        return "model_runtime_unavailable"
+    if "ocr" in message or "tesseract" in message:
+        return "ocr_runtime_unavailable"
+    return "extraction_failed"

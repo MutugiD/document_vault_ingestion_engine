@@ -59,6 +59,7 @@ class DoclingDocumentUnderstanding:
         self.artifacts_path = (artifacts_path or _configured_artifacts_path()).resolve()
         if importlib.util.find_spec("docling") is None:
             raise DoclingRuntimeError("Docling package is not installed")
+        validate_docling_runtime(self.artifacts_path.parent)
         self._converter: Any | None = None
 
     def convert(self, source_path: Path) -> DoclingConversion:
@@ -110,11 +111,23 @@ def validate_docling_runtime(bundle_root: Path) -> dict[str, object]:
     if not manifest_path.exists():
         raise DoclingRuntimeError(f"missing Docling runtime manifest: {manifest_path}")
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if payload.get("manifest_format_version") != 1:
+        raise DoclingRuntimeError("unsupported Docling manifest format")
     if payload.get("provider") != "docling":
         raise DoclingRuntimeError("unsupported Docling runtime provider")
     files = payload.get("files")
     if not isinstance(files, list) or not files:
         raise DoclingRuntimeError("Docling manifest must list model files")
+    declared = [str(entry["relative_path"]) for entry in files]
+    if len(declared) != len(set(declared)):
+        raise DoclingRuntimeError("duplicate Docling runtime paths")
+    actual = {
+        path.relative_to(bundle_root).as_posix()
+        for path in bundle_root.rglob("*")
+        if path.is_file() and path.name != manifest_path.name
+    }
+    if set(declared) != actual:
+        raise DoclingRuntimeError("Docling runtime contains undeclared or missing files")
     verified = 0
     for entry in files:
         relative = str(entry["relative_path"])

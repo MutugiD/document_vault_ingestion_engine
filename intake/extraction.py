@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import tempfile
 from dataclasses import dataclass, replace
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
 
@@ -42,6 +44,13 @@ class OcrEngine(Protocol):
         """Return OCR text for an image path."""
 
 
+class PasswordProvider(Protocol):
+    """Provide an encrypted-document password without persisting it."""
+
+    def get_password(self, source_path: Path) -> str | None:
+        """Return a password held only in the caller's memory."""
+
+
 @dataclass(frozen=True)
 class ExtractionResult:
     source_path: Path
@@ -54,6 +63,23 @@ class ExtractionResult:
     tables: tuple[DoclingTable, ...] = ()
     extractor_version: str = "native"
     model_version: str = "not_loaded"
+    source_sha256: str = ""
+    pages: tuple[PageResult, ...] = ()
+    status: str = "completed"
+    retryable: bool = False
+    started_at: str = ""
+    completed_at: str = ""
+
+
+@dataclass(frozen=True)
+class PageResult:
+    page_number: int
+    text: str
+    source: str
+    requires_ocr: bool = False
+    ocr_completed: bool = False
+    confidence: float | None = None
+    warnings: tuple[str, ...] = ()
 
 
 def extract_document(
@@ -61,15 +87,29 @@ def extract_document(
     *,
     ocr_engine: OcrEngine | None = None,
     document_understanding: DocumentUnderstanding | None = None,
+    password_provider: PasswordProvider | None = None,
 ) -> ExtractionResult:
     """Run native extraction followed by the mandatory Docling boundary."""
 
-    native_result = extract_text(source_path, ocr_engine=ocr_engine)
+    started = datetime.now(UTC)
+    native_result = extract_text(
+        source_path,
+        ocr_engine=ocr_engine,
+        password_provider=password_provider,
+    )
+    if native_result.status in {"password_required", "invalid_password"}:
+        return replace(
+            native_result,
+            source_sha256=_sha256_file(source_path),
+            started_at=started.isoformat(),
+            completed_at=datetime.now(UTC).isoformat(),
+        )
     understanding = document_understanding or DoclingDocumentUnderstanding()
     try:
         converted = understanding.convert(source_path)
     except DoclingRuntimeError:
         raise
+    completed = datetime.now(UTC)
     return replace(
         native_result,
         text=converted.text or native_result.text,
@@ -79,16 +119,39 @@ def extract_document(
         tables=converted.tables,
         extractor_version=converted.extractor_version,
         model_version=converted.model_version,
+        source_sha256=_sha256_file(source_path),
+        pages=tuple(
+            PageResult(
+                page_number=block.page_number or 1,
+                text=block.text,
+                source=block.provenance or "docling",
+            )
+            for block in converted.blocks
+        ),
+        status="completed_with_warnings" if converted.warnings else "completed",
+        retryable=False,
+        started_at=started.isoformat(),
+        completed_at=completed.isoformat(),
     )
 
 
-def extract_text(source_path: Path, *, ocr_engine: OcrEngine | None = None) -> ExtractionResult:
+def extract_text(
+    source_path: Path,
+    *,
+    ocr_engine: OcrEngine | None = None,
+    password_provider: PasswordProvider | None = None,
+) -> ExtractionResult:
     """Extract local text from supported files or report OCR status for images."""
 
     source_bytes = source_path.read_bytes()
     detected_file_type, warnings = detect_file_type(source_path, source_bytes)
     if detected_file_type == "pdf":
-        return _extract_pdf(source_path, warnings, ocr_engine=ocr_engine)
+        return _extract_pdf(
+            source_path,
+            warnings,
+            ocr_engine=ocr_engine,
+            password_provider=password_provider,
+        )
     if detected_file_type == "docx":
         return _extract_docx(source_path, warnings)
     if detected_file_type in IMAGE_TYPES:
@@ -113,9 +176,36 @@ def _extract_pdf(
     warnings: tuple[str, ...],
     *,
     ocr_engine: OcrEngine | None,
+    password_provider: PasswordProvider | None,
 ) -> ExtractionResult:
     try:
         with fitz.open(source_path) as document:
+            if document.needs_pass:
+                password = (
+                    password_provider.get_password(source_path) if password_provider else None
+                )
+                if not password:
+                    return ExtractionResult(
+                        source_path=source_path,
+                        detected_file_type="pdf",
+                        text="",
+                        page_count=document.page_count,
+                        ocr_status=OCR_FAILED,
+                        warnings=(*warnings, "password_required"),
+                        status="password_required",
+                        retryable=True,
+                    )
+                if not document.authenticate(password):
+                    return ExtractionResult(
+                        source_path=source_path,
+                        detected_file_type="pdf",
+                        text="",
+                        page_count=document.page_count,
+                        ocr_status=OCR_FAILED,
+                        warnings=(*warnings, "invalid_password"),
+                        status="invalid_password",
+                        retryable=True,
+                    )
             page_text = [page.get_text("text") for page in document]
             page_count = document.page_count
             if not any(part.strip() for part in page_text) and ocr_engine is not None:
@@ -230,7 +320,12 @@ def _extract_docx(source_path: Path, warnings: tuple[str, ...]) -> ExtractionRes
         raise ExtractionError(f"DOCX extraction failed: {source_path}") from exc
 
     paragraphs = [paragraph.text.strip() for paragraph in document.paragraphs]
-    text = "\n".join(paragraph for paragraph in paragraphs if paragraph)
+    table_rows = [
+        " | ".join(cell.text.strip() for cell in row.cells)
+        for table in document.tables
+        for row in table.rows
+    ]
+    text = "\n".join(part for part in (*paragraphs, *table_rows) if part)
     result_warnings = list(warnings)
     if not text:
         result_warnings.append("empty_extracted_text")
@@ -241,4 +336,14 @@ def _extract_docx(source_path: Path, warnings: tuple[str, ...]) -> ExtractionRes
         page_count=1,
         ocr_status=OCR_NOT_REQUIRED,
         warnings=tuple(dict.fromkeys(result_warnings)),
+        source_sha256=_sha256_file(source_path),
+        pages=(PageResult(1, text, "docx"),),
     )
+
+
+def _sha256_file(source_path: Path) -> str:
+    digest = hashlib.sha256()
+    with source_path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()

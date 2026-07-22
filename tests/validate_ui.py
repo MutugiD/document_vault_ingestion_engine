@@ -11,6 +11,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from fixture_document_understanding import FixtureDocumentUnderstanding  # noqa: E402
 from PySide6.QtCore import QEventLoop, QObject, QTimer  # noqa: E402
 from PySide6.QtWidgets import QLabel, QLineEdit, QPushButton, QTabWidget, QTextEdit  # noqa: E402
 
@@ -24,7 +25,7 @@ from ui import (  # noqa: E402
 
 def main() -> None:
     app = create_app(["validate_ui"])
-    window = MainWindow()
+    window = MainWindow(document_understanding=FixtureDocumentUnderstanding())
     assert window.windowTitle() == "WakiliOS"
     assert window.minimumWidth() >= 900
     assert len(DEFAULT_MODULES) >= 7

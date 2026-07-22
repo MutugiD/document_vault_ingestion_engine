@@ -18,7 +18,7 @@ from intake import (  # noqa: E402
     DUPLICATE_STATUS,
     REJECTED_STATUS,
     ExtractionError,
-    extract_text,
+    extract_document,
     import_document,
 )
 from rag import build_answer_packet, build_rag_index  # noqa: E402
@@ -153,7 +153,7 @@ def run_public_kenyan_e2e(input_root: Path, workspace: Path) -> dict[str, object
         if record.status != ACCEPTED_STATUS:
             continue
         try:
-            extraction = extract_text(
+            extraction = extract_document(
                 record.quarantine_path,
                 ocr_engine=_sidecar_ocr_engine(source_path),
             )
