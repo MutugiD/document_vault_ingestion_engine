@@ -121,8 +121,17 @@ jobs:
           pip install -r requirements.txt
           pip install cython
 
-      - name: Install pinned 7-Zip build tool
-        run: choco install 7zip.install --version=24.09 -y --no-progress
+      - name: Ensure 7-Zip build tool is available
+        shell: pwsh
+        run: |
+          $sevenZip = Join-Path $env:ProgramFiles '7-Zip\7z.exe'
+          if (-not (Test-Path $sevenZip)) {
+            choco install 7zip.install -y --no-progress
+          }
+          if (-not (Test-Path $sevenZip)) {
+            throw "7-Zip was not installed at $sevenZip"
+          }
+          & $sevenZip | Select-Object -First 2
 
       - name: Prepare verified document runtime
         shell: pwsh
