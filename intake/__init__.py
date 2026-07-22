@@ -32,6 +32,7 @@ from intake.extraction import (
 )
 from intake.ocr_runtime import (
     TESSERACT_MANIFEST_NAME,
+    OcrRecognition,
     OcrRuntimeError,
     TesseractOcrEngine,
     TesseractRuntime,
@@ -63,6 +64,7 @@ __all__ = [
     "TesseractRuntime",
     "TesseractRuntimeManifest",
     "TesseractOcrEngine",
+    "OcrRecognition",
     "TESSERACT_MANIFEST_NAME",
     "REJECTED_STATUS",
     "IntakeError",
