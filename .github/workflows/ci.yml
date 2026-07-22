@@ -121,6 +121,9 @@ jobs:
           pip install -r requirements.txt
           pip install cython
 
+      - name: Install pinned 7-Zip build tool
+        run: choco install 7zip.install --version=24.09 -y --no-progress
+
       - name: Prepare verified document runtime
         shell: pwsh
         run: python scripts/prepare_document_runtime.py

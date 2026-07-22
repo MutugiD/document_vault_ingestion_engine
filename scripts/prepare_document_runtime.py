@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -72,7 +71,12 @@ def main() -> int:
             urllib.request.urlretrieve(tesseract_url, archive)
         if _sha256(archive) != tesseract_sha256.lower():
             raise SystemExit("Tesseract archive SHA-256 mismatch")
-        _extract_tesseract(archive, tesseract_root, tuple(dict.fromkeys(args.language)))
+        _extract_tesseract(archive, tesseract_root)
+        _stage_tesseract_languages(
+            tesseract_root,
+            tuple(dict.fromkeys(args.language)),
+            lock,
+        )
     _write_notice(
         tesseract_root,
         "Tesseract OCR runtime",
@@ -91,7 +95,7 @@ def main() -> int:
     return 0
 
 
-def _extract_tesseract(archive: Path, target: Path, languages: tuple[str, ...]) -> None:
+def _extract_tesseract(archive: Path, target: Path) -> None:
     if archive.suffix.lower() == ".zip":
         with zipfile.ZipFile(archive) as source:
             for member in source.infolist():
@@ -100,43 +104,66 @@ def _extract_tesseract(archive: Path, target: Path, languages: tuple[str, ...]) 
                     raise SystemExit(f"Tesseract archive path escapes target: {member.filename}")
                 source.extract(member, target)
     elif archive.suffix.lower() == ".exe" and sys.platform == "win32":
-        _stage_nsis_tesseract_installer(archive, target)
+        _extract_nsis_tesseract_installer(archive, target)
     else:
         raise SystemExit("Tesseract asset must be a ZIP or Windows NSIS installer")
     executables = list(target.rglob("tesseract.exe"))
     if len(executables) != 1:
         raise SystemExit("Tesseract bundle must contain exactly one tesseract.exe")
     executable = executables[0]
-    for child in target.iterdir():
-        if child != executable.parent:
-            if child.is_dir():
-                shutil.rmtree(child)
-            else:
-                child.unlink()
-    for child in executable.parent.iterdir():
-        if child != executable:
-            destination = target / child.name
-            if destination.exists():
-                shutil.rmtree(destination) if destination.is_dir() else destination.unlink()
-            shutil.move(str(child), destination)
-    shutil.move(str(executable), str(target / "tesseract.exe"))
+    if executable.parent != target:
+        for child in target.iterdir():
+            if child != executable.parent:
+                if child.is_dir():
+                    shutil.rmtree(child)
+                else:
+                    child.unlink()
+        for child in executable.parent.iterdir():
+            if child != executable:
+                destination = target / child.name
+                if destination.exists():
+                    shutil.rmtree(destination) if destination.is_dir() else destination.unlink()
+                shutil.move(str(child), destination)
+        shutil.move(str(executable), str(target / "tesseract.exe"))
+    if not (target / "tesseract.exe").is_file():
+        raise SystemExit("Tesseract bundle did not produce tesseract.exe")
+
+
+def _extract_nsis_tesseract_installer(installer: Path, target: Path) -> None:
+    extractor = _seven_zip_executable()
+    subprocess.run([str(extractor), "x", str(installer), f"-o{target}", "-y"], check=True)
+
+
+def _stage_tesseract_languages(
+    target: Path,
+    languages: tuple[str, ...],
+    lock: dict[str, object],
+) -> None:
+    entries = lock["languages"]
+    if not isinstance(entries, list):
+        raise SystemExit("Tesseract runtime lock languages must be a list")
+    by_code = {str(entry["code"]): entry for entry in entries if isinstance(entry, dict)}
     tessdata = target / "tessdata"
+    tessdata.mkdir(parents=True, exist_ok=True)
     for language in languages:
-        if not (tessdata / f"{language}.traineddata").exists():
-            raise SystemExit(f"missing tessdata/{language}.traineddata")
+        entry = by_code.get(language)
+        if entry is None:
+            raise SystemExit(f"Tesseract runtime lock does not pin language: {language}")
+        destination = tessdata / f"{language}.traineddata"
+        urllib.request.urlretrieve(str(entry["source_url"]), destination)
+        if _sha256(destination) != str(entry["sha256"]):
+            destination.unlink(missing_ok=True)
+            raise SystemExit(f"Tesseract language SHA-256 mismatch: {language}")
 
 
-def _stage_nsis_tesseract_installer(installer: Path, target: Path) -> None:
-    """Install on the ephemeral build worker, then copy files into the bundle stage."""
-
-    program_files = Path(os.environ.get("ProgramFiles", r"C:\\Program Files"))
-    installation = program_files / "Tesseract-OCR"
-    if installation.exists():
-        raise SystemExit("refusing to overwrite an existing Tesseract installation")
-    subprocess.run([str(installer), "/S"], check=True)
-    if not (installation / "tesseract.exe").is_file():
-        raise SystemExit("silent Tesseract installer did not produce tesseract.exe")
-    shutil.copytree(installation, target, dirs_exist_ok=True)
+def _seven_zip_executable() -> Path:
+    discovered = shutil.which("7z") or shutil.which("7z.exe")
+    if discovered:
+        return Path(discovered)
+    program_files = Path(r"C:\\Program Files") / "7-Zip" / "7z.exe"
+    if program_files.is_file():
+        return program_files
+    raise SystemExit("pinned 7-Zip build tool is required to extract Tesseract")
 
 
 def _load_tesseract_lock() -> dict[str, object]:
@@ -149,7 +176,7 @@ def _load_tesseract_lock() -> dict[str, object]:
         "platform",
         "version",
     }
-    if set(payload) != required | {"license"}:
+    if set(payload) != required | {"license", "languages"}:
         raise SystemExit("unexpected Tesseract runtime lock fields")
     if payload["format_version"] != 1 or payload["platform"] != "windows-x64":
         raise SystemExit("unsupported Tesseract runtime lock")
@@ -158,6 +185,12 @@ def _load_tesseract_lock() -> dict[str, object]:
     digest = str(payload["archive_sha256"])
     if len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest):
         raise SystemExit("invalid Tesseract runtime lock SHA-256")
+    language_entries = payload["languages"]
+    if not isinstance(language_entries, list) or not language_entries:
+        raise SystemExit("Tesseract runtime lock must pin language assets")
+    for entry in language_entries:
+        if not isinstance(entry, dict) or set(entry) != {"code", "sha256", "source_url"}:
+            raise SystemExit("invalid Tesseract language lock entry")
     return payload
 
 
