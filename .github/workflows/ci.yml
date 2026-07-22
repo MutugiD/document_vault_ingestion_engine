@@ -75,7 +75,9 @@ jobs:
             "tests/validate_backup.py",
             "tests/validate_wakilios_backend.py",
             "tests/validate_wakilios_api.py",
-            "tests/validate_e2e.py"
+            "tests/validate_e2e.py",
+            "tests/validate_extraction.py",
+            "tests/validate_docling_runtime.py"
           )
           foreach ($s in $suites) {
             Write-Host "=== $s ==="
@@ -119,6 +121,22 @@ jobs:
           pip install -r requirements.txt
           pip install cython
 
+      - name: Ensure 7-Zip build tool is available
+        shell: pwsh
+        run: |
+          $sevenZip = Join-Path $env:ProgramFiles '7-Zip\7z.exe'
+          if (-not (Test-Path $sevenZip)) {
+            choco install 7zip.install -y --no-progress
+          }
+          if (-not (Test-Path $sevenZip)) {
+            throw "7-Zip was not installed at $sevenZip"
+          }
+          & $sevenZip | Select-Object -First 2
+
+      - name: Prepare verified document runtime
+        shell: pwsh
+        run: python scripts/prepare_document_runtime.py
+
       - name: Install Cython (obfuscation build tool)
         if: steps.spec.outputs.present == 'true'
         run: pip install "cython>=3,<4"
@@ -135,4 +153,11 @@ jobs:
         if: steps.spec.outputs.present == 'true'
         env:
           QT_QPA_PLATFORM: offscreen
-        run: dist\WakiliOS\WakiliOS.exe --selftest
+        run: dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe --selftest
+
+      - name: Validate bundled document runtimes
+        if: steps.spec.outputs.present == 'true'
+        run: |
+          python tests/validate_docling_runtime.py
+          python tests/validate_ocr_runtime.py
+          python tests/validate_package.py

@@ -23,7 +23,7 @@ from intake import (  # noqa: E402
     OCR_NOT_REQUIRED,
     OCR_PENDING,
     REJECTED_STATUS,
-    extract_text,
+    extract_document,
     import_document,
 )
 from intake.ocr_runtime import discover_tesseract_runtime  # noqa: E402
@@ -251,7 +251,7 @@ def _ingest_store_and_index(
     if not source_path.exists():
         raise SmokeFailure("intake moved the source file instead of copying it")
 
-    extraction = extract_text(record.quarantine_path, ocr_engine=ocr_engine)
+    extraction = extract_document(record.quarantine_path, ocr_engine=ocr_engine)
     if extraction.detected_file_type not in CONTENT_TYPES:
         raise SmokeFailure("accepted document could not be extracted as PDF or DOCX")
     if extraction.ocr_status not in {OCR_NOT_REQUIRED, OCR_PENDING, OCR_COMPLETED}:

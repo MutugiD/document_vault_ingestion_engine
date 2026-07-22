@@ -19,6 +19,8 @@ def main() -> None:
     assert "resources/public_kenyan_legal_docs.json" in spec_text
     assert '"ai"' in spec_text
     assert "runtime/tesseract" in spec_text
+    assert "docling" in spec_text.lower()
+    assert "runtime/docling" in spec_text
     assert (
         (ROOT / "resources" / "license_public_key.pem")
         .read_text(encoding="utf-8")

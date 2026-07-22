@@ -10,6 +10,14 @@ from intake.core import (
     import_document,
     list_intake_records,
 )
+from intake.docling_runtime import (
+    DoclingBlock,
+    DoclingConversion,
+    DoclingDocumentUnderstanding,
+    DoclingRuntimeError,
+    DoclingTable,
+    validate_docling_runtime,
+)
 from intake.extraction import (
     OCR_COMPLETED,
     OCR_FAILED,
@@ -17,10 +25,14 @@ from intake.extraction import (
     OCR_PENDING,
     ExtractionError,
     ExtractionResult,
+    PageResult,
+    PasswordProvider,
+    extract_document,
     extract_text,
 )
 from intake.ocr_runtime import (
     TESSERACT_MANIFEST_NAME,
+    OcrRecognition,
     OcrRuntimeError,
     TesseractOcrEngine,
     TesseractRuntime,
@@ -41,9 +53,18 @@ __all__ = [
     "OcrRuntimeError",
     "ExtractionError",
     "ExtractionResult",
+    "extract_document",
+    "DoclingBlock",
+    "DoclingTable",
+    "PageResult",
+    "PasswordProvider",
+    "DoclingConversion",
+    "DoclingDocumentUnderstanding",
+    "DoclingRuntimeError",
     "TesseractRuntime",
     "TesseractRuntimeManifest",
     "TesseractOcrEngine",
+    "OcrRecognition",
     "TESSERACT_MANIFEST_NAME",
     "REJECTED_STATUS",
     "IntakeError",
@@ -56,4 +77,5 @@ __all__ = [
     "list_intake_records",
     "load_tesseract_manifest",
     "validate_tesseract_runtime",
+    "validate_docling_runtime",
 ]

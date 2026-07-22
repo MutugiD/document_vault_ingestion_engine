@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import tomllib
 import zipfile
 from dataclasses import asdict, dataclass
@@ -17,8 +16,6 @@ from products import load_product_catalog
 APP_NAME = "DocumentVaultIngestionEngine"
 PLATFORM = "windows-x64"
 MANIFEST_NAME = "release-manifest.json"
-REQUIRE_TESSERACT_BUNDLE_ENV = "DOCUMENT_VAULT_REQUIRE_TESSERACT_BUNDLE"
-REQUIRE_DOCLING_BUNDLE_ENV = "DOCUMENT_VAULT_REQUIRE_DOCLING_BUNDLE"
 FORBIDDEN_NAME_MARKERS = (
     ".env",
     "client-document",
@@ -207,18 +204,16 @@ def _assert_required_entries(names: list[str]) -> None:
         f"{APP_NAME}/_internal/resources/public_kenyan_legal_docs.json",
         f"{APP_NAME}/{MANIFEST_NAME}",
     ]
-    if os.environ.get(REQUIRE_TESSERACT_BUNDLE_ENV) == "1":
-        required_suffixes.extend(
-            [
-                f"{APP_NAME}/_internal/runtime/tesseract/tesseract-runtime.json",
-                f"{APP_NAME}/_internal/runtime/tesseract/tesseract.exe",
-            ]
-        )
-    if os.environ.get(REQUIRE_DOCLING_BUNDLE_ENV) == "1":
-        required_suffixes.append(f"{APP_NAME}/_internal/runtime/docling/docling-runtime.json")
-        model_prefix = f"{APP_NAME}/_internal/runtime/docling/models/"
-        if not any(name.startswith(model_prefix) for name in names):
-            raise ReleaseBundleError("release ZIP is missing bundled Docling model assets")
+    required_suffixes.extend(
+        [
+            f"{APP_NAME}/_internal/runtime/tesseract/tesseract-runtime.json",
+            f"{APP_NAME}/_internal/runtime/tesseract/tesseract.exe",
+            f"{APP_NAME}/_internal/runtime/docling/docling-runtime.json",
+        ]
+    )
+    model_prefix = f"{APP_NAME}/_internal/runtime/docling/models/"
+    if not any(name.startswith(model_prefix) for name in names):
+        raise ReleaseBundleError("release ZIP is missing bundled Docling model assets")
     missing = [suffix for suffix in required_suffixes if suffix not in names]
     if missing:
         raise ReleaseBundleError(f"release ZIP is missing required entries: {missing}")
