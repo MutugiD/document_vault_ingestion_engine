@@ -50,11 +50,12 @@ python main.py --selftest
 python main.py --gui
 ```
 
-The controlled build must prepare and verify the Docling model and Tesseract
-runtime before PyInstaller. The `TESSERACT_RUNTIME_URL` secret must point to an
-approved Windows x64 portable ZIP; its SHA-256 secret must match the exact
-uploaded bytes; and its version secret must match `tesseract.exe --version`.
-See [documentation/05-text-extraction-ocr.md](documentation/05-text-extraction-ocr.md)
+The controlled build prepares and verifies the Docling model and Tesseract
+runtime before PyInstaller. The immutable Windows x64 Tesseract source URL,
+SHA-256, version, platform, and license are pinned in
+`resources/tesseract-runtime.lock.json`; the application never downloads OCR
+assets at end-user runtime. See
+[documentation/05-text-extraction-ocr.md](documentation/05-text-extraction-ocr.md)
 for the complete procedure.
 
 ### Validation
