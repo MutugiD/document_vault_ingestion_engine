@@ -5,8 +5,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import urllib.request
 import zipfile
@@ -14,6 +16,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_RUNTIME = ROOT / "runtime"
+TESSERACT_LOCK = ROOT / "resources" / "tesseract-runtime.lock.json"
 
 
 def main() -> int:
@@ -22,9 +25,14 @@ def main() -> int:
     parser.add_argument("--tesseract-archive", type=Path)
     parser.add_argument("--tesseract-url")
     parser.add_argument("--tesseract-sha256")
-    parser.add_argument("--tesseract-version", required=True)
+    parser.add_argument("--tesseract-version")
     parser.add_argument("--language", action="append", default=["eng"])
     args = parser.parse_args()
+
+    lock = _load_tesseract_lock()
+    tesseract_url = args.tesseract_url or str(lock["archive_url"])
+    tesseract_sha256 = args.tesseract_sha256 or str(lock["archive_sha256"])
+    tesseract_version = args.tesseract_version or str(lock["version"])
 
     runtime_root = args.runtime_root.resolve()
     docling_root = runtime_root / "docling"
@@ -60,28 +68,23 @@ def main() -> int:
     archive = args.tesseract_archive
     with tempfile.TemporaryDirectory(prefix="document-runtime-") as temporary_dir:
         if archive is None:
-            if not args.tesseract_url or not args.tesseract_sha256:
-                raise SystemExit(
-                    "Tesseract requires --tesseract-archive or pinned "
-                    "--tesseract-url and --tesseract-sha256"
-                )
-            archive = Path(temporary_dir) / "tesseract-runtime.zip"
-            urllib.request.urlretrieve(args.tesseract_url, archive)
-        if args.tesseract_sha256 and _sha256(archive) != args.tesseract_sha256.lower():
+            archive = Path(temporary_dir) / Path(tesseract_url).name
+            urllib.request.urlretrieve(tesseract_url, archive)
+        if _sha256(archive) != tesseract_sha256.lower():
             raise SystemExit("Tesseract archive SHA-256 mismatch")
         _extract_tesseract(archive, tesseract_root, tuple(dict.fromkeys(args.language)))
     _write_notice(
         tesseract_root,
         "Tesseract OCR runtime",
-        args.tesseract_version,
-        args.tesseract_url or "local archive",
+        tesseract_version,
+        tesseract_url if args.tesseract_archive is None else "local archive",
     )
     _write_manifest(
         tesseract_root,
         "tesseract",
-        args.tesseract_version,
+        tesseract_version,
         tesseract_root.rglob("*"),
-        source_url=args.tesseract_url or "local archive",
+        source_url=tesseract_url if args.tesseract_archive is None else "local archive",
         languages=tuple(dict.fromkeys(args.language)),
     )
     print(f"DOCUMENT RUNTIME READY: {runtime_root}")
@@ -89,14 +92,17 @@ def main() -> int:
 
 
 def _extract_tesseract(archive: Path, target: Path, languages: tuple[str, ...]) -> None:
-    if archive.suffix.lower() != ".zip":
-        raise SystemExit("Tesseract asset must be a portable ZIP, not an installer")
-    with zipfile.ZipFile(archive) as source:
-        for member in source.infolist():
-            destination = (target / member.filename).resolve()
-            if not destination.is_relative_to(target.resolve()):
-                raise SystemExit(f"Tesseract archive path escapes target: {member.filename}")
-            source.extract(member, target)
+    if archive.suffix.lower() == ".zip":
+        with zipfile.ZipFile(archive) as source:
+            for member in source.infolist():
+                destination = (target / member.filename).resolve()
+                if not destination.is_relative_to(target.resolve()):
+                    raise SystemExit(f"Tesseract archive path escapes target: {member.filename}")
+                source.extract(member, target)
+    elif archive.suffix.lower() == ".exe" and sys.platform == "win32":
+        _stage_nsis_tesseract_installer(archive, target)
+    else:
+        raise SystemExit("Tesseract asset must be a ZIP or Windows NSIS installer")
     executables = list(target.rglob("tesseract.exe"))
     if len(executables) != 1:
         raise SystemExit("Tesseract bundle must contain exactly one tesseract.exe")
@@ -118,6 +124,41 @@ def _extract_tesseract(archive: Path, target: Path, languages: tuple[str, ...]) 
     for language in languages:
         if not (tessdata / f"{language}.traineddata").exists():
             raise SystemExit(f"missing tessdata/{language}.traineddata")
+
+
+def _stage_nsis_tesseract_installer(installer: Path, target: Path) -> None:
+    """Install on the ephemeral build worker, then copy files into the bundle stage."""
+
+    program_files = Path(os.environ.get("ProgramFiles", r"C:\\Program Files"))
+    installation = program_files / "Tesseract-OCR"
+    if installation.exists():
+        raise SystemExit("refusing to overwrite an existing Tesseract installation")
+    subprocess.run([str(installer), "/S"], check=True)
+    if not (installation / "tesseract.exe").is_file():
+        raise SystemExit("silent Tesseract installer did not produce tesseract.exe")
+    shutil.copytree(installation, target, dirs_exist_ok=True)
+
+
+def _load_tesseract_lock() -> dict[str, object]:
+    payload = json.loads(TESSERACT_LOCK.read_text(encoding="utf-8"))
+    required = {
+        "archive_url",
+        "archive_sha256",
+        "asset_type",
+        "format_version",
+        "platform",
+        "version",
+    }
+    if set(payload) != required | {"license"}:
+        raise SystemExit("unexpected Tesseract runtime lock fields")
+    if payload["format_version"] != 1 or payload["platform"] != "windows-x64":
+        raise SystemExit("unsupported Tesseract runtime lock")
+    if payload["asset_type"] != "nsis-installer":
+        raise SystemExit("unsupported Tesseract runtime asset type")
+    digest = str(payload["archive_sha256"])
+    if len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest):
+        raise SystemExit("invalid Tesseract runtime lock SHA-256")
+    return payload
 
 
 def _write_manifest(

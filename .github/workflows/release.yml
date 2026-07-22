@@ -25,14 +25,8 @@ jobs:
           pip install cython
 
       - name: Prepare verified document runtime
-        env:
-          TESSERACT_RUNTIME_URL: ${{ secrets.TESSERACT_RUNTIME_URL }}
-          TESSERACT_RUNTIME_SHA256: ${{ secrets.TESSERACT_RUNTIME_SHA256 }}
-          TESSERACT_RUNTIME_VERSION: ${{ secrets.TESSERACT_RUNTIME_VERSION }}
         shell: pwsh
-        run: |
-          if (-not $env:TESSERACT_RUNTIME_URL -or -not $env:TESSERACT_RUNTIME_SHA256 -or -not $env:TESSERACT_RUNTIME_VERSION) { throw "Pinned Tesseract runtime secrets are required" }
-          python scripts/prepare_document_runtime.py --tesseract-url $env:TESSERACT_RUNTIME_URL --tesseract-sha256 $env:TESSERACT_RUNTIME_SHA256 --tesseract-version $env:TESSERACT_RUNTIME_VERSION
+        run: python scripts/prepare_document_runtime.py
 
       - name: Verify tag matches the app version
         shell: pwsh
