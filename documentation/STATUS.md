@@ -1,6 +1,6 @@
 # Project Tracker
 
-WakiliOS is a local-first Windows application for legal document intake, encrypted vault custody, local search, licensing, backup, and restore — with optional multi-seat firm management via a FastAPI backend.
+JurisNuru is a local-first Windows application for legal document intake, encrypted vault custody, local search, licensing, backup, and restore — with optional multi-seat firm management via a FastAPI backend.
 
 ## Current Phase
 
@@ -19,7 +19,7 @@ F38 Release hardening, CI/CD, and E2E validation complete. Ready for v0.1.0 tag.
 | AD7 | Clock-rollback guard with NTP cross-check (spec §6.2). | Detects system clock tampering; degrades gracefully when NTP unreachable. |
 | AD8 | IFC-Converter CI/CD pattern for release. | Lint+format, dependency audit, test+coverage, build+smoke, CodeQL weekly. Tag-triggered release with Cython obfuscation and selftest gate. |
 | AD9 | Solo mode as default; FastAPI backend optional. | UI calls core/vault/rag modules directly in solo mode. Multi-seat via WakiliOSClient HTTP client. |
-| AD10 | 4-tab UI: Dashboard, Workspace, Settings, About. | Consolidates 10 tabs into logical groups. License is part of Dashboard, not a separate tab. |
+| AD10 | 4-tab UI: Dashboard, Workspace, Settings, About. | Consolidates 10 tabs into logical groups. Licensing is a startup gate, never a dashboard tab or panel. |
 
 ## Progress
 
@@ -62,7 +62,7 @@ F38 Release hardening, CI/CD, and E2E validation complete. Ready for v0.1.0 tag.
 | F34 managed cloud backup backend boundary | Complete | AWS/Azure/GCP grant contracts, encrypted-package-only transfer, interrupted upload safety, clean-machine restore drill, `tests/validate_cloud_boundary.py`, `main.py --managed-cloud-backup-e2e` |
 | F35 Wakili-Mkononi integration boundary | Complete | User-approved matter export packet, citation packet handoff, entitlement gating, audit event, privacy validator, `tests/validate_wakilios_integration.py`, `main.py --wakili-mkononi-e2e` |
 | F36 hosted AI/LLM boundary | Complete | Provider-key status, local-citation-only prompt boundary, entitlement gating, no-context blocking, local fallback, audit event, `tests/validate_hosted_ai_boundary.py`, `main.py --hosted-ai-e2e` |
-| F37 WakiliOS firm management | Complete | Multi-seat firm backend, standard roles, litigation matter workspace, court costs and receipts, `.ics` calendar export, read-only offline cache, AI summaries with citations, solo mode, in-process architecture, `tests/validate_wakilios_backend.py`, `main.py --wakilios-backend-e2e` |
+| F37 JurisNuru firm management | Complete | Multi-seat firm backend, standard roles, litigation matter workspace, court costs and receipts, `.ics` calendar export, read-only offline cache, AI summaries with citations, solo mode, in-process architecture, `tests/validate_wakilios_backend.py`, `main.py --wakilios-backend-e2e` |
 | F38 UI redesign and polish | Complete | 4-tab UI (Dashboard/Workspace/Settings/About), dark navy/blue theme (wakilios.qss), BackendConnectionDialog for solo/multi-seat, role-aware controls |
 | F39 Licensing hardening and CI/CD | Complete | Hard-coded RSA public key (§6.2), clock-rollback guard, Cython obfuscation (§6.3), IFC-Converter CI/CD (lint+audit+coverage+build+CodeQL), release workflow, `tools/keygen.py`, `tools/sign_license.py` |
 

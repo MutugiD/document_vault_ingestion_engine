@@ -1,8 +1,8 @@
-# 25 - WakiliOS Firm Management Gap Analysis
+# 25 - JurisNuru Firm Management Gap Analysis
 
 ## Architecture Direction
 
-WakiliOS is a single-process desktop application. The UI calls `wakilios.core` directly — no HTTP client, no separate server needed for solo use. For multi-seat firms, the optional `wakilios.api` FastAPI wrapper allows LAN/VPN access to the same core logic.
+JurisNuru is a single-process desktop application. The UI calls `wakilios.core` directly — no HTTP client, no separate server needed for solo use. For multi-seat firms, the optional `wakilios.api` FastAPI wrapper allows LAN/VPN access to the same core logic.
 
 The `wakilios.client` HTTP module is only needed for multi-seat LAN/VPN mode. Solo users never use it.
 
@@ -33,7 +33,7 @@ The `wakilios.client` HTTP module is only needed for multi-seat LAN/VPN mode. So
 | Document-receipt proof attachment | MISSING | Schema supports linked_document_id, no UI/flow yet |
 | FastAPI test client validation | DONE | TestClient tests pass |
 | pyproject.toml dependencies | DONE | Runtime deps declared |
-| CI WakiliOS validation | DONE | Steps added to ci.yml |
+| CI JurisNuru validation | DONE | Steps added to ci.yml |
 
 ## UI Integration Gaps
 
@@ -87,7 +87,7 @@ The UI currently has separate code for intake, search, RAG, and backup that work
 - Add Pydantic request/response models for all endpoints
 - Add FastAPI TestClient validation test
 - Fix pyproject.toml dependencies
-- Add CI WakiliOS validation steps
+- Add CI JurisNuru validation steps
 
 ### PR2: feature/f37-wakilios-ui-gaps [OPEN - needs rework]
 Current state: Has separate HTTP client (`wakilios/client.py`) and login dialog.

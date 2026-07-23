@@ -1033,15 +1033,15 @@ Definition of done:
 - `python tests\validate_security_scan.py`
 - `python main.py --hosted-ai-e2e`
 
-## F37 - WakiliOS Firm Management
+## F37 - JurisNuru Firm Management
 
 Status: Active.
 
-Transform the Windows Legal Document Vault into WakiliOS, a litigation-focused legal firm management system. WakiliOS is the top-level product that runs on top of the existing document vault, RAG, search, intake, and backup modules.
+Transform the Windows Legal Document Vault into JurisNuru, a litigation-focused legal firm management system. JurisNuru is the top-level product that runs on top of the existing document vault, RAG, search, intake, and backup modules.
 
 ### Architecture
 
-WakiliOS is a single-process desktop application. The UI calls Python modules directly:
+JurisNuru is a single-process desktop application. The UI calls Python modules directly:
 
 - Solo mode: UI → `wakilios.core` (in-process, no HTTP)
 - Multi-seat mode: UI → `wakilios.client` → `wakilios.api` → `wakilios.core` (LAN/VPN)

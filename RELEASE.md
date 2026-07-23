@@ -1,4 +1,4 @@
-# Releasing WakiliOS
+# Releasing JurisNuru
 
 Releases are built and published automatically by `.github/workflows/release.yml` when a version tag is pushed. Each release ships one self-contained Windows bundle built (and licence-obfuscated) on a clean `windows-latest` runner.
 
@@ -6,10 +6,10 @@ Releases are built and published automatically by `.github/workflows/release.yml
 
 | Asset | Notes |
 |-------|-------|
-| `DocumentVaultIngestionEngine-vX.Y.Z-win64.zip` | The one-folder app. Ships with licence modules Cython-compiled to `.pyd` with the hard-coded public key baked in. Includes WakiliOS solo mode, multi-seat backend, RAG, vault, and all litigation management features. |
+| `DocumentVaultIngestionEngine-vX.Y.Z-win64.zip` | The one-folder app. Ships with licence modules Cython-compiled to `.pyd` with the hard-coded public key baked in. Includes JurisNuru solo mode, multi-seat backend, RAG, vault, and all litigation management features. |
 | `DocumentVaultIngestionEngine-vX.Y.Z-win64.zip.sha256` | SHA256 checksum sidecar. |
 
-Self-contained — unzip and run `WakiliOS.exe` (no Python required).
+Self-contained — unzip and run `DocumentVaultIngestionEngine.exe` (no Python required).
 
 ## Cutting a release
 
@@ -70,6 +70,6 @@ Get-FileHash -Algorithm SHA256 DocumentVaultIngestionEngine-v0.1.0-win64.zip
    ```bash
    python tools/sign_license.py <machine_hash> <expiry YYYY-MM-DD> [plan] [output_file]
    ```
-   The machine hash comes from the customer running `WakiliOS.exe --selftest` or from the installation identity JSON.
+   The machine hash comes from the customer running `DocumentVaultIngestionEngine.exe --selftest` or from the installation identity JSON.
 
-3. The customer places the `license.key` file next to `WakiliOS.exe` or in their `%APPDATA%\WakiliOS\` directory.
+3. The customer places the `license.key` file next to `DocumentVaultIngestionEngine.exe` or in their `%APPDATA%\WakiliOS\` directory.

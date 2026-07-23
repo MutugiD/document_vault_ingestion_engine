@@ -45,7 +45,7 @@ pip install -r requirements.txt
 pip install "cython>=3,<4"
 python scripts\obfuscate_licensing.py
 pyinstaller main.spec --noconfirm --clean
-dist\WakiliOS\WakiliOS.exe --selftest
+dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe --selftest
 ```
 
 ### 5. CodeQL (weekly, ubuntu-latest)
