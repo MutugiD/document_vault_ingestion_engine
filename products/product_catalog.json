@@ -2,7 +2,7 @@
   "products": [
     {
       "slug": "windows-legal-document-vault",
-      "name": "WakiliOS",
+      "name": "JurisNuru",
       "summary": "Multi-seat Windows legal firm management for litigation matters, roles, encrypted document custody, activities, lodgings, court decisions, fees, receipts, calendars, audit events, search, backup, restore, and recovery ownership.",
       "license_features": [
         "firm_management",
@@ -38,7 +38,7 @@
         "documentation/07-search-indexing.md",
         "documentation/08-licensing-security.md",
         "documentation/09-backup-restore-cloud.md",
-        "documentation/25-wakilios-firm-management.md",
+        "documentation/25-jurisnuru-firm-management.md",
         "documentation/11-packaging-distribution.md",
         "documentation/products/windows-legal-document-vault/architecture.md",
         "documentation/products/windows-legal-document-vault/features-breakdown.md",

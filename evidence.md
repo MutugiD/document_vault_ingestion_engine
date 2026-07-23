@@ -1,4 +1,4 @@
-# WakiliOS E2E Evidence Log
+# JurisNuru E2E Evidence Log
 
 Date: 2026-07-16
 Machine: WSL Ubuntu (development), Python 3.11
@@ -8,11 +8,11 @@ Branch: `main` (post-merge of PRs #39-#46)
 
 | PR | Title | Status |
 | --- | --- | --- |
-| #39 | WakiliOS: Expand FastAPI endpoints, fix deps, add API validation | Merged |
-| #40 | WakiliOS: Backend client, login dialog, role-aware UI, workspace wiring | Merged |
-| #41 | WakiliOS: Fee-receipt linking, document upload, audit log viewer | Merged |
-| #42 | Docs: Restructure WakiliOS as in-process product | Merged |
-| #43 | WakiliOS: Solo mode, in-process backend, audit log, fee-receipt linking | Merged |
+| #39 | JurisNuru: Expand FastAPI endpoints, fix deps, add API validation | Merged |
+| #40 | JurisNuru: Backend client, login dialog, role-aware UI, workspace wiring | Merged |
+| #41 | JurisNuru: Fee-receipt linking, document upload, audit log viewer | Merged |
+| #42 | Docs: Restructure JurisNuru as in-process product | Merged |
+| #43 | JurisNuru: Solo mode, in-process backend, audit log, fee-receipt linking | Merged |
 | #44 | UI: Professional dark theme stylesheet and polish | Merged |
 | #45 | UI: Redesign tabs - 10 tabs consolidated to 4 | Merged |
 | #46 | Licensing hardening, clock guard, and release workflow | Merged |

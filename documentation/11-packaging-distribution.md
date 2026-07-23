@@ -10,7 +10,7 @@ PyInstaller one-folder build through `main.spec`.
 
 ## Bundle Includes
 
-- Application executable (`WakiliOS.exe`, console=False).
+- Application executable (`DocumentVaultIngestionEngine.exe`, console=False).
 - Python runtime files.
 - PySide6 runtime files.
 - Tesseract binaries once OCR begins.

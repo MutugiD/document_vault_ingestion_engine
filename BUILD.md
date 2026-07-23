@@ -1,6 +1,6 @@
 # Windows Build Guide
 
-This guide defines the local Windows build target for WakiliOS.
+This guide defines the local Windows build target for JurisNuru.
 
 ## Baseline
 
@@ -67,8 +67,9 @@ For the interactive desktop app:
 release-output\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe
 ```
 
-Double-clicking the packaged EXE launches the License screen. Activate a valid signed `license.key`
-there before Dashboard, Workspace, or Settings become available.
+Double-clicking the packaged EXE launches the JurisNuru licensing gate. Activate a valid signed
+`license.key` there before the four product tabs open. After activation, the product view contains
+only Dashboard, Workspace, Settings, and About; licensing is not a dashboard tab or dashboard panel.
 
 To run the scripted UI workflow and save local screenshots without committing them:
 

@@ -13,7 +13,8 @@ PySide6 with a professional dark navy/blue theme (`ui/wakilios.qss`).
 
 | Tab | Sections |
 | --- | --- |
-| **Dashboard** | Backend connection (Start Solo / Connect to server), Firm setup, License activation, Vault initialization |
+| **Startup gate** | Signed license activation before the product shell opens |
+| **Dashboard** | Backend connection (Start Solo / Connect to server), Firm setup, Vault initialization |
 | **Workspace** | Matter list with actions (New, Refresh, Export calendar), 8 sub-tabs: Summary, Parties, Activities, Lodgings, Court Decisions, Fees, Receipts, Documents |
 | **Settings** | Document Import, Search & RAG, AI Keys, Backup/Restore, Admin & Audit Log |
 | **About** | Module cards, release info, native workflow button |

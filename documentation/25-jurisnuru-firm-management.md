@@ -1,10 +1,10 @@
-# 25 - WakiliOS Firm Management
+# 25 - JurisNuru Firm Management
 
-F37 evolves the Windows Legal Document Vault into WakiliOS, a litigation-focused legal firm management system.
+F37 evolves the Windows Legal Document Vault into JurisNuru, a litigation-focused legal firm management system.
 
 ## Product Vision
 
-WakiliOS is a single-process desktop application where the UI calls Python modules directly — no separate server needed. The `wakilios.core` module provides the firm backend (users, seats, roles, matters, fees, receipts, audit) and the UI calls it in-process. For multi-seat firms, an optional FastAPI wrapper (`wakilios.api`) allows multiple desktop clients to connect over LAN/VPN.
+JurisNuru is a single-process desktop application where the UI calls Python modules directly — no separate server needed. The `wakilios.core` module provides the firm backend (users, seats, roles, matters, fees, receipts, audit) and the UI calls it in-process. For multi-seat firms, an optional FastAPI wrapper (`wakilios.api`) allows multiple desktop clients to connect over LAN/VPN.
 
 The first release is intentionally narrow:
 
@@ -34,7 +34,8 @@ For firms with 2–5 advocates sharing matters, the optional FastAPI server
 
 | Tab | Contents |
 | --- | --- |
-| **Dashboard** | BackendConnectionDialog (Start Solo / Connect), Firm setup, License activation, Vault initialization |
+| **Startup gate** | Signed license activation before the product shell opens |
+| **Dashboard** | BackendConnectionDialog (Start Solo / Connect), Firm setup, Vault initialization |
 | **Workspace** | Matter list + 8 sub-tabs (Summary, Parties, Activities, Lodgings, Court Decisions, Fees, Receipts, Documents) |
 | **Settings** | Document Import, Search & RAG, AI Keys, Backup/Restore, Admin & Audit Log |
 | **About** | Module cards, release info, native workflow button |
@@ -44,7 +45,7 @@ For firms with 2–5 advocates sharing matters, the optional FastAPI server
 The desktop app runs as a single process. The UI (`ui/app.py`) calls `wakilios.core` directly:
 
 ```
-WakiliOS UI (app.py)
+JurisNuru UI (app.py)
   │
   ├── Firm setup → wakilios.core (FirmBackend, users, seats, roles)
   ├── Login → wakilios.core (authenticate, session token)
@@ -98,7 +99,7 @@ Both paths exercise the same business logic. The API wrapper is a thin transport
 
 ## UI and role behavior
 
-The desktop shell is branded WakiliOS with a litigation matter workspace. Workspace tabs include:
+The desktop shell is branded JurisNuru with a litigation matter workspace. Workspace tabs include:
 
 - Summary
 - Parties
@@ -119,22 +120,22 @@ Role-aware behavior:
 
 ## How existing modules integrate
 
-WakiliOS does NOT duplicate functionality that already exists in the repo:
+JurisNuru does NOT duplicate functionality that already exists in the repo:
 
-- **Document intake**: `intake/` handles import, quarantine, duplicate detection. WakiliOS calls it.
-- **Text extraction**: `intake/extraction.py` handles PDF/DOCX/image extraction. WakiliOS calls it.
-- **Encrypted vault**: `vault/` handles encrypted storage and recovery keys. WakiliOS calls it.
-- **Search**: `search/` provides FTS5 matter-scoped search. WakiliOS calls it.
-- **RAG**: `rag/` provides citation-first retrieval. WakiliOS calls it.
-- **AI summaries**: `ai/` provides hosted AI boundary-checked calls. WakiliOS calls it.
-- **Backup**: `backup/` handles encrypted backup/restore. WakiliOS calls it.
-- **Licensing**: `licensing/` handles offline license validation. WakiliOS calls it.
+- **Document intake**: `intake/` handles import, quarantine, duplicate detection. JurisNuru calls it.
+- **Text extraction**: `intake/extraction.py` handles PDF/DOCX/image extraction. JurisNuru calls it.
+- **Encrypted vault**: `vault/` handles encrypted storage and recovery keys. JurisNuru calls it.
+- **Search**: `search/` provides FTS5 matter-scoped search. JurisNuru calls it.
+- **RAG**: `rag/` provides citation-first retrieval. JurisNuru calls it.
+- **AI summaries**: `ai/` provides hosted AI boundary-checked calls. JurisNuru calls it.
+- **Backup**: `backup/` handles encrypted backup/restore. JurisNuru calls it.
+- **Licensing**: `licensing/` handles offline license validation. JurisNuru calls it.
 
 The `wakilios.core` module owns matter-specific logic (users, seats, matters, parties, fees, receipts, audit) that has no equivalent elsewhere. Everything else delegates to the existing modules.
 
 ## AI summaries and privacy boundary
 
-WakiliOS uses the existing hosted AI boundary and privacy model. Summary generation is gated by:
+JurisNuru uses the existing hosted AI boundary and privacy model. Summary generation is gated by:
 
 - local matter RAG context only
 - citation IDs attached to source documents
@@ -168,10 +169,10 @@ The current implementation state in this repo is:
 
 - `wakilios.core` backend service layer implemented and validated.
 - FastAPI API wrapper implemented (optional multi-seat mode).
-- WakiliOS UI shell branded with matter workspace layout.
+- JurisNuru UI shell branded with matter workspace layout.
 - Backend service validators passing.
 - UI validation passing.
-- CI WakiliOS steps added.
+- CI JurisNuru steps added.
 
 ### Run validation
 

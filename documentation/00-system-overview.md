@@ -2,7 +2,7 @@
 
 ## Purpose
 
-WakiliOS is a Windows local-first litigation management system for law firms. It provides matter management, document custody, search, RAG retrieval, and backup — all running on a single desktop without requiring a server.
+JurisNuru is a Windows local-first litigation management system for law firms. It provides matter management, document custody, search, RAG retrieval, and backup — all running on a single desktop without requiring a server.
 
 ## Users
 
@@ -31,10 +31,10 @@ WakiliOS is a Windows local-first litigation management system for law firms. It
 
 ## Architecture
 
-WakiliOS is a single-process desktop application. The UI calls Python modules directly — no separate server, no HTTP API, no client/server split.
+JurisNuru is a single-process desktop application. The UI calls Python modules directly — no separate server, no HTTP API, no client/server split.
 
 ```
-WakiliOS Desktop App (single process)
+JurisNuru Desktop App (single process)
 ├── ui/app.py ─── PySide6 shell, matter workspace, login, role-aware controls
 ├── wakilios/core.py ─── Firm backend: users, seats, roles, matters, fees, receipts, audit
 ├── wakilios/api.py ─── Optional LAN/VPN FastAPI wrapper (for multi-seat, NOT required for solo)
@@ -64,7 +64,7 @@ For solo use, the desktop app calls `wakilios.core` directly. For multi-seat fir
 
 ## Published Products
 
-1. WakiliOS — Litigation management with matter workspace, fees/receipts, and calendar.
+1. JurisNuru — Litigation management with matter workspace, fees/receipts, and calendar.
 2. Document Intake Engine — Import, extract, and vault legal documents.
 3. Local Matter RAG Connector — Citation-first retrieval over matter documents.
 

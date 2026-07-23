@@ -1,4 +1,4 @@
-# WakiliOS
+# JurisNuru
 
 Multi-seat Windows legal firm management built on a local-first encrypted document vault, intake, matter RAG, and audit foundation.
 
@@ -14,7 +14,7 @@ is not considered release-ready while those gates are red or pending.
 
 ### What's implemented
 
-- **4-tab desktop UI**: Dashboard (setup + license + vault), Workspace (matters + sub-tabs), Settings (import + search/RAG + AI keys + backup + admin), About
+- **4-tab desktop UI**: Dashboard (setup + vault), Workspace (matters + sub-tabs), Settings (import + search/RAG + AI keys + backup + admin), About. Licensing is handled by the startup gate before these tabs open.
 - **Professional dark theme**: Navy/blue stylesheet (`ui/wakilios.qss`)
 - **Solo mode**: In-process backend, no server needed; UI calls `wakilios.core` directly
 - **Multi-seat mode**: Optional FastAPI server (`wakilios.api`) with HTTP client (`wakilios.client`)
