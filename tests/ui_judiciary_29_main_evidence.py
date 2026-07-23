@@ -1,5 +1,7 @@
 """Current-main UI E2E: activate, upload 29 judiciary PDFs, and capture evidence."""
 
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 import base64
@@ -8,7 +10,6 @@ import sys
 import tempfile
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 TEST_ROOT = Path(tempfile.mkdtemp(prefix="wakilios-main-ui-"))
@@ -24,7 +25,14 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QFont, QFontDatabase, QImage, QPainter
-from PySide6.QtWidgets import QCheckBox, QLabel, QLineEdit, QListWidget, QPushButton, QTabWidget, QTextEdit
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QLineEdit,
+    QListWidget,
+    QPushButton,
+    QTabWidget,
+    QTextEdit,
+)
 
 import licensing.core as licensing_core
 import ui.app as ui_app
@@ -121,7 +129,9 @@ def main() -> None:
     license_input = window.findChild(QLineEdit, "licenseFileInput")
     assert license_input is not None
     original_picker = ui_app.QFileDialog.getOpenFileName
-    ui_app.QFileDialog.getOpenFileName = staticmethod(lambda *args, **kwargs: (str(license_path), ""))
+    ui_app.QFileDialog.getOpenFileName = staticmethod(
+        lambda *args, **kwargs: (str(license_path), "")
+    )
     try:
         button("browseLicenseButton").click()
     finally:
@@ -160,7 +170,9 @@ def main() -> None:
     assert workspace_tabs is not None
     summary = window.findChild(QTextEdit, "matterCaseInformationInput")
     assert summary is not None
-    summary.setPlainText("Kenyan judiciary filing and custody record; portal filing cannot be reconstructed.")
+    summary.setPlainText(
+        "Kenyan judiciary filing and custody record; portal filing cannot be reconstructed."
+    )
     button("summaryAddButton").click()
     shot("09-matter-summary")
     for index, (label, object_name) in enumerate(
@@ -181,7 +193,9 @@ def main() -> None:
     tab(3)
     shot("16-settings-before-import")
     original_open_files = ui_app.QFileDialog.getOpenFileNames
-    ui_app.QFileDialog.getOpenFileNames = staticmethod(lambda *args, **kwargs: ([str(p) for p in corpus], ""))
+    ui_app.QFileDialog.getOpenFileNames = staticmethod(
+        lambda *args, **kwargs: ([str(p) for p in corpus], "")
+    )
     try:
         button("addFilesButton").click()
     finally:
@@ -210,7 +224,9 @@ def main() -> None:
         if index % 2 == 1:
             shot(f"33-uploaded-{index:02d}")
     documents = window.findChild(QListWidget, "matterDocumentsTabList")
-    assert documents is not None and documents.count() == 29, documents.count() if documents else None
+    assert documents is not None and documents.count() == 29, (
+        documents.count() if documents else None
+    )
     shot("48-all-29-uploaded")
     for row in range(0, 29, 2):
         documents.setCurrentRow(row)
@@ -238,7 +254,9 @@ def main() -> None:
 
     tab(2)
     save_original = ui_app.QFileDialog.getSaveFileName
-    ui_app.QFileDialog.getSaveFileName = staticmethod(lambda *args, **kwargs: (str(TEST_ROOT / "matter.ics"), ""))
+    ui_app.QFileDialog.getSaveFileName = staticmethod(
+        lambda *args, **kwargs: (str(TEST_ROOT / "matter.ics"), "")
+    )
     try:
         button("exportCalendarButton").click()
     finally:
