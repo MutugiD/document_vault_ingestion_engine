@@ -139,24 +139,8 @@ class BackendConnectionDialog(QFrame):
 
     def _attempt_solo(self) -> None:
         username = self.username_input.text().strip() or "admin"
-        password = self.password_input.text() or "admin-pass"
-        try:
-            solo_root = Path(tempfile.gettempdir()) / "wakilios-solo"
-            solo_root.mkdir(parents=True, exist_ok=True)
-            backend = initialize_firm_backend(
-                solo_root,
-                firm_name="Solo Practice",
-                admin_username=username,
-                admin_password=password,
-                vault_passphrase="solo vault passphrase",
-                max_seats=1,
-            )
-            session = backend.login(username, password)
-            role = session.role
-            self.status_label.setText(f"Solo mode as {username} ({role})")
-            self.solo_mode_started.emit(username, role)
-        except Exception as exc:
-            self.status_label.setText(f"Solo start failed: {exc}")
+        self.status_label.setText(f"Starting solo mode as {username} (admin)")
+        self.solo_mode_started.emit(username, "admin")
 
 
 class MainWindow(QMainWindow):
