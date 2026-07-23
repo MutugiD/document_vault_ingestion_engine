@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QPushButton,
     QScrollArea,
+    QStackedWidget,
     QTabWidget,
     QTextEdit,
     QVBoxLayout,
@@ -153,7 +154,7 @@ class MainWindow(QMainWindow):
         workspace: Path | None = None,
     ) -> None:
         super().__init__()
-        self.setWindowTitle("WakiliOS")
+        self.setWindowTitle("JurisNuru")
         self.setMinimumSize(920, 620)
 
         self._backend_client: WakiliOSClient | None = None
@@ -168,7 +169,7 @@ class MainWindow(QMainWindow):
         root_layout.setContentsMargins(16, 16, 16, 16)
         root_layout.setSpacing(12)
 
-        heading = QLabel("WakiliOS")
+        heading = QLabel("JurisNuru")
         heading.setObjectName("heading")
         heading.setAlignment(Qt.AlignmentFlag.AlignLeft)
         root_layout.addWidget(heading)
@@ -179,14 +180,20 @@ class MainWindow(QMainWindow):
         subtitle.setObjectName("subtitle")
         root_layout.addWidget(subtitle)
 
+        self.application_stack = QStackedWidget()
+        self.application_stack.setObjectName("applicationStack")
+        self.license_gate = _scroll_page(_license_page())
+        self.license_gate.setObjectName("licenseGate")
+        self.application_stack.addWidget(self.license_gate)
+
         self.tabs = QTabWidget()
         self.tabs.setObjectName("workflowTabs")
-        self.tabs.addTab(_scroll_page(_license_page()), "License")
         self.tabs.addTab(_scroll_page(_dashboard_page()), "Dashboard")
         self.tabs.addTab(_scroll_page(_workspace_page()), "Workspace")
         self.tabs.addTab(_scroll_page(_settings_page()), "Settings")
         self.tabs.addTab(_about_page(modules), "About")
-        root_layout.addWidget(self.tabs, stretch=1)
+        self.application_stack.addWidget(self.tabs)
+        root_layout.addWidget(self.application_stack, stretch=1)
 
         footer = QHBoxLayout()
         footer.setSpacing(10)
@@ -231,9 +238,9 @@ class MainWindow(QMainWindow):
         status_label = self.findChild(QLabel, "licenseStatusLabel")
         if status_label is not None:
             status_label.setText(status)
-        for index in (1, 2, 3):
-            self.tabs.setTabEnabled(index, active)
-        self.tabs.setCurrentIndex(1 if active else 0)
+        self.application_stack.setCurrentIndex(1 if active else 0)
+        if active:
+            self.tabs.setCurrentIndex(0)
 
     @Slot()
     def activate_license(self) -> None:
@@ -304,7 +311,7 @@ class MainWindow(QMainWindow):
             self.status_label.setText(message)
             return
         self._set_license_state(True, f"Active: {document.firm_display_name} ({document.plan})")
-        self.status_label.setText("License activated; dashboard unlocked")
+        self.status_label.setText("License activated; JurisNuru is ready")
 
     def browse_for_license(self) -> None:
         selected, _ = QFileDialog.getOpenFileName(
@@ -324,7 +331,7 @@ class MainWindow(QMainWindow):
         button_actions = {
             "completeSetupButton": "Setup complete",
             "initializeVaultButton": "Vault initialization checked",
-            "newMatterButton": "WakiliOS matter workflow checked",
+            "newMatterButton": "JurisNuru matter workflow checked",
             "exportCalendarButton": "Matter calendar export checked",
             "runOcrButton": "OCR workflow checked",
         }
@@ -1065,12 +1072,11 @@ def _license_page() -> QWidget:
     layout.setContentsMargins(24, 24, 24, 24)
     layout.setSpacing(16)
 
-    title = QLabel("Activate WakiliOS")
+    title = QLabel("Activate JurisNuru")
     title.setObjectName("licensePageTitle")
     layout.addWidget(title)
     explanation = QLabel(
-        "A valid signed license is required before the Dashboard, Workspace, or Settings "
-        "are available."
+        "A valid signed license is required before JurisNuru can open the dashboard."
     )
     explanation.setObjectName("licensePageExplanation")
     explanation.setWordWrap(True)
@@ -1101,7 +1107,7 @@ def _license_page() -> QWidget:
     license_layout.addRow("", activate)
     layout.addWidget(license_group)
 
-    locked = QLabel("Dashboard locked until license activation")
+    locked = QLabel("JurisNuru is locked until license activation")
     locked.setObjectName("licenseLockMessage")
     layout.addWidget(locked)
     layout.addStretch(1)
@@ -1109,7 +1115,7 @@ def _license_page() -> QWidget:
 
 
 def _dashboard_page() -> QWidget:
-    """Dashboard: setup, connection, license, and vault in one view."""
+    """Dashboard: setup, connection, and vault in one view after activation."""
     page = QWidget()
     page.setObjectName("dashboardPage")
     layout = QVBoxLayout(page)
@@ -1118,7 +1124,7 @@ def _dashboard_page() -> QWidget:
     connection_group = QFrame()
     connection_group.setObjectName("connectionGroup")
     connection_layout = QVBoxLayout(connection_group)
-    connection_label = QLabel("Connect to WakiliOS")
+    connection_label = QLabel("Connect to JurisNuru")
     connection_label.setObjectName("connectionGroupLabel")
     connection_layout.addWidget(connection_label)
     backend_connection = BackendConnectionDialog()
@@ -1400,7 +1406,7 @@ def _about_page(modules: tuple[ModuleStatus, ...]) -> QWidget:
     page = QWidget()
     page.setObjectName("aboutPage")
     layout = QVBoxLayout(page)
-    release_info = QLabel("WakiliOS multi-seat litigation management")
+    release_info = QLabel("JurisNuru multi-seat litigation management")
     release_info.setObjectName("releaseInfoLabel")
     layout.addWidget(release_info)
     grid = QGridLayout()

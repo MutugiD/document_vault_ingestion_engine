@@ -142,7 +142,7 @@ def main() -> None:
     assert window._license_active
     shot("03-license-active")
 
-    tab(1)
+    tab(0)
     shot("04-dashboard-unlocked")
     window.findChild(QLineEdit, "firmNameInput").setText("Main Evidence Practice")
     window.findChild(QLineEdit, "primaryUserInput").setText("admin")
@@ -161,7 +161,7 @@ def main() -> None:
     assert window._backend_local is not None
     shot("07-solo-connected")
 
-    tab(2)
+    tab(1)
     button("newMatterButton").click()
     app.processEvents()
     assert window._current_matter_id
@@ -190,7 +190,7 @@ def main() -> None:
         button(object_name).click()
         shot(label)
 
-    tab(3)
+    tab(2)
     shot("16-settings-before-import")
     original_open_files = ui_app.QFileDialog.getOpenFileNames
     ui_app.QFileDialog.getOpenFileNames = staticmethod(
@@ -209,7 +209,7 @@ def main() -> None:
         if index % 2 == 0:
             shot(f"18-review-{index + 1:02d}")
 
-    tab(2)
+    tab(1)
     workspace_tabs.setCurrentIndex(7)
     original_open_files = ui_app.QFileDialog.getOpenFileNames
     for index, path in enumerate(corpus, start=1):
@@ -232,7 +232,7 @@ def main() -> None:
         documents.setCurrentRow(row)
         shot(f"49-document-{row + 1:02d}")
 
-    tab(3)
+    tab(2)
     questions = [
         "Which judiciary documents are in this matter?",
         "What filing records are present?",
@@ -252,7 +252,7 @@ def main() -> None:
         button("askRagButton").click()
         shot(f"64-rag-{index:02d}")
 
-    tab(2)
+    tab(1)
     save_original = ui_app.QFileDialog.getSaveFileName
     ui_app.QFileDialog.getSaveFileName = staticmethod(
         lambda *args, **kwargs: (str(TEST_ROOT / "matter.ics"), "")
@@ -262,9 +262,9 @@ def main() -> None:
     finally:
         ui_app.QFileDialog.getSaveFileName = save_original
     shot("75-calendar-export")
-    tab(4)
-    shot("76-about")
     tab(3)
+    shot("76-about")
+    tab(2)
     shot("77-settings-final")
     button("createBackupButton").click()
     shot("78-backup-created")
