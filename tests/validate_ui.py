@@ -25,22 +25,18 @@ from ui import (  # noqa: E402
 def main() -> None:
     app = create_app(["validate_ui"])
     window = MainWindow()
-    assert window.windowTitle() == "WakiliOS"
+    assert window.windowTitle() == "JurisNuru"
     assert window.minimumWidth() >= 900
     assert len(DEFAULT_MODULES) >= 7
-    assert window.tabs.count() == 5  # License, Dashboard, Workspace, Settings, About
+    assert window.tabs.count() == 4  # Dashboard, Workspace, Settings, About
     assert [window.tabs.tabText(index) for index in range(window.tabs.count())] == [
-        "License",
         "Dashboard",
         "Workspace",
         "Settings",
         "About",
     ]
-    assert window.tabs.isTabEnabled(0)
-    assert not window.tabs.isTabEnabled(1)
-    assert not window.tabs.isTabEnabled(2)
-    assert not window.tabs.isTabEnabled(3)
-    assert window.tabs.widget(1).findChild(QObject, "licenseGroup") is None
+    assert window.application_stack.currentIndex() == 0
+    assert window.tabs.widget(0).findChild(QObject, "licenseGroup") is None
     expected_widgets = (
         "licensePage",
         "licenseGroup",
@@ -128,9 +124,8 @@ def main() -> None:
     assert "Expecting value" not in window.status_label.text()
 
     window._set_license_state(True, "Active: validation")
-    assert window.tabs.isTabEnabled(1)
-    assert window.tabs.isTabEnabled(2)
-    assert window.tabs.isTabEnabled(3)
+    assert window.application_stack.currentIndex() == 1
+    assert all(window.tabs.isTabEnabled(index) for index in range(window.tabs.count()))
 
     matter_workspace = window.findChild(QTabWidget, "matterWorkspaceTabs")
     assert matter_workspace is not None
