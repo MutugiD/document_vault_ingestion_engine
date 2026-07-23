@@ -51,7 +51,7 @@ def main() -> None:
     intake = product_by_slug("document-intake-engine")
     rag = product_by_slug("local-matter-rag-connector")
 
-    assert vault.name == "WakiliOS"
+    assert vault.name == "JurisNuru"
     assert "wakilios" in vault.modules
     assert "firm_management" in vault.license_features
     assert "tests/validate_wakilios_backend.py" in vault.validators
