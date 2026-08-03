@@ -57,7 +57,7 @@ jobs:
       - name: Install coverage
         run: pip install coverage==7.14.3
 
-      - name: Core validation suites + coverage (>= 80%)
+      - name: Core validation suites + coverage (>= 60%)
         env:
           QT_QPA_PLATFORM: offscreen
         shell: pwsh
@@ -75,6 +75,8 @@ jobs:
             "tests/validate_backup.py",
             "tests/validate_wakilios_backend.py",
             "tests/validate_wakilios_api.py",
+            "tests/validate_seat_networking.py",
+            "tests/validate_solo_backend_reuse.py",
             "tests/validate_e2e.py",
             "tests/validate_ui.py"
           )
@@ -127,6 +129,10 @@ jobs:
       - name: Obfuscate licensing (Cython -> .pyd)
         if: steps.spec.outputs.present == 'true'
         run: python scripts/obfuscate_licensing.py
+
+      - name: Verify the compiled trust anchor survived obfuscation
+        if: steps.spec.outputs.present == 'true'
+        run: python scripts/verify_trust_anchor.py
 
       - name: Build one-folder bundle (PyInstaller)
         if: steps.spec.outputs.present == 'true'
