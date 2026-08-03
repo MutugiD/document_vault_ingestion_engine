@@ -14,6 +14,9 @@ from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, Signal, 
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QFileDialog,
     QFormLayout,
     QFrame,
@@ -52,6 +55,100 @@ def _joined(*parts: object) -> str:
 
 
 @dataclass(frozen=True)
+class FormField:
+    """One input on a matter record form.
+
+    ``choices`` renders a combo box; the portal's vocabularies (party type,
+    activity type, filing status) are suggestions rather than enums, because
+    they were read off one firm's account at a subset of stations.
+    """
+
+    name: str
+    label: str
+    placeholder: str = ""
+    choices: tuple[str, ...] = ()
+    numeric: bool = False
+    required: bool = False
+
+
+class MatterRecordDialog(QDialog):
+    """Collect one matter record from the user.
+
+    Replaces the fixed placeholder rows the Add buttons used to write. Built
+    from the field spec on ``MatterTabView`` so a tab cannot gain an input the
+    backend does not accept.
+    """
+
+    def __init__(self, view: MatterTabView, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName(f"{view.object_name}Dialog")
+        self.setWindowTitle(f"Add {view.label.rstrip('s').lower()}")
+        self.setMinimumWidth(420)
+        self._view = view
+        self._inputs: dict[str, QWidget] = {}
+
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        for field in view.fields:
+            widget: QWidget
+            if field.choices:
+                widget = QComboBox()
+                widget.setEditable(True)
+                widget.addItems(field.choices)
+                widget.setCurrentText("")
+            else:
+                widget = QLineEdit()
+                if field.placeholder:
+                    widget.setPlaceholderText(field.placeholder)
+            widget.setObjectName(f"{view.object_name}Field_{field.name}")
+            self._inputs[field.name] = widget
+            form.addRow(f"{field.label}*" if field.required else field.label, widget)
+        layout.addLayout(form)
+
+        self.error_label = QLabel("")
+        self.error_label.setObjectName(f"{view.object_name}DialogError")
+        self.error_label.setWordWrap(True)
+        layout.addWidget(self.error_label)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.setObjectName(f"{view.object_name}DialogButtons")
+        buttons.accepted.connect(self._on_accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _value(self, field: FormField) -> str:
+        widget = self._inputs[field.name]
+        text = widget.currentText() if isinstance(widget, QComboBox) else widget.text()
+        return text.strip()
+
+    def _on_accept(self) -> None:
+        for field in self._view.fields:
+            value = self._value(field)
+            if field.required and not value:
+                self.error_label.setText(f"{field.label} is required.")
+                return
+            if field.numeric and value:
+                try:
+                    float(value)
+                except ValueError:
+                    self.error_label.setText(f"{field.label} must be a number.")
+                    return
+        self.accept()
+
+    def values(self) -> dict[str, object]:
+        """Field values, with blanks omitted so backend defaults still apply."""
+        collected: dict[str, object] = {}
+        for field in self._view.fields:
+            value = self._value(field)
+            if not value:
+                continue
+            collected[field.name] = float(value) if field.numeric else value
+        return collected
+
+
+@dataclass(frozen=True)
 class MatterTabView:
     """One matter sub-tab: how it is built, and how its rows are rendered.
 
@@ -67,6 +164,9 @@ class MatterTabView:
     # Documents arrive by upload, not by a generic Add. Giving that tab an Add
     # button produced a control with nothing connected to it.
     addable: bool = True
+    # Inputs shown when Add is pressed. Field names are the keyword arguments
+    # the matching backend method accepts.
+    fields: tuple[FormField, ...] = ()
 
 
 MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
@@ -79,6 +179,24 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
             row.get("party_role", ""),
             row.get("name", ""),
             row.get("representative", ""),
+        ),
+        fields=(
+            FormField("name", "Party name", "e.g. Angela Wambui Nderito", required=True),
+            FormField(
+                "party_role",
+                "Party type",
+                choices=(
+                    "1st Plaintiff",
+                    "1st Defendant",
+                    "1st Respondent",
+                    "1st Interested Party",
+                    "Applicant",
+                ),
+                required=True,
+            ),
+            FormField("representative", "Firm / agent", "e.g. Kiriinya and Achieng Advocates"),
+            FormField("contact_details", "Contact"),
+            FormField("notes", "Notes"),
         ),
     ),
     MatterTabView(
@@ -93,6 +211,19 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
             row.get("court_session", ""),
             row.get("status", ""),
         ),
+        fields=(
+            FormField(
+                "activity_type",
+                "Activity",
+                choices=("Mention", "Directions", "Hearing", "Ruling", "Judgment"),
+                required=True,
+            ),
+            FormField("title", "Title", "what this activity is", required=True),
+            FormField("starts_at", "Date", "YYYY-MM-DD"),
+            FormField("court_session", "Court room", "e.g. Courtroom 32, 2nd Floor"),
+            FormField("status", "Actioned to", "e.g. Hon. Justice Peter Mulwa"),
+            FormField("notes", "Outcome"),
+        ),
     ),
     MatterTabView(
         "lodgingsTab",
@@ -106,6 +237,19 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
             row.get("filing_status", ""),
             f"ref {row['filing_reference']}" if row.get("filing_reference") else "",
         ),
+        fields=(
+            FormField("document_kind", "Document", "what is being lodged", required=True),
+            FormField("party", "Created by"),
+            FormField("due_date", "Due date", "YYYY-MM-DD"),
+            FormField("lodged_date", "Lodged date", "YYYY-MM-DD"),
+            FormField(
+                "filing_status",
+                "Fee status",
+                choices=("Not Payable", "Payable", "Paid", "pending"),
+            ),
+            FormField("actioning_status", "Portal status", choices=("Not Actioned", "Actioned")),
+            FormField("filing_reference", "Tracking number", "e.g. AERJ2026"),
+        ),
     ),
     MatterTabView(
         "courtDecisionsTab",
@@ -117,6 +261,19 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
             row.get("decision_type", ""),
             row.get("decision_maker", ""),
             row.get("outcome", ""),
+        ),
+        fields=(
+            FormField(
+                "decision_type",
+                "Decision",
+                choices=("Ruling", "Judgment", "Order", "Direction"),
+                required=True,
+            ),
+            FormField("decision_date", "Date", "YYYY-MM-DD"),
+            FormField("court", "Court", "e.g. Milimani High Court"),
+            FormField("decision_maker", "Decision maker", "e.g. Hon. Justice Francis Gikonyo"),
+            FormField("outcome", "Outcome"),
+            FormField("notes", "Notes"),
         ),
     ),
     MatterTabView(
@@ -130,6 +287,14 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
             f"{row.get('currency', 'KES')} {row.get('amount', 0)}",
             row.get("status", ""),
         ),
+        fields=(
+            FormField("fee_type", "Payment type", "e.g. Fees", required=True),
+            FormField("amount", "Amount", "0.00", numeric=True, required=True),
+            FormField("prn", "PRN", "e.g. E6EWRY6F"),
+            FormField("currency", "Currency", choices=("KES", "USD")),
+            FormField("status", "Status", choices=("pending", "paid", "Not Payable")),
+            FormField("paid_by", "Paid by"),
+        ),
     ),
     MatterTabView(
         "receiptsTab",
@@ -141,6 +306,14 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
             row.get("receipt_date", ""),
             f"{row.get('currency', 'KES')} {row.get('amount', 0)}",
             f"fee {row['linked_fee_id']}" if row.get("linked_fee_id") else "",
+        ),
+        fields=(
+            FormField("receipt_number", "Customer ref#", "e.g. E6EWRY6F", required=True),
+            FormField("amount", "Amount paid", "0.00", numeric=True, required=True),
+            FormField("receipt_date", "Date", "YYYY-MM-DD"),
+            FormField("issuer", "Channel", choices=("PYBL", "MPESA", "KCB", "Cash")),
+            FormField("payer", "Payer"),
+            FormField("linked_fee_id", "Against fee", "fee id, optional"),
         ),
     ),
     MatterTabView(
@@ -169,6 +342,18 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
             f"next: {row['next_action']} {row.get('next_action_date', '')}".strip()
             if row.get("next_action")
             else "",
+        ),
+        fields=(
+            FormField("tracking_number", "Tracking number", "e.g. AERJ2026", required=True),
+            FormField("what_was_filed", "What was filed", required=True),
+            FormField("filed_at", "Filed on", "YYYY-MM-DD"),
+            FormField("station", "Station", "e.g. Milimani High Court"),
+            FormField("case_number", "Case number", "e.g. HCCOMM/E214/2026"),
+            FormField("what_was_served", "What was served"),
+            FormField("what_was_received", "What came back", "e.g. filing receipt"),
+            FormField("next_action", "Next action"),
+            FormField("next_action_date", "Next action date", "YYYY-MM-DD"),
+            FormField("portal_status", "Portal status", choices=("Not Actioned", "Actioned")),
         ),
     ),
 )
@@ -628,20 +813,12 @@ class MainWindow(QMainWindow):
             if button is not None:
                 button.clicked.connect(handler)
 
-        for tab_object_name, handler in [
-            ("summaryTab", self._on_update_summary),
-            ("partiesTab", self._on_add_party),
-            ("activitiesTab", self._on_add_activity),
-            ("lodgingsTab", self._on_add_lodging),
-            ("courtDecisionsTab", self._on_add_court_decision),
-            ("feesTab", self._on_add_fee),
-            ("receiptsTab", self._on_add_receipt),
-            ("filingRecordTab", self._on_add_filing_record),
-        ]:
-            object_name = f"{tab_object_name}AddButton"
-            button = self.findChild(QPushButton, object_name)
+        for view in MATTER_TAB_VIEWS:
+            if not view.addable:
+                continue
+            button = self.findChild(QPushButton, f"{view.object_name}AddButton")
             if button is not None:
-                button.clicked.connect(handler)
+                button.clicked.connect(lambda _checked=False, v=view: self._on_add_record(v))
 
         reports_button = self.findChild(QPushButton, "refreshReportsButton")
         if reports_button is not None:
@@ -933,106 +1110,6 @@ class MainWindow(QMainWindow):
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Summary update failed: {exc}")
 
-    def _on_add_party(self) -> None:
-        if (
-            self._backend_local is None and self._backend_client is None
-        ) or not self._current_matter_id:
-            return
-        try:
-            self._backend_add_party(
-                self._current_matter_id, name="New Party", party_role="Respondent"
-            )
-            self.status_label.setText("Party added")
-            self._refresh_matter_workspace()
-        except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
-            self.status_label.setText(f"Add party failed: {exc}")
-
-    def _on_add_activity(self) -> None:
-        if (
-            self._backend_local is None and self._backend_client is None
-        ) or not self._current_matter_id:
-            return
-        try:
-            self._backend_add_activity(
-                self._current_matter_id, activity_type="mention", title="New Activity", starts_at=""
-            )
-            self.status_label.setText("Activity added")
-            self._refresh_matter_workspace()
-        except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
-            self.status_label.setText(f"Add activity failed: {exc}")
-
-    def _on_add_lodging(self) -> None:
-        if (
-            self._backend_local is None and self._backend_client is None
-        ) or not self._current_matter_id:
-            return
-        try:
-            self._backend_add_lodging(self._current_matter_id, document_kind="New Lodging")
-            self.status_label.setText("Lodging added")
-            self._refresh_matter_workspace()
-        except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
-            self.status_label.setText(f"Add lodging failed: {exc}")
-
-    def _on_add_filing_record(self) -> None:
-        if (
-            self._backend_local is None and self._backend_client is None
-        ) or not self._current_matter_id:
-            return
-        try:
-            self._backend_add_filing_record(
-                self._current_matter_id,
-                what_was_filed="New filing",
-                filed_by=self._current_username,
-                portal_status="not actioned",
-            )
-            self.status_label.setText("Filing record added")
-            self._refresh_matter_workspace()
-        except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
-            self.status_label.setText(f"Add filing record failed: {exc}")
-
-    def _on_add_court_decision(self) -> None:
-        if (
-            self._backend_local is None and self._backend_client is None
-        ) or not self._current_matter_id:
-            return
-        try:
-            self._backend_add_court_decision(
-                self._current_matter_id, decision_type="Ruling", decision_date=""
-            )
-            self.status_label.setText("Court decision added")
-            self._refresh_matter_workspace()
-        except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
-            self.status_label.setText(f"Add court decision failed: {exc}")
-
-    def _on_add_fee(self) -> None:
-        if (
-            self._backend_local is None and self._backend_client is None
-        ) or not self._current_matter_id:
-            return
-        try:
-            self._backend_add_fee(self._current_matter_id, fee_type="Filing fee", amount=0)
-            self.status_label.setText("Fee added")
-            self._on_refresh_fee_receipt_view()
-        except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
-            self.status_label.setText(f"Add fee failed: {exc}")
-
-    def _on_add_receipt(self) -> None:
-        if (
-            self._backend_local is None and self._backend_client is None
-        ) or not self._current_matter_id:
-            return
-        try:
-            self._backend_add_receipt(
-                self._current_matter_id,
-                receipt_number="NEW-RCT",
-                amount=0,
-                receipt_date="2026-07-16",
-            )
-            self.status_label.setText("Receipt added")
-            self._on_refresh_fee_receipt_view()
-        except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
-            self.status_label.setText(f"Add receipt failed: {exc}")
-
     def _on_upload_document(self) -> None:
         if self._backend_local is None and self._backend_client is None:
             self.status_label.setText("Start solo mode or connect to a server first")
@@ -1076,6 +1153,46 @@ class MainWindow(QMainWindow):
                 return
         # Refresh document list
         self._refresh_matter_workspace()
+
+    _ADD_DISPATCH: dict[str, str] = {
+        "partiesTab": "_backend_add_party",
+        "activitiesTab": "_backend_add_activity",
+        "lodgingsTab": "_backend_add_lodging",
+        "courtDecisionsTab": "_backend_add_court_decision",
+        "feesTab": "_backend_add_fee",
+        "receiptsTab": "_backend_add_receipt",
+        "filingRecordTab": "_backend_add_filing_record",
+    }
+
+    def _on_add_record(self, view: MatterTabView) -> None:
+        """Collect a record from the user and store it against the matter.
+
+        These handlers used to write a fixed placeholder row -- "New Party",
+        "NEW-RCT", amount 0 -- which demonstrated the round trip but could not
+        record anything real.
+        """
+        if self._backend_local is None and self._backend_client is None:
+            self.status_label.setText("Start solo mode or connect to a server first")
+            return
+        if not self._current_matter_id:
+            self.status_label.setText("Open a matter first")
+            return
+
+        dialog = MatterRecordDialog(view, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        fields = dialog.values()
+        if not fields:
+            self.status_label.setText(f"Nothing entered; no {view.label.lower()} added")
+            return
+
+        method = getattr(self, self._ADD_DISPATCH[view.object_name])
+        try:
+            method(self._current_matter_id, **fields)
+            self.status_label.setText(f"{view.label} record added")
+            self._refresh_matter_workspace()
+        except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
+            self.status_label.setText(f"Add {view.label.lower()} failed: {exc}")
 
     def _on_refresh_fee_receipt_view(self) -> None:
         """Backwards-compatible alias for the full workspace refresh."""

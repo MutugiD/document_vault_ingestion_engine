@@ -38,6 +38,7 @@ from PySide6.QtWidgets import (  # noqa: E402
 
 import ui.app as ui_app  # noqa: E402
 from ui import MainWindow, create_app  # noqa: E402
+from ui.app import MatterRecordDialog  # noqa: E402
 
 PASS, PARTIAL, FAIL = "PASS", "PARTIAL", "FAIL"
 results: list[tuple[str, str, str]] = []
@@ -144,6 +145,27 @@ def main() -> int:
     )
 
     # ── Matter sub-tabs ─────────────────────────────────────────────────
+    # Add now opens a form. Fill it as a user would; the modal event loop is
+    # the only thing replaced, since a headless run cannot click OK.
+    def fill_dialog(dialog: MatterRecordDialog) -> int:
+        from PySide6.QtWidgets import QComboBox, QDialog
+
+        for field in dialog._view.fields:
+            widget = dialog._inputs[field.name]
+            value = (
+                "2500"
+                if field.numeric
+                else (field.choices[0] if field.choices else f"Audit {field.label}")
+            )
+            if isinstance(widget, QComboBox):
+                widget.setCurrentText(value)
+            else:
+                widget.setText(value)
+        dialog._on_accept()
+        return int(QDialog.DialogCode.Accepted)
+
+    MatterRecordDialog.exec = fill_dialog
+
     workspace_tabs = window.findChild(QTabWidget, "matterWorkspaceTabs")
     for view in ui_app.MATTER_TAB_VIEWS:
         add = window.findChild(QPushButton, f"{view.object_name}AddButton")
@@ -156,26 +178,13 @@ def main() -> int:
         app.processEvents()
         rows = [target.item(i).text() for i in range(target.count())]
         if target.count() > before or (rows and view.empty_text not in rows):
-            placeholder = any(
-                marker in " ".join(rows)
-                # Every Add handler writes a fixed row; there is no data-entry
-                # form anywhere in the matter workspace.
-                for marker in (
-                    "New Party",
-                    "New Activity",
-                    "New Lodging",
-                    "Ruling",
-                    "Filing fee",
-                    "NEW-RCT",
-                    "New filing",
-                )
-            )
+            entered = any("Audit " in text or "2500" in text for text in rows)
             record(
                 f"Tab: {view.label}",
-                PARTIAL if placeholder else PASS,
-                "writes a hardcoded placeholder; no data-entry form"
-                if placeholder
-                else f"{target.count()} row(s) rendered",
+                PASS if entered else PARTIAL,
+                f"form captured {len(view.fields)} field(s); {target.count()} row(s) rendered"
+                if entered
+                else "row added but the entered values are not rendered",
             )
         else:
             record(f"Tab: {view.label}", FAIL, "Add changed nothing on screen")
