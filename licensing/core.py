@@ -31,18 +31,18 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 # In a release build this module is Cython-compiled to licensing/core.pyd, so the key lives
 # in native machine code. This closes the key-substitution bypass.
 _PUBLIC_KEY_PEM = b"""-----BEGIN PUBLIC KEY-----
-MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAstGureWyW6PRLX8sWJWu
-jalNZbWl7J8vbvAo1bkIQBo4PnEHV2LjFHt/SvnD6aknIjA22v/4nNtJsUIJ5+SA
-xWcHSilw0OrWNKXTwYXsRS78mGVpV9AC74uYjuzU+CNT/T4IrILcQZJsvazoyywc
-4xxaJ0cUbQr9f0s+nbrGKENx9Jw1n2kKhfthLxtaFHtA1SjBG3oP4Nq6EP+XrPKe
-/RFYJknIRezAwsUvZkGsecDXVR2V/hh/zHclaCN+FwoOksb5+9L7g2Ljy/bvRsPw
-tNxvLKBgZwApR6cramhmjVHd4lmfsZzMpKITZlm05XulRE7V3tBtEjXq7ZpKw4G4
-nldUhOh+aSXOnDtMC9Q6+qT7fLbvNh7eP5RzFAGFgB2PsoOmuTNP4RJd/hQtrRRC
-x/DHd6DD4gr/gWivio8jNG4WdcbPufIFlqpAM/0eCaOVMwYPJBPqZm22lZhMO1vY
-Xvo8eHT0oXSVimzQQ3VxlfwmsBY8RMUhzdGKnzjapbD33/ztflNwSDR19qGiP+Z5
-Fe8eXJh7vS18an79THRxt/h37udbTtMtqbmhHf52WLthFhbYLDwYidFPYQjQ1u0Y
-AC61un38pE/JCn3Hc9OvkzlOc2MUQiEZ5mld24RtD9LhtIfpq5wL/qO7l5iOGi2A
-JjF70s+9STGxwS3ghFsv8z0CAwEAAQ==
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAqfQ7pWIBycY0NkqGrzPd
+6X53/J8aH07QVysSLtwqaZG8S92VzwLqSPA9O+7IdOtMbwo7I+ZkWWXSardQL44p
+WzYFx/XFZkawmMvXUEYS/Fm+nKXoPewalibb/s7dXK2ZNazRTJiGWV+oApnORs25
+S0EREjBTYkJleAgN+guA8YVP+PxirJUIkxI0sQ6xRMfdMoFu39UwJ4AADbEcaIb/
+VBqLetnjT/fAbx7YmIcGIk6aN5UoiHPHxG+y/rouua+c0ZusYHEiF5RJOe/tYKKJ
+hmKJ0guRlWnluPaYvQdnCrRHpLimz2PLS2tzA2f71NMU+WESyURWpgTzpSIdpeuq
++NXtml/d2VOM/znoBNVt9aTGgwnNVYSENiN8MBVLTIkhjq1IE2JrAVRCwdPKoyMD
+jJJG/HfwzVyfeCCSpYWOLoY/VwCqDCGCX6y72o/NxT/TYUVbm31yqP1Zw3BJlStv
+d/D0KtHusWElX3XprtEECK6vLhI4izCZYXWmahUEWK0t8SDYlFsAFOqfNtlSssLE
+mJyf03VlPl64JyNPh2tzYUvySzDo2zQlJfiB6uRVk754a/8eIJOeMtjJxx37i4Un
+MD7Z+qpgARRAxEYiH3NOc5gHnmUhbFxmj2rTXB5o3yT1zEDpaRTmCCz32X/4x3Ka
+179FIDWKhiwRl8Asdh/TCAECAwEAAQ==
 -----END PUBLIC KEY-----
 """
 

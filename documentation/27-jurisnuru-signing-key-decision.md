@@ -1,9 +1,24 @@
 # JurisNuru license signing key: open decision
 
-Status: **open**. This document records the decision, the evidence, and the work
-already done that is correct under either outcome. It is not a recommendation
-that has been acted on — the repository is unchanged and still ships the key
-that was on `main`.
+Status: **decided and applied** (option (c), fresh keypair). A new RSA-4096
+production keypair was generated with `tools/keygen.py`; `licensing/core.py` and
+`resources/license_public_key.pem` now carry its public half and
+`_vendor/private_key.pem` holds the private half. Licences can be issued again.
+
+The trigger was concrete rather than theoretical: driving the packaged
+executable through Windows UI Automation showed the gate rendering correctly and
+reporting an installation ID, with **no way to get past it** — the private half
+of the previously shipped key did not exist on the build machine, and
+`JURISNURU_DEV_UNLOCK` is inert when frozen by design. The shipped exe was
+unusable by anyone.
+
+**The custody requirements in §5 are now outstanding work, not advice.** The new
+private key currently sits as unencrypted PKCS8 in the working tree, which is
+exactly the provenance problem this document warned about. Escrow it before any
+licence is issued to a real firm.
+
+The record below is retained because the reasoning still governs how the key is
+handled from here.
 
 ## What the product does today
 
