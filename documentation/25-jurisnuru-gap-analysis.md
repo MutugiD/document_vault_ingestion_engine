@@ -22,7 +22,7 @@ Assessed on `feat/jurisnuru-reconcile`: `origin/main` plus the reconcile and fil
 | Matter workspace: identity, people, dates, documents, history | 3, 4 | **REAL** | 8 sub-tabs mirroring the portal; `tests/validate_matter_workspace_tabs.py` |
 | Encrypted document custody | 3, 6 | **REAL** | `vault/core.py` AES-GCM + audit ledger; `tests/validate_vault.py` |
 | Searchable memory / grounded RAG with visible sources | 3, 7 | **PARTIAL** | `rag/core.py` returns real citations and Search is now its own destination; still global rather than slide 14's per-matter panel |
-| Independent record of what was filed | 13 | **PARTIAL** | `matter_filing_records` and the Filing record tab now exist; the tab is a list with a placeholder Add, not a data-entry form |
+| Independent record of what was filed | 13 | **REAL** | `matter_filing_records`, a Filing record sub-tab and a Filing record destination, both with a data-entry form; next actions flow into the `.ics` export |
 | Recoverable continuity: receipt, filed copy, service proof, next action | 13 | **PARTIAL** | Modelled (`filing_role`, `what_was_served`, `next_action`; next actions reach the `.ics` export); no UI to classify a document |
 | Product map nav: Matters / Documents / Filing record / Search / Reports / Settings | 14 | **REAL** | Sidebar over `ui/app.py` `_build_workbench()`; `tests/validate_ui.py` asserts the six destinations and two-way sync |
 | Per-matter AI context panel, source count, "Lawyer review required" | 14 | **ABSENT** | RAG is global, in Settings. `document_summaries.approval_status` exists and is unused |
@@ -41,7 +41,7 @@ The portal's case-detail view (e.g. `HCCOMM/E214/2026`, tracking `AERJ2026`, Mil
 | Portal tab | Fields observed on the portal | Backend | UI | Verdict |
 |---|---|---|---|---|
 | Summary | case category, case type, station, case number, filed by, tracking number (used for SMS `22490`, USSD `*508#`, and MPESA/KCB reconciliation) | `matters` via `search/core.py` `MatterRecord` | `summaryTab`, free text | **PARTIAL** — no tracking-number field on the matter |
-| Parties | category, party type (`1st Plaintiff`, `1st Respondent`, `1st Interested Party`), name, firm/agent, nationality, gender | `matter_parties` | `partiesTab` | **PARTIAL** — renders as of this commit; no nationality/gender; Add writes a placeholder |
+| Parties | category, party type (`1st Plaintiff`, `1st Respondent`, `1st Interested Party`), name, firm/agent, nationality, gender | `matter_parties` | `partiesTab` | **PARTIAL** — renders and has a form with the portal's party types; no nationality/gender |
 | Activities | activity (`Mention`, `Directions`), date, court room, actioned to (judge), outcomes | `matter_activities` | `activitiesTab` | **PARTIAL** — renders as of this commit; `court_session` covers court room; no explicit judge field |
 | Lodging | date, file count, created by, fee payable, fees paid, status (`Not Payable`), "File Additional Documents" | `lodgings` + `actioning_status` | `lodgingsTab` | **PARTIAL** — renders as of this commit; no fee payable/paid rollup on the row |
 | Court Decisions | decision type, date, court, decision maker, outcome | `court_decisions` | `courtDecisionsTab` | **PARTIAL** — renders as of this commit |
@@ -59,19 +59,25 @@ Plus one tab the portal does not have and the brief demands: **Filing record** (
 
 Each verified against the working tree.
 
-### 3.1 Fixed in this branch
+### 3.1 Fixed
 
 - **Four of eight matter tabs never rendered.** `_on_add_party`, `_on_add_activity`, `_on_add_lodging` and `_on_add_court_decision` wrote to the backend and refreshed nothing; only Fees and Receipts called a refresh. Fixed with `MATTER_TAB_VIEWS` + `_refresh_matter_workspace()`; guarded by `tests/validate_matter_workspace_tabs.py`, confirmed to fail against the old behaviour.
 - **No way to open an existing matter.** `_current_matter_id` was set only by creating one, so after a restart the workspace could show nothing. Selecting a matter now opens it.
 - **No schema migration mechanism.** `_create_schema` is entirely `CREATE TABLE IF NOT EXISTS`, a no-op against an existing database, so any new column reached fresh installs only. Fixed with `_migrate_schema` over `PRAGMA user_version`; `tests/validate_schema_migration.py` covers upgrade, idempotence, and row survival.
 - **No test bound the shipped license key.** Every check in `validate_license.py` supplied its own ephemeral keypair, so the embedded trust anchor was never exercised and a key substitution left the suite green. Fixed with `_validate_embedded_trust_anchor` plus `scripts/verify_trust_anchor.py` in CI after obfuscation.
 - **The Documents tab shipped an Add button with nothing connected to it.** `_matter_text_list_tab` built one for all eight sub-tabs, but documents arrive by upload, so seven are wired and the eighth did nothing when clicked. Found by `tests/audit_ui_functionality.py`; `addable` is now part of the tab table.
+- **The application never performed OCR.** `TesseractOcrEngine` existed and the runtime was bundled and validated at release, but the only engine wired to an import replayed a pre-existing `.ocr.txt` sidecar. Every scanned receipt, title copy, sealed order and CR12 yielded nothing. OCR is now per page rather than per document, at 300 DPI. Measured: 4,714 characters recovered from one real judgment's scanned annexures; 11/11 scanned documents recovered across a 30-document corpus.
+- **The packaged executable could not be activated by anyone.** The private half of its embedded key did not exist, and the dev unlock is inert when frozen. A fresh RSA-4096 production keypair was issued.
+- **The release bundle could not be built or extracted on Windows.** Torch's nested third-party licence tree exceeds MAX_PATH once an install root is prepended; a realistic customer path reaches 338 characters.
+- **Form labels were invisible.** `QDialog` inherits the dark shell while `QLabel` defaults to dark text.
 - **Mixed line endings hid a security-relevant diff.** No `.gitattributes`, `core.autocrlf=false`: a 12-line change to the embedded key in `licensing/core.py` presented as a 470-line diff. Fixed with `.gitattributes` and renormalization.
+
+- **Opening a matter meant retyping the filing's heading.** `intake/matter_details.py` now reads the case number, parties, court, station and practice area off the document. Anchored on the formal heading rather than scanning, because scanning read the courts a judgment *cites* -- a Maua appeal came back as a Supreme Court matter at Kisumu. Verified against six genuine Maua and Meru judgments.
 
 ### 3.2 Open
 
 - **License entitlements are decorative.** `LicenseValidationResult` carries `FeatureEntitlements` — `cloud_backup`, `matter_rag`, `hosted_ai` — and the UI only prints them into `entitlementStatusLabel` (`ui/app.py:1170`). Nothing is gated on them. The access control that does exist is role-based and enforced server-side. **Plan tiers are cosmetic**: a `basic` license unlocks exactly what `enterprise` does.
-- **Add buttons write hardcoded placeholders.** `name="New Party"`, `receipt_number="NEW-RCT"`, `amount=0`, `document_kind="New Lodging"`. There is no data-entry form anywhere in the matter workspace, so the tabs demonstrate the round trip rather than supporting real work. This is the largest remaining gap between "the tabs render" and "a firm could use this".
+- ~~Add buttons write hardcoded placeholders.~~ **Fixed.** `MatterRecordDialog` gives every tab a form built from the portal's own fields, driven by the same `MATTER_TAB_VIEWS` table that builds and renders the tabs.
 - **Hardcoded password in solo mode.** `login(self._current_username, "admin-pass")` at `ui/app.py:615`, `:656` and `:965`. Solo mode provisions that account itself, so this is not a credential disclosed to a third party, but the solo password is fixed and the connection dialog's password field is ignored in solo mode.
 - **Seats are provisioned users, not concurrent logins.** One user may reconnect from another laptop with the same credentials. Acceptable for a pilot, but it must be stated in commercial terms. See [26-jurisnuru-seats-networking.md](26-jurisnuru-seats-networking.md).
 - **The signing key decision is open**, and the private half of the currently shipped key is not on the development workstation — so no license can presently be issued. See [27-jurisnuru-signing-key-decision.md](27-jurisnuru-signing-key-decision.md).
@@ -83,7 +89,7 @@ Each verified against the working tree.
 | Gap | What the brief expects | Cost |
 |---|---|---|
 | Data-entry forms | Slide 14 shows real matter content | Medium — one form per tab; the backend already accepts the fields |
-| Tracking number on the matter | Slides 13, 14; the portal's primary reference for SMS, USSD and payment reconciliation | Small — one column, one field |
+| Tracking number on the matter itself | Slides 13, 14 | Small — it exists on the filing record; the matter row has no column |
 | Filing-role classification in the UI | Slide 13: receipt, filed copy, service proof | Small — `documents.filing_role` exists, needs a picker |
 | Per-matter AI context panel | Slide 14: source count, "Lawyer review required" | Medium — move RAG out of Settings; `document_summaries.approval_status` already models the review gate |
 | Firm dashboard tiles | Portal parity: payable/paid/balance as tiles, per-station table | Small — `firm_overview()` already returns the data |
@@ -92,7 +98,7 @@ Each verified against the working tree.
 
 ## 5. Sequencing
 
-1. **Data-entry forms per tab.** Highest value per line: model and rendering are both done, only input is missing. The functional audit reports all seven Add handlers as PARTIAL for exactly this reason.
+1. **Per-matter AI context panel** (slide 14). `document_summaries.approval_status` already models the review gate; the Draft summary button is the first half of it.
 2. **Tracking number on the matter, filing-role picker on upload.** Completes the slide 13 continuity story.
 3. **Per-matter AI context panel.** The review-gate model already exists in the schema.
 4. **Left-nav IA.** Do last, in one commit that rewrites the three UI tests together; keep `objectName`s stable so `findChild` assertions survive the container change.
@@ -110,5 +116,6 @@ Stated plainly so this document is not read as broader assurance than it is.
 - **Portal observations come from photographs of one firm's account** at Milimani High Court, Kiambu High Court, Nairobi and Nakuru ELRC, and several Magistrates' Courts. Field vocabulary may differ elsewhere. No API contract was inspected — there is none. JurisNuru does not integrate with the portal; it records alongside it.
 - **Multi-machine LAN operation has never been run.** Seat behaviour is verified in-process through Starlette's `TestClient` only; no two-machine acceptance pass exists.
 - **The frozen build was not rebuilt for this analysis.** CI's `package` job covers it; the local `dist/` dates from 2026-07-22.
-- **`tests/audit_ui_functionality.py` reports 16 pass, 9 partial, 0 fail.** It drives every visible control through the real gate, but a PARTIAL is a judgement about product completeness, not a measurement.
+- **`tests/audit_ui_functionality.py` reports 23 pass, 2 partial, 0 fail.** It drives every visible control through the real gate, but a PARTIAL is a judgement about product completeness, not a measurement.
+- **RAG was exercised over six genuine Maua and Meru judgments** (207 chunks, 12 advocate questions): every question returned at least one citation, confidence 0.48-1.00. That measures retrieval, not answer correctness -- no ground truth was established, so it does not show the citations support the answers.
 - **No performance or scale testing** at any point. Matter counts, document counts and FTS5 behaviour under a real firm's corpus are unmeasured.
