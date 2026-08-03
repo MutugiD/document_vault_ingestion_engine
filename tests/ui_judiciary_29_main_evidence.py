@@ -4,11 +4,9 @@
 
 from __future__ import annotations
 
-import base64
 import os
 import sys
 import tempfile
-from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -21,8 +19,7 @@ tempfile.tempdir = str(TEST_ROOT / "temp")
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from _license_harness import install_test_license
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QFont, QFontDatabase, QImage, QPainter
 from PySide6.QtWidgets import (
@@ -34,44 +31,8 @@ from PySide6.QtWidgets import (
     QTextEdit,
 )
 
-import licensing.core as licensing_core
 import ui.app as ui_app
-from licensing import (
-    FeatureEntitlements,
-    LicenseDocument,
-    canonical_license_bytes,
-    ensure_installation_identity,
-    write_license_file,
-)
 from ui import MainWindow, create_app
-
-
-def signed_license(installation_id: str, key: rsa.RSAPrivateKey) -> LicenseDocument:
-    unsigned = LicenseDocument(
-        installation_id=installation_id,
-        license_id="LIC-MAIN-UI-EVIDENCE",
-        firm_display_name="Main UI Evidence Practice",
-        plan="enterprise",
-        features=FeatureEntitlements(True, True, True, True, True),
-        expiry=date.today() + timedelta(days=365),
-        issued_at=datetime.now(UTC),
-        signature="",
-    )
-    signature = key.sign(
-        canonical_license_bytes(unsigned),
-        padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
-        hashes.SHA256(),
-    )
-    return LicenseDocument(
-        installation_id=unsigned.installation_id,
-        license_id=unsigned.license_id,
-        firm_display_name=unsigned.firm_display_name,
-        plan=unsigned.plan,
-        features=unsigned.features,
-        expiry=unsigned.expiry,
-        issued_at=unsigned.issued_at,
-        signature=base64.b64encode(signature).decode("ascii"),
-    )
 
 
 def main() -> None:
@@ -82,15 +43,9 @@ def main() -> None:
     corpus = sorted((ROOT / "test-output" / "judiciary-ui-corpus").glob("*.pdf"))
     assert len(corpus) == 29, len(corpus)
 
-    identity_path = Path(os.environ["APPDATA"]) / "WakiliOS" / "settings" / "installation.json"
-    identity = ensure_installation_identity(identity_path)
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    licensing_core._PUBLIC_KEY_PEM = private_key.public_key().public_bytes(
-        serialization.Encoding.PEM,
-        serialization.PublicFormat.SubjectPublicKeyInfo,
-    )
-    license_path = TEST_ROOT / "license.key"
-    write_license_file(license_path, signed_license(identity.installation_id, private_key))
+    license_path = install_test_license(
+        TEST_ROOT, firm_display_name="Judiciary Evidence Practice"
+    ).path
 
     app = create_app(["ui_judiciary_29_main_evidence"])
     font_path = Path(r"C:\Windows\Fonts\arial.ttf")
