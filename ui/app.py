@@ -42,6 +42,24 @@ from wakilios.client import (
 )
 from wakilios.core import WakiliOSBackend, initialize_firm_backend
 
+DEV_UNLOCK_ENV_VAR = "JURISNURU_DEV_UNLOCK"
+
+
+def _dev_unlock_requested() -> bool:
+    """Whether to open the license gate for local development.
+
+    This is a UI-layer bypass only: it flips the same gate state a real
+    activation produces, and leaves every licensing check, widget and code
+    path instantiated and reachable. Nothing in ``licensing/`` consults it,
+    so the compiled trust anchor in ``licensing/core.pyd`` is untouched.
+
+    It is inert in packaged builds -- PyInstaller sets ``sys.frozen`` -- so a
+    shipped executable gates regardless of the environment it runs in.
+    """
+    if getattr(sys, "frozen", False):
+        return False
+    return os.environ.get(DEV_UNLOCK_ENV_VAR) == "1"
+
 
 @dataclass(frozen=True)
 class ModuleStatus:
@@ -159,6 +177,7 @@ class MainWindow(QMainWindow):
 
         self._backend_client: WakiliOSClient | None = None
         self._backend_local: WakiliOSBackend | None = None
+        self._workspace_root = workspace
         self._current_role: str = ""
         self._current_username: str = ""
         self._current_matter_id: str = ""
@@ -222,6 +241,8 @@ class MainWindow(QMainWindow):
         self._connect_workflow_controls()
         self._connect_backend_controls()
         self._set_license_state(False, "Not activated")
+        if _dev_unlock_requested():
+            self._set_license_state(True, "DEVELOPMENT BUILD - license gate bypassed")
 
     def _initialize_license_identity(self) -> None:
         from licensing.installation import ensure_installation_identity
@@ -266,6 +287,22 @@ class MainWindow(QMainWindow):
             if license_path.suffix.lower() == ".pem" or b"BEGIN PUBLIC KEY" in raw_license:
                 message = (
                     "This is the public verification key, not a license. "
+                    "Select a vendor-issued signed license.key file."
+                )
+                self._set_license_state(False, message)
+                self.status_label.setText(message)
+                return
+            try:
+                license_payload = json.loads(raw_license.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                license_payload = None
+            if (
+                isinstance(license_payload, dict)
+                and "installation_id" in license_payload
+                and "signature" not in license_payload
+            ):
+                message = (
+                    "This is the installation identity, not a license. "
                     "Select a vendor-issued signed license.key file."
                 )
                 self._set_license_state(False, message)
@@ -431,7 +468,14 @@ class MainWindow(QMainWindow):
     @Slot(str, str)
     def _on_solo_mode_started(self, username: str, role: str) -> None:
         """Handle solo mode: initialize local backend directly, no HTTP needed."""
-        solo_root = Path(tempfile.gettempdir()) / "wakilios-solo"
+        # Keep the solo backend out of the shared temp directory. A fixed path
+        # under gettempdir() is world-writable and survives between runs, so a
+        # second launch reopened a database another process still held.
+        if self._workspace_root is not None:
+            solo_root = self._workspace_root / "solo-backend"
+        else:
+            app_data = Path(os.environ.get("APPDATA", tempfile.gettempdir()))
+            solo_root = app_data / "WakiliOS" / "solo-backend"
         self._backend_local = initialize_firm_backend(
             solo_root,
             firm_name="Solo Practice",

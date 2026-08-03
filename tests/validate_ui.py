@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -20,9 +22,15 @@ from ui import (  # noqa: E402
     MainWindow,
     create_app,
 )
+from ui import app as ui_app  # noqa: E402
+from ui.app import DEV_UNLOCK_ENV_VAR  # noqa: E402
 
 
 def main() -> None:
+    # The gate must be validated in its shipped state, never under a dev
+    # bypass that a developer happened to leave exported.
+    os.environ.pop(DEV_UNLOCK_ENV_VAR, None)
+
     app = create_app(["validate_ui"])
     window = MainWindow()
     assert window.windowTitle() == "JurisNuru"
@@ -35,7 +43,12 @@ def main() -> None:
         "Settings",
         "About",
     ]
+    # Locked at startup: the gate is showing and the application is not
+    # merely disabled behind it, it is not in the visible widget tree at all.
+    assert window._license_active is False
     assert window.application_stack.currentIndex() == 0
+    assert window.application_stack.currentWidget() is window.license_gate
+    assert window.application_stack.currentWidget().findChild(QObject, "dashboardPage") is None
     assert window.tabs.widget(0).findChild(QObject, "licenseGroup") is None
     expected_widgets = (
         "licensePage",
@@ -122,6 +135,20 @@ def main() -> None:
     activate_button.click()
     assert "public verification key" in license_status.text()
     assert "Expecting value" not in window.status_label.text()
+    assert window.application_stack.currentIndex() == 0
+
+    # The installation identity is the one file a user is most likely to
+    # mistake for a license: same directory, same .json shape, no signature.
+    with tempfile.TemporaryDirectory() as temp_dir:
+        identity_file = Path(temp_dir) / "installation.json"
+        identity_file.write_text(
+            json.dumps({"installation_id": "ec65d956-test", "created_at": "2026-01-01T00:00:00"}),
+            encoding="utf-8",
+        )
+        license_input.setText(str(identity_file))
+        activate_button.click()
+    assert "installation identity" in license_status.text()
+    assert window.application_stack.currentIndex() == 0
 
     window._set_license_state(True, "Active: validation")
     assert window.application_stack.currentIndex() == 1
@@ -207,6 +234,30 @@ def main() -> None:
 
     window.close()
     app.processEvents()
+
+    # The dev bypass is production code and is tested as such: it opens the
+    # gate when exported, and it is inert when the build is frozen.
+    os.environ[DEV_UNLOCK_ENV_VAR] = "1"
+    try:
+        unlocked = MainWindow()
+        assert unlocked._license_active is True
+        assert unlocked.application_stack.currentIndex() == 1
+        assert "DEVELOPMENT BUILD" in unlocked.findChild(QLabel, "licenseStatusLabel").text()
+        unlocked.close()
+        app.processEvents()
+
+        sys.frozen = True  # type: ignore[attr-defined]
+        try:
+            assert ui_app._dev_unlock_requested() is False
+            frozen = MainWindow()
+            assert frozen._license_active is False
+            assert frozen.application_stack.currentIndex() == 0
+            frozen.close()
+            app.processEvents()
+        finally:
+            del sys.frozen  # type: ignore[attr-defined]
+    finally:
+        os.environ.pop(DEV_UNLOCK_ENV_VAR, None)
 
     print("UI VALIDATION PASS")
 
