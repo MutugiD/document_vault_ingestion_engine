@@ -60,6 +60,9 @@ def main() -> None:
         "browseLicenseButton",
         "licenseStatusLabel",
         "licenseInstallationLabel",
+        "licensePageSteps",
+        "copyInstallationIdButton",
+        "licenseFileNote",
         "dashboardPage",
         "connectionGroup",
         "setupGroup",
@@ -143,6 +146,19 @@ def main() -> None:
     assert license_input is not None
     assert activate_button is not None
     assert license_status is not None
+    # The gate must tell a firm how to obtain a license, not just demand one.
+    steps = window.findChild(QLabel, "licensePageSteps")
+    assert steps is not None
+    assert "Installation ID" in steps.text()
+    assert "supplier" in steps.text()
+    copy_button = window.findChild(QPushButton, "copyInstallationIdButton")
+    assert copy_button is not None
+    copy_button.click()
+    installation_label = window.findChild(QLabel, "licenseInstallationLabel")
+    copied = app.clipboard().text()
+    assert copied and copied in installation_label.text(), (copied, installation_label.text())
+    assert "Installation ID:" not in copied, "the label prefix must not be copied"
+
     license_input.setText(str(ROOT / "resources" / "license_public_key.pem"))
     activate_button.click()
     assert "public verification key" in license_status.text()
