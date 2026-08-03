@@ -738,6 +738,19 @@ class MainWindow(QMainWindow):
         self._set_license_state(True, f"Active: {document.firm_display_name} ({document.plan})")
         self.status_label.setText("License activated; JurisNuru is ready")
 
+    @Slot()
+    def copy_installation_id(self) -> None:
+        """Put the installation ID on the clipboard, ready to send to the supplier."""
+        label = self.findChild(QLabel, "licenseInstallationLabel")
+        if label is None:
+            return
+        identity = label.text().replace("Installation ID:", "").strip()
+        if not identity:
+            self.status_label.setText("Installation identity is not ready yet")
+            return
+        QApplication.clipboard().setText(identity)
+        self.status_label.setText(f"Installation ID copied: {identity}")
+
     def browse_for_license(self) -> None:
         selected, _ = QFileDialog.getOpenFileName(
             self,
@@ -770,6 +783,10 @@ class MainWindow(QMainWindow):
         activate_button = self.findChild(QPushButton, "activateLicenseButton")
         if activate_button is not None:
             activate_button.clicked.connect(self.activate_license)
+
+        copy_button = self.findChild(QPushButton, "copyInstallationIdButton")
+        if copy_button is not None:
+            copy_button.clicked.connect(self.copy_installation_id)
 
         browse_button = self.findChild(QPushButton, "browseLicenseButton")
         if browse_button is not None:
@@ -1526,11 +1543,25 @@ def _license_page() -> QWidget:
     title.setObjectName("licensePageTitle")
     layout.addWidget(title)
     explanation = QLabel(
-        "A valid signed license is required before JurisNuru can open the dashboard."
+        "A valid signed license is required before JurisNuru can open the dashboard. "
+        "Licenses are issued per machine, so this installation needs its own file."
     )
     explanation.setObjectName("licensePageExplanation")
     explanation.setWordWrap(True)
     layout.addWidget(explanation)
+
+    # Without this, a firm that has just installed JurisNuru sees a file picker,
+    # an installation ID and no indication of where a license comes from.
+    steps = QLabel(
+        "<b>To obtain a license</b><br>"
+        "1. Copy the Installation ID below and send it to your JurisNuru supplier.<br>"
+        "2. You will receive a <code>license.key</code> file issued for this machine.<br>"
+        "3. Choose <b>Browse</b>, select that file, then <b>Activate license</b>."
+    )
+    steps.setObjectName("licensePageSteps")
+    steps.setWordWrap(True)
+    steps.setTextFormat(Qt.TextFormat.RichText)
+    layout.addWidget(steps)
 
     license_group = QFrame()
     license_group.setObjectName("licenseGroup")
@@ -1552,7 +1583,13 @@ def _license_page() -> QWidget:
     license_file_row.addWidget(license_file, stretch=1)
     license_file_row.addWidget(browse)
     license_layout.addRow("License file", license_file_row)
-    license_layout.addRow("Installation", installation)
+    copy_identity = QPushButton("Copy ID")
+    copy_identity.setObjectName("copyInstallationIdButton")
+    copy_identity.setToolTip("Copy this machine's Installation ID to the clipboard")
+    installation_row = QHBoxLayout()
+    installation_row.addWidget(installation, stretch=1)
+    installation_row.addWidget(copy_identity)
+    license_layout.addRow("Installation", installation_row)
     license_layout.addRow("Status", status)
     license_layout.addRow("", activate)
     layout.addWidget(license_group)
@@ -1560,6 +1597,17 @@ def _license_page() -> QWidget:
     locked = QLabel("JurisNuru is locked until license activation")
     locked.setObjectName("licenseLockMessage")
     layout.addWidget(locked)
+
+    # Say plainly what the two files that are NOT a license look like, because
+    # both sit in the installation directory and both get tried.
+    note = QLabel(
+        "Note: neither the public verification key (license_public_key.pem) nor the "
+        "installation identity (installation.json) is a license. Both live alongside "
+        "JurisNuru and are rejected here."
+    )
+    note.setObjectName("licenseFileNote")
+    note.setWordWrap(True)
+    layout.addWidget(note)
     layout.addStretch(1)
     return page
 

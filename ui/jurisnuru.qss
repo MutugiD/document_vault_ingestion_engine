@@ -88,6 +88,34 @@ QFrame#licenseGroup {
     padding: 18px;
 }
 
+QWidget#licensePage QLabel#licensePageSteps {
+    color: #B9C8DA;
+    font-size: 13px;
+    background-color: #16263C;
+    border: 1px solid #24384F;
+    border-radius: 8px;
+    padding: 14px 16px;
+}
+
+QWidget#licensePage QLabel#licenseFileNote {
+    color: #6F86A3;
+    font-size: 11px;
+    padding: 4px 2px;
+}
+
+QWidget#licensePage QPushButton#copyInstallationIdButton {
+    background-color: transparent;
+    border: 1px solid #2A4058;
+    color: #8FA3BC;
+    font-weight: 500;
+    padding: 6px 12px;
+}
+
+QWidget#licensePage QPushButton#copyInstallationIdButton:hover {
+    border: 1px solid #1D6FB8;
+    color: #FFFFFF;
+}
+
 QWidget#licensePage QLabel#licenseStatusLabel,
 QWidget#licensePage QLabel#licenseInstallationLabel {
     color: #8FA3BC;
