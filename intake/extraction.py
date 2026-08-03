@@ -20,6 +20,10 @@ OCR_FAILED = "failed"
 
 IMAGE_TYPES = {"jpeg", "png", "tiff"}
 
+# Rasterisation resolution for OCR. Tesseract's accuracy degrades sharply below
+# ~300 DPI for body text, and worse for court stamps and receipt footers.
+OCR_RENDER_DPI = 300
+
 
 class ExtractionError(Exception):
     """Base extraction failure."""
@@ -81,8 +85,19 @@ def _extract_pdf(
         with fitz.open(source_path) as document:
             page_text = [page.get_text("text") for page in document]
             page_count = document.page_count
-            if not any(part.strip() for part in page_text) and ocr_engine is not None:
-                return _ocr_pdf_pages(source_path, document, warnings, ocr_engine=ocr_engine)
+            # OCR is decided per page, not per document. A Kenyan filing is
+            # typically typed pleadings with scanned annexures -- stamped
+            # receipts, executed agreements, sealed orders. Deciding for the
+            # whole document meant one page of native text suppressed OCR on
+            # every scanned page, and the result still reported "not_required".
+            if ocr_engine is not None and any(not part.strip() for part in page_text):
+                return _ocr_pdf_pages(
+                    source_path,
+                    document,
+                    warnings,
+                    ocr_engine=ocr_engine,
+                    native_text=page_text,
+                )
     except Exception as exc:
         raise ExtractionError(f"PDF extraction failed: {source_path}") from exc
 
@@ -143,13 +158,29 @@ def _ocr_pdf_pages(
     warnings: tuple[str, ...],
     *,
     ocr_engine: OcrEngine,
+    native_text: list[str] | None = None,
 ) -> ExtractionResult:
+    """OCR the pages that have no native text, keeping the ones that do.
+
+    ``native_text`` carries what PyMuPDF already extracted per page. Pages with
+    text are kept as-is: native text is exact, and re-recognising it would
+    introduce OCR error into content that had none.
+    """
     page_text: list[str] = []
     with tempfile.TemporaryDirectory() as temporary_dir:
         workspace = Path(temporary_dir)
         for page_number, page in enumerate(document, start=1):
+            existing = native_text[page_number - 1] if native_text else ""
+            if existing.strip():
+                page_text.append(existing)
+                continue
             image_path = workspace / f"page-{page_number}.png"
-            page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False).save(image_path)
+            # 300 DPI. PDF user space is 72 DPI, so the previous Matrix(2, 2)
+            # rendered at ~144 -- below what Tesseract needs for the small type
+            # in court stamps and receipt footers.
+            page.get_pixmap(
+                matrix=fitz.Matrix(OCR_RENDER_DPI / 72, OCR_RENDER_DPI / 72), alpha=False
+            ).save(image_path)
             try:
                 page_text.append(ocr_engine.recognize_image(image_path))
             except OcrRuntimeError:
