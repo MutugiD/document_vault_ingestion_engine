@@ -159,6 +159,7 @@ class MainWindow(QMainWindow):
 
         self._backend_client: WakiliOSClient | None = None
         self._backend_local: WakiliOSBackend | None = None
+        self._workspace_root = workspace
         self._current_role: str = ""
         self._current_username: str = ""
         self._current_matter_id: str = ""
@@ -431,7 +432,14 @@ class MainWindow(QMainWindow):
     @Slot(str, str)
     def _on_solo_mode_started(self, username: str, role: str) -> None:
         """Handle solo mode: initialize local backend directly, no HTTP needed."""
-        solo_root = Path(tempfile.gettempdir()) / "wakilios-solo"
+        # Keep the solo backend out of the shared temp directory. A fixed path
+        # under gettempdir() is world-writable and survives between runs, so a
+        # second launch reopened a database another process still held.
+        if self._workspace_root is not None:
+            solo_root = self._workspace_root / "solo-backend"
+        else:
+            app_data = Path(os.environ.get("APPDATA", tempfile.gettempdir()))
+            solo_root = app_data / "WakiliOS" / "solo-backend"
         self._backend_local = initialize_firm_backend(
             solo_root,
             firm_name="Solo Practice",
