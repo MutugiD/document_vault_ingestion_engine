@@ -22,10 +22,46 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from PySide6.QtWidgets import QListWidget, QPushButton, QTabWidget  # noqa: E402
+from PySide6.QtWidgets import (  # noqa: E402
+    QComboBox,
+    QDialog,
+    QListWidget,
+    QPushButton,
+    QTabWidget,
+)
 
 from ui import MainWindow, create_app  # noqa: E402
-from ui.app import DEV_UNLOCK_ENV_VAR, MATTER_TAB_VIEWS  # noqa: E402
+from ui.app import DEV_UNLOCK_ENV_VAR, MATTER_TAB_VIEWS, MatterRecordDialog  # noqa: E402
+
+
+def _autofill(sample: str = "AUDIT"):
+    """Drive the Add dialog as a user would, without blocking on exec().
+
+    The dialog is real -- construction, field spec and validation all run; only
+    the modal event loop is replaced, because a headless test cannot click OK.
+    """
+
+    def fake_exec(dialog: MatterRecordDialog) -> int:
+        for field in dialog._view.fields:
+            widget = dialog._inputs[field.name]
+            value = (
+                "1500"
+                if field.numeric
+                else (field.choices[0] if field.choices else f"{sample}-{field.name}")
+            )
+            if isinstance(widget, QComboBox):
+                widget.setCurrentText(value)
+            else:
+                widget.setText(value)
+        dialog._on_accept()
+        return (
+            int(QDialog.DialogCode.Accepted)
+            if dialog.result()
+            else int(QDialog.DialogCode.Rejected)
+        )
+
+    return fake_exec
+
 
 # Tabs whose "Add" control creates a row. Documents are added by upload, which
 # the evidence runners cover end to end with real files.
@@ -74,6 +110,9 @@ def main() -> None:
             app.processEvents()
             assert window._current_matter_id
 
+            original_exec = MatterRecordDialog.exec
+            MatterRecordDialog.exec = _autofill()
+
             for object_name in ADDABLE_TABS:
                 before = [
                     listing(object_name).item(i).text() for i in range(listing(object_name).count())
@@ -91,7 +130,14 @@ def main() -> None:
                 assert view.empty_text not in after, (
                     f"{object_name} still shows its placeholder after Add: {after}"
                 )
+                # What the form collected must reach the rendered row, not a
+                # hardcoded placeholder.
+                assert any("AUDIT" in text or "1500" in text for text in after), (
+                    f"{object_name} did not render the values entered: {after}"
+                )
                 assert all(text.strip() for text in after), f"{object_name} rendered a blank row"
+
+            MatterRecordDialog.exec = original_exec
 
             # Selecting a matter from the list opens it and repopulates the tabs.
             created_matter_id = window._current_matter_id
