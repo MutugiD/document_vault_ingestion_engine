@@ -21,47 +21,17 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tests"))
 
+from _dialog_harness import autofill_dialogs  # noqa: E402
 from PySide6.QtWidgets import (  # noqa: E402
-    QComboBox,
-    QDialog,
     QListWidget,
     QPushButton,
     QTabWidget,
 )
 
 from ui import MainWindow, create_app  # noqa: E402
-from ui.app import DEV_UNLOCK_ENV_VAR, MATTER_TAB_VIEWS, MatterRecordDialog  # noqa: E402
-
-
-def _autofill(sample: str = "AUDIT"):
-    """Drive the Add dialog as a user would, without blocking on exec().
-
-    The dialog is real -- construction, field spec and validation all run; only
-    the modal event loop is replaced, because a headless test cannot click OK.
-    """
-
-    def fake_exec(dialog: MatterRecordDialog) -> int:
-        for field in dialog._view.fields:
-            widget = dialog._inputs[field.name]
-            value = (
-                "1500"
-                if field.numeric
-                else (field.choices[0] if field.choices else f"{sample}-{field.name}")
-            )
-            if isinstance(widget, QComboBox):
-                widget.setCurrentText(value)
-            else:
-                widget.setText(value)
-        dialog._on_accept()
-        return (
-            int(QDialog.DialogCode.Accepted)
-            if dialog.result()
-            else int(QDialog.DialogCode.Rejected)
-        )
-
-    return fake_exec
-
+from ui.app import DEV_UNLOCK_ENV_VAR, MATTER_TAB_VIEWS  # noqa: E402
 
 # Tabs whose "Add" control creates a row. Documents are added by upload, which
 # the evidence runners cover end to end with real files.
@@ -93,6 +63,7 @@ def main() -> None:
                 assert found is not None, object_name
                 return found
 
+            restore_dialogs = autofill_dialogs("AUDIT")
             button("startSoloButton").click()
             app.processEvents()
             assert window._backend_local is not None
@@ -109,9 +80,6 @@ def main() -> None:
             button("newMatterButton").click()
             app.processEvents()
             assert window._current_matter_id
-
-            original_exec = MatterRecordDialog.exec
-            MatterRecordDialog.exec = _autofill()
 
             for object_name in ADDABLE_TABS:
                 before = [
@@ -137,7 +105,7 @@ def main() -> None:
                 )
                 assert all(text.strip() for text in after), f"{object_name} rendered a blank row"
 
-            MatterRecordDialog.exec = original_exec
+            restore_dialogs()
 
             # Selecting a matter from the list opens it and repopulates the tabs.
             created_matter_id = window._current_matter_id

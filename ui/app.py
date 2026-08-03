@@ -82,7 +82,7 @@ class MatterRecordDialog(QDialog):
     def __init__(self, view: MatterTabView, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName(f"{view.object_name}Dialog")
-        self.setWindowTitle(f"Add {view.label.rstrip('s').lower()}")
+        self.setWindowTitle(f"Add {view.singular}")
         self.setMinimumWidth(420)
         self._view = view
         self._inputs: dict[str, QWidget] = {}
@@ -118,6 +118,9 @@ class MatterRecordDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
+    def _field_specs(self) -> tuple[FormField, ...]:
+        return self._view.fields
+
     def _value(self, field: FormField) -> str:
         widget = self._inputs[field.name]
         text = widget.currentText() if isinstance(widget, QComboBox) else widget.text()
@@ -148,6 +151,224 @@ class MatterRecordDialog(QDialog):
         return collected
 
 
+MATTER_FIELDS: tuple[FormField, ...] = (
+    FormField("internal_reference", "Firm reference", "left blank, one is generated"),
+    FormField("client_name", "Client", required=True),
+    FormField("parties", "Parties", "e.g. Abdi Yusuf vs Faith Kinya Kiaira"),
+    FormField("case_number", "Case number", "e.g. HCCOMM/E214/2026"),
+    FormField(
+        "court",
+        "Court",
+        choices=(
+            "High Court",
+            "Court of Appeal",
+            "Supreme Court",
+            "Employment and Labour Relations Court",
+            "Environment and Land Court",
+            "Chief Magistrate's Court",
+            "Principal Magistrate's Court",
+            "Resident Magistrate's Court",
+        ),
+    ),
+    FormField("station", "Station", "e.g. Meru, Milimani, Maua"),
+    FormField(
+        "practice_area",
+        "Practice area",
+        choices=(
+            "Civil",
+            "Commercial",
+            "Criminal",
+            "Employment",
+            "Succession",
+            "Environment and Land",
+            "Family",
+            "Constitutional",
+            "Judicial Review",
+        ),
+    ),
+    FormField("filing_status", "Filing status", choices=("draft", "filed", "served", "closed")),
+    FormField("filing_date", "Filing date", "YYYY-MM-DD"),
+)
+
+
+def _draft_matter_summary(workspace: dict) -> str:
+    """Compose a matter summary from recorded facts only."""
+    matter = workspace.get("matter") or {}
+    lines: list[str] = []
+
+    parties = str(matter.get("parties") or "").strip()
+    case_number = str(matter.get("case_number") or "").strip()
+    court = str(matter.get("court") or "").strip()
+    station = str(matter.get("station") or "").strip()
+
+    opening = parties or str(matter.get("client_name") or "").strip() or "This matter"
+    venue = " at ".join(part for part in (court, station) if part)
+    if case_number and venue:
+        lines.append(f"{opening} - {case_number}, {venue}.")
+    elif case_number:
+        lines.append(f"{opening} - {case_number}.")
+    elif venue:
+        lines.append(f"{opening} - {venue}.")
+    else:
+        lines.append(f"{opening}.")
+
+    def count(key: str) -> int:
+        return len(workspace.get(key) or [])
+
+    holdings = [
+        f"{count('documents')} document(s)",
+        f"{count('parties')} part(y/ies)",
+        f"{count('activities')} activity/activities",
+        f"{count('lodgings')} lodging(s)",
+    ]
+    lines.append("On record: " + ", ".join(holdings) + ".")
+
+    fees = workspace.get("fees") or []
+    receipts = workspace.get("receipts") or []
+    if fees or receipts:
+        raised = sum(float(item.get("amount") or 0) for item in fees)
+        paid = sum(float(item.get("amount") or 0) for item in receipts)
+        lines.append(
+            f"Fees: KES {raised:,.2f} raised, KES {paid:,.2f} receipted, "
+            f"balance KES {raised - paid:,.2f}."
+        )
+
+    decisions = workspace.get("court_decisions") or []
+    if decisions:
+        latest = decisions[-1]
+        detail = " ".join(
+            str(latest.get(key) or "").strip()
+            for key in ("decision_date", "decision_type", "outcome")
+        ).strip()
+        lines.append(f"Latest decision: {detail}.")
+
+    filings = workspace.get("filing_records") or []
+    if filings:
+        latest = filings[-1]
+        filed = str(latest.get("what_was_filed") or "").strip()
+        when = str(latest.get("filed_at") or "").strip()
+        tracking = str(latest.get("tracking_number") or "").strip()
+        parts = [
+            p for p in (filed, when and f"filed {when}", tracking and f"tracking {tracking}") if p
+        ]
+        if parts:
+            lines.append("Filing: " + ", ".join(parts) + ".")
+        served = str(latest.get("what_was_served") or "").strip()
+        if served:
+            lines.append(f"Service: {served}.")
+        next_action = str(latest.get("next_action") or "").strip()
+        next_date = str(latest.get("next_action_date") or "").strip()
+        if next_action or next_date:
+            lines.append(f"Next action: {' '.join(p for p in (next_action, next_date) if p)}.")
+
+    upcoming = [
+        item
+        for item in (workspace.get("activities") or [])
+        if str(item.get("starts_at") or "").strip()
+    ]
+    if upcoming:
+        soonest = sorted(upcoming, key=lambda item: str(item.get("starts_at")))[-1]
+        lines.append(
+            f"Recorded activity: {soonest.get('activity_type', '')} "
+            f"{soonest.get('starts_at', '')}".strip()
+            + "."
+        )
+
+    lines.append("")
+    lines.append("Drafted from the matter record. Verify before relying on it.")
+    return "\n".join(lines)
+
+
+def _next_reference() -> str:
+    """A firm reference when none was given, ordered and readable."""
+    from datetime import UTC, datetime
+
+    return f"MTR-{datetime.now(UTC):%Y%m%d-%H%M%S}"
+
+
+class MatterDialog(QDialog):
+    """Open a matter, optionally prefilled from a document.
+
+    Fields read from a document are marked, because a value the computer
+    supplied deserves a second look before it becomes the firm's record.
+    """
+
+    def __init__(
+        self,
+        prefill: dict[str, str],
+        *,
+        source: str = "",
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setObjectName("matterDialog")
+        self.setWindowTitle("Open a matter")
+        self.setMinimumWidth(560)
+        self._inputs: dict[str, QWidget] = {}
+
+        layout = QVBoxLayout(self)
+        if source:
+            banner = QLabel(
+                f"Prefilled from <b>{Path(source).name}</b>. Check each value before saving."
+            )
+            banner.setObjectName("dialogHint")
+            banner.setWordWrap(True)
+            layout.addWidget(banner)
+
+        form = QFormLayout()
+        for field_spec in MATTER_FIELDS:
+            widget: QWidget
+            value = prefill.get(field_spec.name, "")
+            if field_spec.choices:
+                widget = QComboBox()
+                widget.setEditable(True)
+                widget.addItems(field_spec.choices)
+                widget.setCurrentText(value)
+            else:
+                widget = QLineEdit(value)
+                if field_spec.placeholder:
+                    widget.setPlaceholderText(field_spec.placeholder)
+            widget.setObjectName(f"matterField_{field_spec.name}")
+            self._inputs[field_spec.name] = widget
+            label = f"{field_spec.label}*" if field_spec.required else field_spec.label
+            if field_spec.name in prefill:
+                label = f"{label}  (read)"
+            form.addRow(label, widget)
+        layout.addLayout(form)
+
+        self.error_label = QLabel("")
+        self.error_label.setObjectName("matterDialogError")
+        self.error_label.setProperty("error", True)
+        self.error_label.setWordWrap(True)
+        layout.addWidget(self.error_label)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.setObjectName("matterDialogButtons")
+        buttons.accepted.connect(self._on_accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _field_specs(self) -> tuple[FormField, ...]:
+        return MATTER_FIELDS
+
+    def _value(self, name: str) -> str:
+        widget = self._inputs[name]
+        text = widget.currentText() if isinstance(widget, QComboBox) else widget.text()
+        return text.strip()
+
+    def _on_accept(self) -> None:
+        for field_spec in MATTER_FIELDS:
+            if field_spec.required and not self._value(field_spec.name):
+                self.error_label.setText(f"{field_spec.label} is required.")
+                return
+        self.accept()
+
+    def values(self) -> dict[str, str]:
+        return {name: self._value(name) for name in self._inputs}
+
+
 @dataclass(frozen=True)
 class MatterTabView:
     """One matter sub-tab: how it is built, and how its rows are rendered.
@@ -158,6 +379,7 @@ class MatterTabView:
 
     object_name: str
     label: str
+    singular: str
     workspace_key: str
     empty_text: str
     format_row: Callable[[dict[str, object]], str]
@@ -173,6 +395,7 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
     MatterTabView(
         "partiesTab",
         "Parties",
+        "party",
         "parties",
         "Parties involved",
         lambda row: _joined(
@@ -202,6 +425,7 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
     MatterTabView(
         "activitiesTab",
         "Activities",
+        "activity",
         "activities",
         "Mentions and applications",
         lambda row: _joined(
@@ -228,6 +452,7 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
     MatterTabView(
         "lodgingsTab",
         "Lodgings",
+        "lodging",
         "lodgings",
         "Documents for lodging",
         lambda row: _joined(
@@ -254,6 +479,7 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
     MatterTabView(
         "courtDecisionsTab",
         "Court Decisions",
+        "court decision",
         "court_decisions",
         "Decisions so far",
         lambda row: _joined(
@@ -279,6 +505,7 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
     MatterTabView(
         "feesTab",
         "Fees",
+        "fee",
         "fees",
         "Court filing fees",
         lambda row: _joined(
@@ -299,6 +526,7 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
     MatterTabView(
         "receiptsTab",
         "Receipts",
+        "receipt",
         "receipts",
         "Court and client receipts",
         lambda row: _joined(
@@ -319,6 +547,7 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
     MatterTabView(
         "matterDocumentsTab",
         "Documents",
+        "document",
         "documents",
         "Matter document vault",
         lambda row: _joined(
@@ -332,6 +561,7 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
     MatterTabView(
         "filingRecordTab",
         "Filing record",
+        "filing record",
         "filing_records",
         "What was filed, served, received, and what happens next",
         lambda row: _joined(
@@ -837,6 +1067,25 @@ class MainWindow(QMainWindow):
             if button is not None:
                 button.clicked.connect(lambda _checked=False, v=view: self._on_add_record(v))
 
+        filing_view = next(v for v in MATTER_TAB_VIEWS if v.object_name == "filingRecordTab")
+        page_add = self.findChild(QPushButton, "filingRecordPageAddButton")
+        if page_add is not None:
+            page_add.clicked.connect(lambda _=False, v=filing_view: self._on_add_record(v))
+        page_refresh = self.findChild(QPushButton, "filingRecordPageRefreshButton")
+        if page_refresh is not None:
+            page_refresh.clicked.connect(self._refresh_matter_workspace)
+        page_export = self.findChild(QPushButton, "filingRecordPageExportButton")
+        if page_export is not None:
+            page_export.clicked.connect(self._on_export_calendar)
+
+        from_document_button = self.findChild(QPushButton, "newMatterFromDocumentButton")
+        if from_document_button is not None:
+            from_document_button.clicked.connect(self._on_new_matter_from_document)
+
+        generate_button = self.findChild(QPushButton, "generateSummaryButton")
+        if generate_button is not None:
+            generate_button.clicked.connect(self._on_generate_summary)
+
         reports_button = self.findChild(QPushButton, "refreshReportsButton")
         if reports_button is not None:
             reports_button.clicked.connect(self._on_refresh_reports)
@@ -1041,27 +1290,78 @@ class MainWindow(QMainWindow):
         return {"events": []}
 
     def _on_new_matter(self) -> None:
+        """Open a matter, with the form blank."""
+        self._create_matter_from(prefill={}, source="")
+
+    def _on_new_matter_from_document(self) -> None:
+        """Open a matter by reading its heading off a filing.
+
+        The case number, parties, court and station are printed on the first
+        page of every filing. Retyping them is the tax the product exists to
+        remove.
+        """
         if self._backend_local is None and self._backend_client is None:
             self.status_label.setText("Start solo mode or connect to a server first")
             return
+        selected, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open a matter from a document",
+            "",
+            "Documents (*.pdf *.docx);;All files (*)",
+        )
+        if not selected:
+            return
+
+        from core.manual_app import resolve_ocr_engine
+        from intake.extraction import ExtractionError, extract_text
+        from intake.matter_details import extract_matter_details
+
+        source = Path(selected)
+        try:
+            extraction = extract_text(source, ocr_engine=resolve_ocr_engine(source))
+        except ExtractionError as exc:
+            self.status_label.setText(f"Could not read {source.name}: {exc}")
+            return
+
+        details = extract_matter_details(extraction.text)
+        if details.is_empty:
+            self.status_label.setText(
+                f"No court heading found in {source.name}; opening a blank matter"
+            )
+        else:
+            self.status_label.setText(
+                f"Read {len(details.found)} field(s) from {source.name}: {', '.join(details.found)}"
+            )
+        self._create_matter_from(prefill=details.as_fields(), source=str(source))
+
+    def _create_matter_from(self, *, prefill: dict[str, str], source: str) -> None:
+        if self._backend_local is None and self._backend_client is None:
+            self.status_label.setText("Start solo mode or connect to a server first")
+            return
+
+        dialog = MatterDialog(prefill, source=source, parent=self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        fields = dialog.values()
         try:
             result = self._backend_create_matter(
-                internal_reference="NEW-001",
-                client_name="New Client",
-                parties="New Matter Parties",
-                court="High Court",
-                station="Nairobi",
-                case_number="NEW/2026",
-                practice_area="General",
+                internal_reference=fields.get("internal_reference", "") or _next_reference(),
+                client_name=fields.get("client_name", ""),
+                parties=fields.get("parties", ""),
+                court=fields.get("court", ""),
+                station=fields.get("station", ""),
+                case_number=fields.get("case_number", ""),
+                practice_area=fields.get("practice_area", ""),
                 responsible_advocate=self._current_username,
-                filing_status="draft",
-                filing_date="",
+                filing_status=fields.get("filing_status", "draft"),
+                filing_date=fields.get("filing_date", ""),
             )
             self._current_matter_id = str(result.get("matter_id", ""))
             self.status_label.setText(
                 f"Created matter: {result.get('internal_reference', self._current_matter_id)}"
             )
             self._on_refresh_matters()
+            self._refresh_matter_workspace()
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Failed to create matter: {exc}")
 
@@ -1112,6 +1412,32 @@ class MainWindow(QMainWindow):
         self._current_matter_id = str(matter_id)
         self.status_label.setText(f"Opened matter: {item.text()}")
         self._refresh_matter_workspace()
+
+    def _on_generate_summary(self) -> None:
+        """Draft a matter summary from what the matter already holds.
+
+        Deliberately built from the recorded facts -- parties, court, filing
+        record, next action, document and fee counts -- rather than free
+        generation. A summary that invents a next hearing date is worse than no
+        summary, and this one can be checked line by line against the tabs.
+        """
+        if (
+            self._backend_local is None and self._backend_client is None
+        ) or not self._current_matter_id:
+            self.status_label.setText("Open a matter first")
+            return
+        summary_box = self.findChild(QTextEdit, "aiMatterSummaryOutput")
+        if summary_box is None:
+            return
+        try:
+            workspace = self._backend_workspace(self._current_matter_id)
+        except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
+            self.status_label.setText(f"Could not read the matter: {exc}")
+            return
+
+        summary = _draft_matter_summary(workspace)
+        summary_box.setPlainText(summary)
+        self.status_label.setText("Summary drafted from the matter record; review before saving")
 
     def _on_update_summary(self) -> None:
         if (
@@ -1230,6 +1556,26 @@ class MainWindow(QMainWindow):
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Failed to refresh matter workspace: {exc}")
             return
+
+        # The Filing record destination shows the same records as the matter
+        # sub-tab, so a user who navigates there sees the open matter rather
+        # than a permanent placeholder.
+        page_list = self.findChild(QListWidget, "filingRecordPageList")
+        if page_list is not None:
+            page_list.clear()
+            records = workspace.get("filing_records") or []
+            filing_view = next(v for v in MATTER_TAB_VIEWS if v.object_name == "filingRecordTab")
+            if records:
+                for row in records:
+                    page_list.addItem(filing_view.format_row(row))
+            else:
+                page_list.addItem("No filing recorded for this matter yet")
+        matter_label = self.findChild(QLabel, "filingRecordMatterLabel")
+        if matter_label is not None:
+            matter = workspace.get("matter") or {}
+            reference = str(matter.get("internal_reference") or self._current_matter_id)
+            case_number = str(matter.get("case_number") or "")
+            matter_label.setText(f"{reference} - {case_number}" if case_number else str(reference))
 
         for view in MATTER_TAB_VIEWS:
             listing = self.findChild(QListWidget, f"{view.object_name}List")
@@ -1685,12 +2031,16 @@ def _workspace_page() -> QWidget:
     export_calendar.setObjectName("exportCalendarButton")
     add_matter = QPushButton("New matter")
     add_matter.setObjectName("newMatterButton")
+    from_document = QPushButton("From document")
+    from_document.setObjectName("newMatterFromDocumentButton")
+    from_document.setToolTip("Read the case number, parties, court and station off a filing")
     refresh_matters = QPushButton("Refresh")
     refresh_matters.setObjectName("refreshMatterListButton")
     header.addWidget(role_status)
     header.addStretch(1)
     header.addWidget(refresh_matters)
     header.addWidget(export_calendar)
+    header.addWidget(from_document)
     header.addWidget(add_matter)
 
     # Matter list
@@ -1873,12 +2223,30 @@ def _filing_record_page() -> QWidget:
     )
     caption.setObjectName("filingRecordCaption")
     caption.setWordWrap(True)
+    matter_label = QLabel("No matter open")
+    matter_label.setObjectName("filingRecordMatterLabel")
     listing = QListWidget()
     listing.setObjectName("filingRecordPageList")
-    listing.addItem("Open a matter to see its filing record")
+    listing.addItem("Open a matter in Matters to see its filing record")
+
+    controls = QHBoxLayout()
+    add_filing = QPushButton("Record a filing")
+    add_filing.setObjectName("filingRecordPageAddButton")
+    refresh_filing = QPushButton("Refresh")
+    refresh_filing.setObjectName("filingRecordPageRefreshButton")
+    export_filing = QPushButton("Export next actions")
+    export_filing.setObjectName("filingRecordPageExportButton")
+    export_filing.setToolTip("Write the recorded next actions to a calendar file")
+    controls.addWidget(add_filing)
+    controls.addWidget(refresh_filing)
+    controls.addWidget(export_filing)
+    controls.addStretch(1)
+
     group_layout.addWidget(heading)
     group_layout.addWidget(caption)
+    group_layout.addWidget(matter_label)
     group_layout.addWidget(listing)
+    group_layout.addLayout(controls)
 
     layout.addWidget(group)
     layout.addStretch(1)
@@ -1959,11 +2327,15 @@ def _matter_summary_tab() -> QWidget:
     ai_summary.setObjectName("aiMatterSummaryOutput")
     ai_summary.setReadOnly(True)
     ai_summary.setPlainText("No summary yet")
+    generate = QPushButton("Draft summary")
+    generate.setObjectName("generateSummaryButton")
+    generate.setToolTip("Compose a summary from the matter's own record")
     summary_add = QPushButton("Update summary")
     summary_add.setObjectName("summaryAddButton")
     layout.addRow("Case information", case_information)
     layout.addRow("Status", matter_status)
     layout.addRow("AI summary", ai_summary)
+    layout.addRow("", generate)
     layout.addRow("", summary_add)
     return tab
 
