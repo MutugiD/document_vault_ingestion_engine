@@ -1,0 +1,425 @@
+/*
+ * JurisNuru desktop stylesheet.
+ *
+ * Dark navy shell, white content cards, blue and teal actions. Matches the
+ * product brief's license-gate and open-dashboard views.
+ *
+ * JurisNuru is an independent product. It records alongside the Judiciary
+ * e-filing portal and is not affiliated with, or endorsed by, the Judiciary
+ * of Kenya.
+ *
+ * Palette
+ *   shell / gate      #0F1B2E    page background   #F4F7FB
+ *   sidebar           #16263C    card              #FFFFFF
+ *   primary action    #1D6FB8    secondary action  #0F9B8E
+ *   accent            #F5A623    muted text        #6B7C93
+ *   text on dark      #FFFFFF    muted on dark     #8FA3BC
+ */
+
+/* ── Global ── */
+QMainWindow,
+QWidget#centralRoot {
+    background-color: #F4F7FB;
+}
+
+QWidget {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    color: #1F2D3D;
+}
+
+QLabel {
+    color: #1F2D3D;
+    background: transparent;
+}
+
+QLabel#heading {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0F1B2E;
+    padding: 6px 0px 2px 0px;
+    background: transparent;
+}
+
+QLabel#subtitle {
+    font-size: 12px;
+    color: #6B7C93;
+    padding: 0px 0px 6px 0px;
+    background: transparent;
+}
+
+QLabel#statusLabel {
+    color: #6B7C93;
+    font-size: 12px;
+}
+
+/* ── License gate ── */
+QScrollArea#licenseGate,
+QScrollArea#licenseGate > QWidget > QWidget {
+    background-color: #0F1B2E;
+    border: none;
+}
+
+QWidget#licensePage {
+    background-color: #0F1B2E;
+}
+
+QWidget#licensePage QLabel {
+    color: #FFFFFF;
+}
+
+QWidget#licensePage QLabel#licensePageTitle {
+    font-size: 30px;
+    font-weight: 700;
+    color: #FFFFFF;
+    padding: 4px 0px;
+}
+
+QWidget#licensePage QLabel#licensePageSubtitle {
+    font-size: 14px;
+    color: #8FA3BC;
+    padding: 0px 0px 18px 0px;
+}
+
+QFrame#licenseGroup {
+    background-color: #16263C;
+    border: 1px solid #24384F;
+    border-radius: 10px;
+    padding: 18px;
+}
+
+QWidget#licensePage QLabel#licenseStatusLabel,
+QWidget#licensePage QLabel#licenseInstallationLabel {
+    color: #8FA3BC;
+    font-size: 12px;
+    padding: 2px 0px;
+}
+
+QWidget#licensePage QLineEdit {
+    background-color: #0F1B2E;
+    border: 1px solid #2A4058;
+    border-radius: 6px;
+    padding: 9px 12px;
+    color: #FFFFFF;
+    selection-background-color: #1D6FB8;
+}
+
+QWidget#licensePage QLineEdit:focus {
+    border: 1px solid #1D6FB8;
+}
+
+QWidget#licensePage QPushButton {
+    background-color: #1D6FB8;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 18px;
+    font-weight: 600;
+}
+
+QWidget#licensePage QPushButton:hover {
+    background-color: #2681D6;
+}
+
+QWidget#licensePage QPushButton:pressed {
+    background-color: #175A96;
+}
+
+QWidget#licensePage QPushButton#browseLicenseButton {
+    background-color: transparent;
+    border: 1px solid #2A4058;
+    color: #8FA3BC;
+    font-weight: 500;
+}
+
+QWidget#licensePage QPushButton#browseLicenseButton:hover {
+    border: 1px solid #1D6FB8;
+    color: #FFFFFF;
+}
+
+/* ── Workbench shell ── */
+QWidget#workbench {
+    background-color: #0F1B2E;
+    border-radius: 10px;
+}
+
+/* ── Sidebar ── */
+QFrame#sidebarFrame {
+    background-color: #16263C;
+    border: none;
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+}
+
+QLabel#sidebarBranding {
+    font-size: 17px;
+    font-weight: 700;
+    color: #FFFFFF;
+    padding: 14px 16px 2px 16px;
+    background: transparent;
+}
+
+QLabel#sidebarSubtitle {
+    font-size: 11px;
+    color: #8FA3BC;
+    padding: 0px 16px 16px 16px;
+    background: transparent;
+}
+
+QPushButton#sidebarNavButton {
+    background-color: transparent;
+    color: #B9C8DA;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 16px;
+    margin: 2px 10px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 500;
+    min-height: 20px;
+}
+
+QPushButton#sidebarNavButton:hover {
+    background-color: #1E3350;
+    color: #FFFFFF;
+}
+
+QPushButton#sidebarNavButton:checked {
+    background-color: #1D6FB8;
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+QLabel#sidebarVersionLabel {
+    font-size: 10px;
+    color: #5E7186;
+    padding: 10px 16px;
+    background: transparent;
+}
+
+/* ── Content area ── */
+QTabWidget#workflowTabs::pane {
+    border: none;
+    background: transparent;
+}
+
+QTabWidget#workflowTabs > QWidget {
+    background: transparent;
+}
+
+QScrollArea {
+    border: none;
+    background: transparent;
+}
+
+/* ── Cards ── */
+QFrame#connectionGroup,
+QFrame#setupGroup,
+QFrame#vaultGroup,
+QFrame#importGroup,
+QFrame#searchGroup,
+QFrame#aiKeysGroup,
+QFrame#backupGroup,
+QFrame#adminGroup,
+QFrame#reportsGroup,
+QFrame#moduleCard {
+    background-color: #FFFFFF;
+    border: 1px solid #E3EAF2;
+    border-radius: 10px;
+    padding: 16px;
+}
+
+QFrame#backendConnectionDialog {
+    background-color: #FFFFFF;
+    border: 1px solid #E3EAF2;
+    border-radius: 10px;
+    padding: 14px;
+}
+
+/* ── Matter workspace sub-tabs ── */
+QTabWidget#matterWorkspaceTabs::pane {
+    border: 1px solid #E3EAF2;
+    background: #FFFFFF;
+    border-radius: 8px;
+}
+
+QTabWidget#matterWorkspaceTabs QTabBar::tab {
+    background: transparent;
+    color: #6B7C93;
+    padding: 9px 14px;
+    margin-right: 2px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 12px;
+}
+
+QTabWidget#matterWorkspaceTabs QTabBar::tab:hover {
+    color: #1F2D3D;
+}
+
+QTabWidget#matterWorkspaceTabs QTabBar::tab:selected {
+    color: #1D6FB8;
+    border-bottom: 2px solid #1D6FB8;
+    font-weight: 600;
+}
+
+/* ── Inputs ── */
+QLineEdit,
+QTextEdit,
+QPlainTextEdit {
+    background-color: #FFFFFF;
+    border: 1px solid #D8E2ED;
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: #1F2D3D;
+    selection-background-color: #1D6FB8;
+    selection-color: #FFFFFF;
+}
+
+QLineEdit:focus,
+QTextEdit:focus,
+QPlainTextEdit:focus {
+    border: 1px solid #1D6FB8;
+}
+
+QLineEdit:disabled,
+QTextEdit:disabled {
+    background-color: #F4F7FB;
+    color: #9AA9BB;
+}
+
+QListWidget {
+    background-color: #FFFFFF;
+    border: 1px solid #E3EAF2;
+    border-radius: 8px;
+    padding: 4px;
+    outline: none;
+}
+
+QListWidget::item {
+    padding: 8px 10px;
+    border-radius: 6px;
+    color: #1F2D3D;
+}
+
+QListWidget::item:hover {
+    background-color: #F0F5FB;
+}
+
+QListWidget::item:selected {
+    background-color: #1D6FB8;
+    color: #FFFFFF;
+}
+
+/* ── Buttons ── */
+QPushButton {
+    background-color: #1D6FB8;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 16px;
+    font-weight: 600;
+    min-height: 18px;
+}
+
+QPushButton:hover {
+    background-color: #2681D6;
+}
+
+QPushButton:pressed {
+    background-color: #175A96;
+}
+
+QPushButton:disabled {
+    background-color: #DCE5EF;
+    color: #9AA9BB;
+}
+
+/* Secondary actions read as teal, per the brief's "AI context" affordance. */
+QPushButton#runNativeWorkflowButton,
+QPushButton#askRagButton,
+QPushButton#summaryAddButton {
+    background-color: #0F9B8E;
+}
+
+QPushButton#runNativeWorkflowButton:hover,
+QPushButton#askRagButton:hover,
+QPushButton#summaryAddButton:hover {
+    background-color: #12B3A4;
+}
+
+/* Low-emphasis actions stay quiet so the primary path is obvious. */
+QPushButton#refreshMatterListButton,
+QPushButton#refreshAuditLogButton,
+QPushButton#exportCalendarButton,
+QPushButton#browseLicenseButton,
+QPushButton#selftestButton {
+    background-color: transparent;
+    color: #1D6FB8;
+    border: 1px solid #C7D6E6;
+    font-weight: 500;
+}
+
+QPushButton#refreshMatterListButton:hover,
+QPushButton#refreshAuditLogButton:hover,
+QPushButton#exportCalendarButton:hover,
+QPushButton#selftestButton:hover {
+    background-color: #F0F5FB;
+    border: 1px solid #1D6FB8;
+}
+
+QCheckBox {
+    color: #1F2D3D;
+    spacing: 8px;
+}
+
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #C7D6E6;
+    border-radius: 4px;
+    background: #FFFFFF;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #1D6FB8;
+    border: 1px solid #1D6FB8;
+}
+
+/* ── Scrollbars ── */
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #C7D6E6;
+    border-radius: 5px;
+    min-height: 30px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #A9BDD4;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+QScrollBar:horizontal {
+    background: transparent;
+    height: 10px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #C7D6E6;
+    border-radius: 5px;
+    min-width: 30px;
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
