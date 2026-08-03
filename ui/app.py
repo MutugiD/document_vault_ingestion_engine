@@ -1554,7 +1554,6 @@ def _workspace_page() -> QWidget:
 
 
 def _import_group() -> QFrame:
-
     import_group = QFrame()
     import_group.setObjectName("importGroup")
     import_layout = QVBoxLayout(import_group)
@@ -1584,7 +1583,6 @@ def _import_group() -> QFrame:
 
 
 def _search_group() -> QFrame:
-
     search_group = QFrame()
     search_group.setObjectName("searchGroup")
     search_layout = QVBoxLayout(search_group)
@@ -1612,7 +1610,6 @@ def _search_group() -> QFrame:
 
 
 def _ai_keys_group() -> QFrame:
-
     ai_group = QFrame()
     ai_group.setObjectName("aiKeysGroup")
     ai_layout = QFormLayout(ai_group)
@@ -1638,7 +1635,6 @@ def _ai_keys_group() -> QFrame:
 
 
 def _backup_group() -> QFrame:
-
     backup_group = QFrame()
     backup_group.setObjectName("backupGroup")
     backup_layout = QFormLayout(backup_group)
@@ -1658,7 +1654,6 @@ def _backup_group() -> QFrame:
 
 
 def _admin_group() -> QFrame:
-
     admin_group = QFrame()
     admin_group.setObjectName("adminGroup")
     admin_layout = QVBoxLayout(admin_group)
