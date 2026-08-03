@@ -390,6 +390,13 @@ def create_app(
         except Exception as exc:
             raise handle_error(exc) from exc
 
+    @app.get("/firm/overview")
+    def firm_overview(token: str = Depends(token_from_header)) -> dict[str, object]:
+        try:
+            return backend.firm_overview(token)
+        except Exception as exc:
+            raise handle_error(exc) from exc
+
     @app.get("/audit")
     def audit_log(
         token: str = Depends(token_from_header),

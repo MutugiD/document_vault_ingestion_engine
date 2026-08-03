@@ -267,6 +267,16 @@ def main() -> None:
         # belongs in the same calendar as mentions and lodging deadlines.
         assert "Next action: Await response" in resp.text
 
+        # Firm overview drives the Reports destination.
+        resp = client.get("/firm/overview", headers={"Authorization": f"Bearer {advocate_token}"})
+        assert resp.status_code == 200, resp.text
+        overview = resp.json()
+        assert overview["matters"] >= 1
+        assert overview["filing_records"] == 1
+        # Balance is what has been charged minus what has been receipted.
+        assert overview["balance"] == round(overview["fees_raised"] - overview["receipts_total"], 2)
+        assert any(entry["station"] for entry in overview["by_station"])
+
         # Offline cache
         resp = client.get("/offline-cache", headers={"Authorization": f"Bearer {advocate_token}"})
         assert resp.status_code == 200

@@ -643,6 +643,10 @@ class MainWindow(QMainWindow):
             if button is not None:
                 button.clicked.connect(handler)
 
+        reports_button = self.findChild(QPushButton, "refreshReportsButton")
+        if reports_button is not None:
+            reports_button.clicked.connect(self._on_refresh_reports)
+
         matter_list = self.findChild(QListWidget, "matterList")
         if matter_list is not None:
             matter_list.currentItemChanged.connect(
@@ -790,6 +794,13 @@ class MainWindow(QMainWindow):
             return self._backend_local.add_court_decision(self._solo_token(), matter_id, **fields)
         if self._backend_client is not None:
             return self._backend_client.add_court_decision(matter_id, **fields)
+        return {}
+
+    def _backend_firm_overview(self) -> dict:
+        if self._backend_local is not None:
+            return self._backend_local.firm_overview(self._solo_token())
+        if self._backend_client is not None:
+            return self._backend_client.firm_overview()
         return {}
 
     def _backend_add_filing_record(self, matter_id: str, **fields: str) -> dict:
@@ -1097,6 +1108,38 @@ class MainWindow(QMainWindow):
                 continue
             for row in rows:
                 listing.addItem(view.format_row(row))
+
+    def _on_refresh_reports(self) -> None:
+        """Fill the Reports destination from the firm-wide aggregate."""
+        if self._backend_local is None and self._backend_client is None:
+            self.status_label.setText("Start solo mode or connect to a server first")
+            return
+        try:
+            overview = self._backend_firm_overview()
+        except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
+            self.status_label.setText(f"Failed to load reports: {exc}")
+            return
+        currency = "KES"
+        for object_name, text in (
+            ("reportMattersLabel", str(overview.get("matters", 0))),
+            ("reportDocumentsLabel", str(overview.get("documents", 0))),
+            ("reportFilingRecordsLabel", str(overview.get("filing_records", 0))),
+            ("reportFeesLabel", f"{currency} {overview.get('fees_raised', 0):,.2f}"),
+            ("reportReceiptsLabel", f"{currency} {overview.get('receipts_total', 0):,.2f}"),
+            ("reportBalanceLabel", f"{currency} {overview.get('balance', 0):,.2f}"),
+        ):
+            target = self.findChild(QLabel, object_name)
+            if target is not None:
+                target.setText(text)
+        stations = self.findChild(QListWidget, "reportStationsList")
+        if stations is not None:
+            stations.clear()
+            rows = overview.get("by_station") or []
+            if not rows:
+                stations.addItem("No matters yet")
+            for row in rows:
+                stations.addItem(f"{row.get('station', '?')}: {row.get('matters', 0)}")
+        self.status_label.setText("Reports refreshed")
 
     def _on_refresh_audit_log(self) -> None:
         if self._backend_local is None and self._backend_client is None:
@@ -1707,10 +1750,15 @@ def _reports_page() -> QWidget:
         ("Filing records", "reportFilingRecordsLabel"),
         ("Fees raised", "reportFeesLabel"),
         ("Receipts recorded", "reportReceiptsLabel"),
+        ("Balance", "reportBalanceLabel"),
     ):
         value = QLabel("-")
         value.setObjectName(object_name)
         form.addRow(label, value)
+    stations = QListWidget()
+    stations.setObjectName("reportStationsList")
+    stations.addItem("Refresh to load matters by station")
+    form.addRow("By station", stations)
     refresh = QPushButton("Refresh reports")
     refresh.setObjectName("refreshReportsButton")
     form.addRow("", refresh)
