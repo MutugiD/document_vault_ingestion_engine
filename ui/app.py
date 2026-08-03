@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListWidget,
+    QListWidgetItem,
     QMainWindow,
     QPushButton,
     QScrollArea,
@@ -43,6 +44,114 @@ from wakilios.client import (
 from wakilios.core import WakiliOSBackend, initialize_firm_backend
 
 DEV_UNLOCK_ENV_VAR = "JURISNURU_DEV_UNLOCK"
+
+
+def _joined(*parts: object) -> str:
+    """Join the non-empty parts of a row summary."""
+    return " | ".join(str(part) for part in parts if str(part).strip())
+
+
+@dataclass(frozen=True)
+class MatterTabView:
+    """One matter sub-tab: how it is built, and how its rows are rendered.
+
+    Construction and refresh read the same table so a tab cannot be added to
+    the workspace without a formatter, or formatted without existing.
+    """
+
+    object_name: str
+    label: str
+    workspace_key: str
+    empty_text: str
+    format_row: Callable[[dict[str, object]], str]
+
+
+MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
+    MatterTabView(
+        "partiesTab",
+        "Parties",
+        "parties",
+        "Parties involved",
+        lambda row: _joined(
+            row.get("party_role", ""),
+            row.get("name", ""),
+            row.get("representative", ""),
+        ),
+    ),
+    MatterTabView(
+        "activitiesTab",
+        "Activities",
+        "activities",
+        "Mentions and applications",
+        lambda row: _joined(
+            row.get("starts_at", "") or "no date",
+            row.get("activity_type", ""),
+            row.get("title", ""),
+            row.get("court_session", ""),
+            row.get("status", ""),
+        ),
+    ),
+    MatterTabView(
+        "lodgingsTab",
+        "Lodgings",
+        "lodgings",
+        "Documents for lodging",
+        lambda row: _joined(
+            row.get("lodged_date", "") or row.get("due_date", "") or "not lodged",
+            row.get("document_kind", ""),
+            row.get("party", ""),
+            row.get("filing_status", ""),
+            f"ref {row['filing_reference']}" if row.get("filing_reference") else "",
+        ),
+    ),
+    MatterTabView(
+        "courtDecisionsTab",
+        "Court Decisions",
+        "court_decisions",
+        "Decisions so far",
+        lambda row: _joined(
+            row.get("decision_date", "") or "no date",
+            row.get("decision_type", ""),
+            row.get("decision_maker", ""),
+            row.get("outcome", ""),
+        ),
+    ),
+    MatterTabView(
+        "feesTab",
+        "Fees",
+        "fees",
+        "Court filing fees",
+        lambda row: _joined(
+            f"[{row.get('fee_id', '?')}]",
+            row.get("fee_type", "Fee"),
+            f"{row.get('currency', 'KES')} {row.get('amount', 0)}",
+            row.get("status", ""),
+        ),
+    ),
+    MatterTabView(
+        "receiptsTab",
+        "Receipts",
+        "receipts",
+        "Court and client receipts",
+        lambda row: _joined(
+            f"[{row.get('receipt_number', '?')}]",
+            row.get("receipt_date", ""),
+            f"{row.get('currency', 'KES')} {row.get('amount', 0)}",
+            f"fee {row['linked_fee_id']}" if row.get("linked_fee_id") else "",
+        ),
+    ),
+    MatterTabView(
+        "matterDocumentsTab",
+        "Documents",
+        "documents",
+        "Matter document vault",
+        lambda row: _joined(
+            row.get("title", "") or row.get("document_type", "Document"),
+            row.get("lifecycle_status", ""),
+            f"id {row.get('document_id', '?')}",
+        ),
+    ),
+)
 
 
 def _dev_unlock_requested() -> bool:
@@ -439,6 +548,12 @@ class MainWindow(QMainWindow):
             if button is not None:
                 button.clicked.connect(handler)
 
+        matter_list = self.findChild(QListWidget, "matterList")
+        if matter_list is not None:
+            matter_list.currentItemChanged.connect(
+                lambda current, _previous: self._on_matter_selected(current)
+            )
+
         # Document upload
         upload_btn = self.findChild(QPushButton, "uploadDocumentButton")
         if upload_btn is not None:
@@ -673,9 +788,23 @@ class MainWindow(QMainWindow):
                 for m in matters:
                     ref = m.get("internal_reference", "")
                     client = m.get("client_name", "")
-                    matter_list.addItem(f"{ref} - {client}")
+                    item = QListWidgetItem(f"{ref} - {client}")
+                    # Carry the id so selecting a row can open that matter.
+                    item.setData(Qt.ItemDataRole.UserRole, str(m.get("matter_id", "")))
+                    matter_list.addItem(item)
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Failed to list matters: {exc}")
+
+    def _on_matter_selected(self, item: QListWidgetItem | None) -> None:
+        """Open the selected matter in the workspace tabs."""
+        if item is None:
+            return
+        matter_id = item.data(Qt.ItemDataRole.UserRole)
+        if not matter_id:
+            return
+        self._current_matter_id = str(matter_id)
+        self.status_label.setText(f"Opened matter: {item.text()}")
+        self._refresh_matter_workspace()
 
     def _on_update_summary(self) -> None:
         if (
@@ -701,6 +830,7 @@ class MainWindow(QMainWindow):
                 self._current_matter_id, name="New Party", party_role="Respondent"
             )
             self.status_label.setText("Party added")
+            self._refresh_matter_workspace()
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Add party failed: {exc}")
 
@@ -714,6 +844,7 @@ class MainWindow(QMainWindow):
                 self._current_matter_id, activity_type="mention", title="New Activity", starts_at=""
             )
             self.status_label.setText("Activity added")
+            self._refresh_matter_workspace()
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Add activity failed: {exc}")
 
@@ -725,6 +856,7 @@ class MainWindow(QMainWindow):
         try:
             self._backend_add_lodging(self._current_matter_id, document_kind="New Lodging")
             self.status_label.setText("Lodging added")
+            self._refresh_matter_workspace()
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Add lodging failed: {exc}")
 
@@ -738,6 +870,7 @@ class MainWindow(QMainWindow):
                 self._current_matter_id, decision_type="Ruling", decision_date=""
             )
             self.status_label.setText("Court decision added")
+            self._refresh_matter_workspace()
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Add court decision failed: {exc}")
 
@@ -812,45 +945,39 @@ class MainWindow(QMainWindow):
                 self.status_label.setText(f"Document upload failed: {exc}")
                 return
         # Refresh document list
-        doc_list = self.findChild(QListWidget, "matterDocumentsTabList")
-        if doc_list is not None:
-            doc_list.clear()
-            try:
-                workspace = self._backend_workspace(self._current_matter_id)
-                for doc in workspace.get("documents", []):
-                    title = doc.get("title", doc.get("document_type", "Document"))
-                    doc_list.addItem(f"{title} (id: {doc.get('document_id', '?')})")
-            except Exception:
-                pass
+        self._refresh_matter_workspace()
 
     def _on_refresh_fee_receipt_view(self) -> None:
-        """Refresh the fees and receipts tabs to show linked data."""
+        """Backwards-compatible alias for the full workspace refresh."""
+        self._refresh_matter_workspace()
+
+    def _refresh_matter_workspace(self) -> None:
+        """Repopulate every matter sub-tab from the backend.
+
+        ``workspace()`` already returns all eight collections in one call, so
+        each tab is a formatter over the payload rather than its own request.
+        """
         if (
             self._backend_local is None and self._backend_client is None
         ) or not self._current_matter_id:
             return
         try:
             workspace = self._backend_workspace(self._current_matter_id)
-            fees_list = self.findChild(QListWidget, "feesTabList")
-            if fees_list is not None:
-                fees_list.clear()
-                for fee in workspace.get("fees", []):
-                    fee_id = fee.get("fee_id", "?")
-                    fee_type = fee.get("fee_type", "Fee")
-                    amount = fee.get("amount", 0)
-                    status = fee.get("status", "")
-                    fees_list.addItem(f"[{fee_id}] {fee_type}: KES {amount} ({status})")
-            receipts_list = self.findChild(QListWidget, "receiptsTabList")
-            if receipts_list is not None:
-                receipts_list.clear()
-                for receipt in workspace.get("receipts", []):
-                    receipt_number = receipt.get("receipt_number", "?")
-                    amount = receipt.get("amount", 0)
-                    linked = receipt.get("linked_fee_id", "")
-                    linked_info = f" -> fee {linked}" if linked else ""
-                    receipts_list.addItem(f"[{receipt_number}] KES {amount}{linked_info}")
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
-            self.status_label.setText(f"Failed to refresh fees/receipts: {exc}")
+            self.status_label.setText(f"Failed to refresh matter workspace: {exc}")
+            return
+
+        for view in MATTER_TAB_VIEWS:
+            listing = self.findChild(QListWidget, f"{view.object_name}List")
+            if listing is None:
+                continue
+            listing.clear()
+            rows = workspace.get(view.workspace_key) or []
+            if not rows:
+                listing.addItem(view.empty_text)
+                continue
+            for row in rows:
+                listing.addItem(view.format_row(row))
 
     def _on_refresh_audit_log(self) -> None:
         if self._backend_local is None and self._backend_client is None:
@@ -1248,25 +1375,11 @@ def _workspace_page() -> QWidget:
     workspace_tabs = QTabWidget()
     workspace_tabs.setObjectName("matterWorkspaceTabs")
     workspace_tabs.addTab(_matter_summary_tab(), "Summary")
-    workspace_tabs.addTab(_matter_text_list_tab("partiesTab", "Parties involved"), "Parties")
-    workspace_tabs.addTab(
-        _matter_text_list_tab("activitiesTab", "Mentions and applications"),
-        "Activities",
-    )
-    workspace_tabs.addTab(_matter_text_list_tab("lodgingsTab", "Documents for lodging"), "Lodgings")
-    workspace_tabs.addTab(
-        _matter_text_list_tab("courtDecisionsTab", "Decisions so far"),
-        "Court Decisions",
-    )
-    workspace_tabs.addTab(_matter_text_list_tab("feesTab", "Court filing fees"), "Fees")
-    workspace_tabs.addTab(
-        _matter_text_list_tab("receiptsTab", "Court and client receipts"),
-        "Receipts",
-    )
-    workspace_tabs.addTab(
-        _matter_text_list_tab("matterDocumentsTab", "Matter document vault"),
-        "Documents",
-    )
+    for view in MATTER_TAB_VIEWS:
+        workspace_tabs.addTab(
+            _matter_text_list_tab(view.object_name, view.empty_text),
+            view.label,
+        )
     # Document upload button (separate from the generic Add)
     doc_upload_btn = QPushButton("Upload document")
     doc_upload_btn.setObjectName("uploadDocumentButton")
