@@ -64,6 +64,9 @@ class MatterTabView:
     workspace_key: str
     empty_text: str
     format_row: Callable[[dict[str, object]], str]
+    # Documents arrive by upload, not by a generic Add. Giving that tab an Add
+    # button produced a control with nothing connected to it.
+    addable: bool = True
 
 
 MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
@@ -151,6 +154,7 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
             row.get("filing_role", ""),
             f"id {row.get('document_id', '?')}",
         ),
+        addable=False,
     ),
     MatterTabView(
         "filingRecordTab",
@@ -1492,7 +1496,7 @@ def _workspace_page() -> QWidget:
     workspace_tabs.addTab(_matter_summary_tab(), "Summary")
     for view in MATTER_TAB_VIEWS:
         workspace_tabs.addTab(
-            _matter_text_list_tab(view.object_name, view.empty_text),
+            _matter_text_list_tab(view.object_name, view.empty_text, addable=view.addable),
             view.label,
         )
     # Document upload button (separate from the generic Add)
@@ -1756,17 +1760,18 @@ def _matter_summary_tab() -> QWidget:
     return tab
 
 
-def _matter_text_list_tab(object_name: str, empty_text: str) -> QWidget:
+def _matter_text_list_tab(object_name: str, empty_text: str, *, addable: bool = True) -> QWidget:
     tab = QWidget()
     tab.setObjectName(object_name)
     layout = QVBoxLayout(tab)
     listing = QListWidget()
     listing.setObjectName(f"{object_name}List")
     listing.addItem(empty_text)
-    add_button = QPushButton("Add")
-    add_button.setObjectName(f"{object_name}AddButton")
     layout.addWidget(listing)
-    layout.addWidget(add_button)
+    if addable:
+        add_button = QPushButton("Add")
+        add_button.setObjectName(f"{object_name}AddButton")
+        layout.addWidget(add_button)
     return tab
 
 
