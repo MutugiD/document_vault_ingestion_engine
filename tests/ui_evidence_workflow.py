@@ -100,7 +100,7 @@ def main() -> None:
         assert all(window.tabs.isTabEnabled(index) for index in range(window.tabs.count()))
         shot("license-active")
 
-        window.tabs.setCurrentIndex(0)
+        window.tabs.setCurrentIndex(5)
         shot("dashboard-without-license-bar")
         window.findChild(QLineEdit, "firmNameInput").setText("Evidence Legal Practice")
         window.findChild(QLineEdit, "primaryUserInput").setText("admin")
@@ -120,7 +120,7 @@ def main() -> None:
         assert window._backend_local is not None
         shot("solo-mode-connected")
 
-        window.tabs.setCurrentIndex(1)
+        window.tabs.setCurrentIndex(0)
         shot("workspace-ready")
         button("newMatterButton").click()
         app.processEvents()
@@ -166,7 +166,7 @@ def main() -> None:
         assert documents is not None and documents.count() >= 1
         shot("document-uploaded")
 
-        window.tabs.setCurrentIndex(2)
+        window.tabs.setCurrentIndex(5)
         shot("settings")
         button("createBackupButton").click()
         shot("backup-created")
@@ -176,9 +176,9 @@ def main() -> None:
         app.processEvents()
         shot("admin-license-sync")
 
-        window.tabs.setCurrentIndex(3)
+        window.tabs.setCurrentIndex(5)
         shot("about")
-        window.tabs.setCurrentIndex(1)
+        window.tabs.setCurrentIndex(0)
         workspace_tabs.setCurrentIndex(7)
         shot("final-matter-vault")
         window.close()

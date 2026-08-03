@@ -36,12 +36,15 @@ def main() -> None:
     assert window.windowTitle() == "JurisNuru"
     assert window.minimumWidth() >= 900
     assert len(DEFAULT_MODULES) >= 7
-    assert window.tabs.count() == 4  # Dashboard, Workspace, Settings, About
+    # Navigation follows the product brief's product map.
+    assert window.tabs.count() == 6
     assert [window.tabs.tabText(index) for index in range(window.tabs.count())] == [
-        "Dashboard",
-        "Workspace",
+        "Matters",
+        "Documents",
+        "Filing record",
+        "Search",
+        "Reports",
         "Settings",
-        "About",
     ]
     # Locked at startup: the gate is showing and the application is not
     # merely disabled behind it, it is not in the visible widget tree at all.
@@ -85,6 +88,14 @@ def main() -> None:
         "matterDocumentsTab",
         "filingRecordTab",
         "settingsPage",
+        "documentsPage",
+        "filingRecordPage",
+        "filingRecordGroup",
+        "filingRecordPageList",
+        "searchPage",
+        "reportsPage",
+        "reportsGroup",
+        "refreshReportsButton",
         "importGroup",
         "documentReviewQueue",
         "ocrStatusLabel",
@@ -151,9 +162,41 @@ def main() -> None:
     assert "installation identity" in license_status.text()
     assert window.application_stack.currentIndex() == 0
 
+    # The sidebar lives inside the stack, so a locked application shows the
+    # gate alone and never the navigation.
+    assert window.findChild(QObject, "sidebarFrame") is None or (
+        window.application_stack.currentWidget().findChild(QObject, "sidebarFrame") is None
+    )
+
     window._set_license_state(True, "Active: validation")
     assert window.application_stack.currentIndex() == 1
     assert all(window.tabs.isTabEnabled(index) for index in range(window.tabs.count()))
+
+    # Sidebar navigation: one button per tab, driven off the tabs themselves,
+    # kept in sync in both directions.
+    sidebar = window.application_stack.currentWidget().findChild(QObject, "sidebarFrame")
+    assert sidebar is not None, "sidebar is missing from the unlocked application"
+    nav_buttons = window.findChildren(QPushButton, "sidebarNavButton")
+    assert len(nav_buttons) == window.tabs.count(), (len(nav_buttons), window.tabs.count())
+    assert [button.text() for button in nav_buttons] == [
+        window.tabs.tabText(index) for index in range(window.tabs.count())
+    ]
+    assert not window.tabs.tabBar().isVisible(), "the sidebar replaces the tab bar"
+
+    nav_buttons[2].click()
+    assert window.tabs.currentIndex() == 2
+    assert nav_buttons[2].isChecked()
+    assert not nav_buttons[0].isChecked()
+    # Programmatic tab changes must move the sidebar too -- handlers and the
+    # evidence runners both call setCurrentIndex directly.
+    window.tabs.setCurrentIndex(1)
+    assert nav_buttons[1].isChecked()
+    assert not nav_buttons[2].isChecked()
+    window.tabs.setCurrentIndex(0)
+
+    branding = window.findChild(QLabel, "sidebarBranding")
+    assert branding is not None
+    assert branding.text() == "JurisNuru"
 
     matter_workspace = window.findChild(QTabWidget, "matterWorkspaceTabs")
     assert matter_workspace is not None
