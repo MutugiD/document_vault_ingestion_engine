@@ -18,7 +18,9 @@ os.environ["TMP"] = str(TEST_ROOT / "temp")
 tempfile.tempdir = str(TEST_ROOT / "temp")
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tests"))
 
+from _dialog_harness import autofill_dialogs
 from _license_harness import install_test_license
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QFont, QFontDatabase, QImage, QPainter
@@ -111,6 +113,7 @@ def main() -> None:
     window.findChild(QLineEdit, "recoveryKeyInput").setText("main evidence recovery key")
     button("initializeVaultButton").click()
     shot("06-vault-initialized")
+    autofill_dialogs()
     button("startSoloButton").click()
     app.processEvents()
     assert window._backend_local is not None

@@ -451,3 +451,82 @@ QScrollBar::add-line:horizontal,
 QScrollBar::sub-line:horizontal {
     width: 0px;
 }
+
+/* ── Dialogs ──
+ * A QDialog inherits the dark shell, but QLabel defaults to dark text, so form
+ * labels rendered near-invisible. Dialogs are light surfaces: they are focused
+ * data entry, not chrome.
+ */
+QDialog {
+    background-color: #FFFFFF;
+}
+
+QDialog QLabel {
+    color: #1F2D3D;
+    font-size: 13px;
+}
+
+QDialog QLineEdit,
+QDialog QComboBox {
+    background-color: #FFFFFF;
+    border: 1px solid #D8E2ED;
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: #1F2D3D;
+    min-height: 18px;
+}
+
+QDialog QLineEdit:focus,
+QDialog QComboBox:focus {
+    border: 1px solid #1D6FB8;
+}
+
+QDialog QComboBox::drop-down {
+    border: none;
+    width: 22px;
+}
+
+QDialog QComboBox QAbstractItemView {
+    background-color: #FFFFFF;
+    color: #1F2D3D;
+    selection-background-color: #1D6FB8;
+    selection-color: #FFFFFF;
+    border: 1px solid #D8E2ED;
+}
+
+QDialog QLabel#dialogHint {
+    color: #6B7C93;
+    font-size: 11px;
+}
+
+QDialog QLabel[error="true"] {
+    color: #C0392B;
+    font-size: 12px;
+}
+
+/* ── Headings that sit on the dark shell ──
+ * These live outside the white content card, so they need light text.
+ */
+QWidget#filingRecordPage > QLabel,
+QWidget#reportsPage > QLabel,
+QWidget#documentsPage > QLabel,
+QWidget#searchPage > QLabel,
+QLabel#filingRecordGroupLabel,
+QLabel#filingRecordCaption {
+    color: #E6EDF6;
+}
+
+QLabel#filingRecordCaption {
+    color: #9FB3CC;
+    font-size: 12px;
+}
+
+QLabel#filingRecordGroupLabel {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* The workspace header row sits on the dark shell too. */
+QLabel#roleStatusLabel {
+    color: #9FB3CC;
+}

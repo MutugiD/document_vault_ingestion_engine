@@ -25,7 +25,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tests"))
 
+from _dialog_harness import autofill_dialogs  # noqa: E402
 from PySide6.QtWidgets import QListWidget, QPushButton  # noqa: E402
 
 from ui import MainWindow, create_app  # noqa: E402
@@ -36,6 +38,7 @@ def _start_solo(workspace: Path) -> MainWindow:
     window = MainWindow(workspace=workspace)
     solo_button = window.findChild(QPushButton, "startSoloButton")
     assert solo_button is not None
+    autofill_dialogs()
     solo_button.click()
     assert window._backend_local is not None, "solo mode did not initialize a backend"
     return window

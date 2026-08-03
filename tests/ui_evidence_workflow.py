@@ -18,7 +18,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tests"))
 
+from _dialog_harness import autofill_dialogs  # noqa: E402
 from _license_harness import install_test_license  # noqa: E402
 from PySide6.QtCore import QPoint  # noqa: E402
 from PySide6.QtGui import QFont, QImage, QPainter  # noqa: E402
@@ -115,6 +117,7 @@ def main() -> None:
         button("initializeVaultButton").click()
         shot("vault-initialized")
 
+        autofill_dialogs()
         button("startSoloButton").click()
         app.processEvents()
         assert window._backend_local is not None

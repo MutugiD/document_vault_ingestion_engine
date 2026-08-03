@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
+from _dialog_harness import autofill_dialogs  # noqa: E402
 from _license_harness import install_test_license  # noqa: E402
 from PySide6.QtWidgets import (  # noqa: E402
     QLabel,
@@ -38,7 +39,6 @@ from PySide6.QtWidgets import (  # noqa: E402
 
 import ui.app as ui_app  # noqa: E402
 from ui import MainWindow, create_app  # noqa: E402
-from ui.app import MatterRecordDialog  # noqa: E402
 
 PASS, PARTIAL, FAIL = "PASS", "PARTIAL", "FAIL"
 results: list[tuple[str, str, str]] = []
@@ -117,6 +117,7 @@ def main() -> int:
     record("Vault initialize", PASS, window.status_label.text())
 
     # ── Solo backend ────────────────────────────────────────────────────
+    autofill_dialogs("Audit")
     button("startSoloButton").click()
     app.processEvents()
     if window._backend_local is None:
@@ -147,24 +148,7 @@ def main() -> int:
     # ── Matter sub-tabs ─────────────────────────────────────────────────
     # Add now opens a form. Fill it as a user would; the modal event loop is
     # the only thing replaced, since a headless run cannot click OK.
-    def fill_dialog(dialog: MatterRecordDialog) -> int:
-        from PySide6.QtWidgets import QComboBox, QDialog
-
-        for field in dialog._view.fields:
-            widget = dialog._inputs[field.name]
-            value = (
-                "2500"
-                if field.numeric
-                else (field.choices[0] if field.choices else f"Audit {field.label}")
-            )
-            if isinstance(widget, QComboBox):
-                widget.setCurrentText(value)
-            else:
-                widget.setText(value)
-        dialog._on_accept()
-        return int(QDialog.DialogCode.Accepted)
-
-    MatterRecordDialog.exec = fill_dialog
+    autofill_dialogs("Audit")
 
     workspace_tabs = window.findChild(QTabWidget, "matterWorkspaceTabs")
     for view in ui_app.MATTER_TAB_VIEWS:
