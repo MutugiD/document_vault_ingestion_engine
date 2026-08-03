@@ -39,6 +39,7 @@ REQUIRED_DOCS = [
     "documentation/25-jurisnuru-gap-analysis.md",
     "documentation/26-jurisnuru-seats-networking.md",
     "documentation/27-jurisnuru-signing-key-decision.md",
+    "documentation/doc-extraction-improvement.md",
     "documentation/enterprise/README.md",
     "documentation/enterprise/architecture.md",
     "documentation/enterprise/product-roadmap.md",
