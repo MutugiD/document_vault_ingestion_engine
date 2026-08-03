@@ -10,7 +10,12 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from release.bundle import APP_NAME, ReleaseBundleError, validate_release_bundle
+from release.bundle import (
+    APP_NAME,
+    ReleaseBundleError,
+    _long_path,
+    validate_release_bundle,
+)
 
 
 @dataclass(frozen=True)
@@ -34,7 +39,10 @@ def run_portable_install_smoke(zip_path: Path, install_root: Path) -> PortableIn
     validate_release_bundle(zip_path, manifest_path)
 
     if install_root.exists():
-        shutil.rmtree(install_root)
+        # Removing needs the extended form for the same reason extracting does:
+        # a previous run leaves paths past MAX_PATH behind, and rmtree cannot
+        # reach them to delete them.
+        shutil.rmtree(_long_path(install_root))
     install_root.mkdir(parents=True)
 
     _safe_extract(zip_path, install_root)
@@ -88,7 +96,12 @@ def _safe_extract(zip_path: Path, install_root: Path) -> None:
             target = (install_root / member.filename).resolve()
             if not target.is_relative_to(install_root):
                 raise ReleaseBundleError(f"unsafe ZIP path: {member.filename}")
-        archive.extractall(install_root)
+        # Extend the destination past MAX_PATH before extracting. The bundle
+        # contains deeply nested third-party licence directories from torch,
+        # which exceed 260 characters once an install root is prepended --
+        # a customer unzipping to anywhere but a short path would hit the same
+        # WinError 206 this guards against.
+        archive.extractall(_long_path(install_root))
 
 
 def _run_executable(

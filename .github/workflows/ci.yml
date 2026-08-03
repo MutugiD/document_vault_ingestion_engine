@@ -80,6 +80,7 @@ jobs:
             "tests/validate_matter_workspace_tabs.py",
             "tests/validate_schema_migration.py",
             "tests/validate_mixed_document_ocr.py",
+            "tests/validate_long_path_bundle.py",
             "tests/validate_e2e.py",
             "tests/validate_ui.py"
           )
