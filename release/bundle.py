@@ -63,6 +63,29 @@ class ReleaseBundle:
     manifest: ReleaseManifest
 
 
+def _long_path(path: Path) -> str:
+    """Windows-safe form of a path for file operations.
+
+    Windows APIs cap paths at MAX_PATH (260 characters) unless the extended
+    form is used. The bundle nests deeply -- torch ships third-party licence
+    directories such as
+    ``_internal/torch-*.dist-info/licenses/third_party/kineto/libkineto/...``
+    which exceed the cap once the output directory is prepended, so copying the
+    frozen folder failed outright with WinError 206.
+
+    Those licence files must be distributed, so they cannot simply be excluded.
+    """
+    if os.name != "nt":
+        return str(path)
+    resolved = os.path.abspath(str(path))
+    if resolved.startswith("\\\\?\\"):
+        return resolved
+    if resolved.startswith("\\\\"):
+        # UNC share: \\server\share -> \\?\UNC\server\share
+        return "\\\\?\\UNC" + resolved[1:]
+    return "\\\\?\\" + resolved
+
+
 def create_release_bundle(
     frozen_bundle_dir: Path,
     output_dir: Path,
@@ -85,13 +108,13 @@ def create_release_bundle(
     extracted_bundle_dir = output_dir / APP_NAME
     if extracted_bundle_dir.exists():
         try:
-            shutil.rmtree(extracted_bundle_dir)
+            shutil.rmtree(_long_path(extracted_bundle_dir))
         except PermissionError as exc:
             raise ReleaseBundleError(
                 "cannot refresh the extracted release folder because the packaged EXE is "
                 "still in use; close DocumentVaultIngestionEngine and run the build again"
             ) from exc
-    shutil.copytree(frozen_bundle_dir, extracted_bundle_dir)
+    shutil.copytree(_long_path(frozen_bundle_dir), _long_path(extracted_bundle_dir))
 
     _write_zip(zip_path, frozen_bundle_dir, manifest)
     bundle_hash = _sha256_file(zip_path)
@@ -193,8 +216,9 @@ def _collect_release_files(frozen_bundle_dir: Path) -> tuple[ReleaseFile, ...]:
     for path in sorted(item for item in frozen_bundle_dir.rglob("*") if item.is_file()):
         relative = path.relative_to(frozen_bundle_dir).as_posix()
         _assert_no_forbidden_names([relative])
+        long = Path(_long_path(path))
         files.append(
-            ReleaseFile(path=relative, size_bytes=path.stat().st_size, sha256=_sha256_file(path))
+            ReleaseFile(path=relative, size_bytes=long.stat().st_size, sha256=_sha256_file(long))
         )
     if not files:
         raise ReleaseBundleError("frozen bundle folder is empty")
@@ -208,7 +232,7 @@ def _write_zip(zip_path: Path, frozen_bundle_dir: Path, manifest: ReleaseManifes
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for release_file in manifest.files:
             archive.write(
-                frozen_bundle_dir / release_file.path,
+                _long_path(frozen_bundle_dir / release_file.path),
                 f"{APP_NAME}/{release_file.path}",
             )
         archive.writestr(f"{APP_NAME}/{MANIFEST_NAME}", embedded_manifest)

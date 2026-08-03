@@ -169,6 +169,20 @@ python tests\validate_release_bundle.py
 The release validator verifies the sidecar manifest hash and confirms the bundle does not include
 obvious secret, private-key, credential, `.env`, recovery-key, or client-document file names.
 
+## Issuing a Licence to a Customer
+
+Licences are bound to one machine and signed offline. The customer sends the
+Installation ID shown on the activation screen; you return a `license.key`
+issued for that machine:
+
+```powershell
+python tools\sign_license.py <installation-id> "<firm name>" <plan> <expiry> <output>
+```
+
+See [documentation/28-license-issuance-runbook.md](documentation/28-license-issuance-runbook.md)
+for verification before sending, what to do when a customer's build carries a
+different key, key custody, and rotation.
+
 ## Vendor License Key Generation
 
 1. Generate a key pair offline:
