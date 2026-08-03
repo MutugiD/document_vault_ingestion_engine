@@ -122,6 +122,13 @@ class WakiliOSClient:
     def add_court_decision(self, matter_id: str, **fields: str) -> dict[str, Any]:
         return self._post(f"/matters/{matter_id}/court-decisions", fields)
 
+    def add_filing_record(self, matter_id: str, **fields: str) -> dict[str, Any]:
+        return self._post(f"/matters/{matter_id}/filing-records", fields)
+
+    def list_filing_records(self, matter_id: str) -> list[dict[str, Any]]:
+        result = self._get(f"/matters/{matter_id}/workspace")
+        return list(result.get("filing_records", []))
+
     def add_fee(self, matter_id: str, **fields: object) -> dict[str, Any]:
         return self._post(f"/matters/{matter_id}/fees", {k: str(v) for k, v in fields.items()})
 

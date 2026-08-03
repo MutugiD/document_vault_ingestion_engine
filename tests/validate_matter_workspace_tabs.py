@@ -36,6 +36,7 @@ ADDABLE_TABS = (
     "courtDecisionsTab",
     "feesTab",
     "receiptsTab",
+    "filingRecordTab",
 )
 
 

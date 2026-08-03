@@ -63,6 +63,7 @@ class LodgingRequest(BaseModel):
     filing_status: str = "pending"
     linked_document_id: str = ""
     filing_reference: str = ""
+    actioning_status: str = ""
 
 
 class CourtDecisionRequest(BaseModel):
@@ -84,6 +85,25 @@ class FeeRequest(BaseModel):
     status: str = "pending"
     linked_activity_id: str = ""
     linked_lodging_id: str = ""
+    prn: str = ""
+
+
+class FilingRecordRequest(BaseModel):
+    """The firm's own record of a filing, independent of the portal."""
+
+    tracking_number: str = ""
+    station: str = ""
+    case_number: str = ""
+    filed_at: str = ""
+    filed_by: str = ""
+    what_was_filed: str = ""
+    what_was_served: str = ""
+    what_was_received: str = ""
+    next_action: str = ""
+    next_action_date: str = ""
+    portal_status: str = ""
+    linked_lodging_id: str = ""
+    linked_receipt_id: str = ""
 
 
 class ReceiptRequest(BaseModel):
@@ -252,6 +272,27 @@ def create_app(
     ) -> dict[str, object]:
         try:
             return backend.add_lodging(token, matter_id, **request.model_dump())
+        except Exception as exc:
+            raise handle_error(exc) from exc
+
+    @app.post("/matters/{matter_id}/filing-records")
+    def add_filing_record(
+        matter_id: str,
+        request: FilingRecordRequest,
+        token: str = Depends(token_from_header),
+    ) -> dict[str, object]:
+        try:
+            return backend.add_filing_record(token, matter_id, **request.model_dump())
+        except Exception as exc:
+            raise handle_error(exc) from exc
+
+    @app.get("/matters/{matter_id}/filing-records")
+    def list_filing_records(
+        matter_id: str,
+        token: str = Depends(token_from_header),
+    ) -> list[dict[str, object]]:
+        try:
+            return backend.list_filing_records(token, matter_id)
         except Exception as exc:
             raise handle_error(exc) from exc
 

@@ -8,7 +8,7 @@ import hmac
 import json
 import os
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -92,6 +92,7 @@ class WakiliOSBackend:
         initialize_search_store(self.vault_root)
         with _connect(self.database_path) as connection:
             _create_schema(connection)
+            _migrate_schema(connection)
             connection.execute("PRAGMA journal_mode = WAL")
 
     def login(self, username: str, password: str) -> AuthSession:
@@ -313,6 +314,8 @@ class WakiliOSBackend:
                 "filing_status": fields.get("filing_status", "pending"),
                 "linked_document_id": fields.get("linked_document_id", ""),
                 "filing_reference": fields.get("filing_reference", ""),
+                # The portal's own actioning state, e.g. "Not Actioned".
+                "actioning_status": fields.get("actioning_status", ""),
             },
         )
 
@@ -352,8 +355,43 @@ class WakiliOSBackend:
                 "status": str(fields.get("status", "pending")),
                 "linked_activity_id": str(fields.get("linked_activity_id", "")),
                 "linked_lodging_id": str(fields.get("linked_lodging_id", "")),
+                # Payment Reference Number: what an MPESA or KCB payment is
+                # reconciled against on the portal.
+                "prn": str(fields.get("prn", "")),
             },
         )
+
+    def add_filing_record(self, token: str, matter_id: str, **fields: object) -> dict[str, object]:
+        """Record what was filed, what came back, and what happens next."""
+        return self._insert_tab_record(
+            token,
+            matter_id,
+            required_roles=DOCUMENT_ROLES,
+            table="matter_filing_records",
+            id_column="filing_record_id",
+            event_type="filing_record_created",
+            fields={
+                "tracking_number": str(fields.get("tracking_number", "")),
+                "station": str(fields.get("station", "")),
+                "case_number": str(fields.get("case_number", "")),
+                "filed_at": str(fields.get("filed_at", "")),
+                "filed_by": str(fields.get("filed_by", "")),
+                "what_was_filed": str(fields.get("what_was_filed", "")),
+                "what_was_served": str(fields.get("what_was_served", "")),
+                "what_was_received": str(fields.get("what_was_received", "")),
+                "next_action": str(fields.get("next_action", "")),
+                "next_action_date": str(fields.get("next_action_date", "")),
+                "portal_status": str(fields.get("portal_status", "")),
+                "linked_lodging_id": str(fields.get("linked_lodging_id", "")),
+                "linked_receipt_id": str(fields.get("linked_receipt_id", "")),
+            },
+        )
+
+    def list_filing_records(self, token: str, matter_id: str) -> list[dict[str, object]]:
+        self.require_authenticated(token)
+        with _connect(self.database_path) as connection:
+            _require_existing_matter(connection, matter_id)
+            return _select_tab(connection, "matter_filing_records", "matter_id", matter_id)
 
     def add_receipt(self, token: str, matter_id: str, **fields: object) -> dict[str, object]:
         return self._insert_tab_record(
@@ -502,6 +540,12 @@ class WakiliOSBackend:
                 "receipts": _select_tab(connection, "receipts", "matter_id", matter_id),
                 "documents": _select_tab(connection, "documents", "matter_id", matter_id),
                 "summaries": _select_tab(connection, "document_summaries", "matter_id", matter_id),
+                "filing_records": _select_tab(
+                    connection,
+                    "matter_filing_records",
+                    "matter_id",
+                    matter_id,
+                ),
             }
 
     def export_calendar_ics(self, token: str, matter_id: str) -> str:
@@ -531,6 +575,14 @@ class WakiliOSBackend:
                 SELECT decision_id, decision_type, decision_date, outcome
                 FROM court_decisions
                 WHERE matter_id = ? AND decision_date <> ''
+                """,
+                (matter_id,),
+            ).fetchall()
+            next_actions = connection.execute(
+                """
+                SELECT filing_record_id, next_action, next_action_date, tracking_number
+                FROM matter_filing_records
+                WHERE matter_id = ? AND next_action_date <> ''
                 """,
                 (matter_id,),
             ).fetchall()
@@ -567,6 +619,15 @@ class WakiliOSBackend:
                     "summary": f"Court decision: {row['decision_type']}",
                     "date": str(row["decision_date"]),
                     "description": str(row["outcome"]),
+                }
+            )
+        for row in next_actions:
+            events.append(
+                {
+                    "uid": str(row["filing_record_id"]),
+                    "summary": f"Next action: {row['next_action'] or 'follow up'}",
+                    "date": str(row["next_action_date"]),
+                    "description": str(row["tracking_number"]),
                 }
             )
         return _build_ics(events)
@@ -723,7 +784,116 @@ def initialize_firm_backend(
     return backend
 
 
+SCHEMA_VERSION = 2
+"""Current schema generation.
+
+Bump this and add a matching entry to ``_MIGRATIONS`` whenever a column or
+table is added to an existing table's shape.
+"""
+
+
+def _add_column(connection: sqlite3.Connection, table: str, column: str, decl: str) -> None:
+    """Add a column if the table does not already have it.
+
+    ``ALTER TABLE ... ADD COLUMN`` has no ``IF NOT EXISTS`` form in SQLite, and
+    migrations must tolerate being re-run against a database that a newer build
+    already touched.
+
+    A missing table is skipped rather than an error. This database is shared
+    with the search store, which owns ``documents`` and creates it separately,
+    so the table a migration targets may legitimately not be there yet.
+    """
+    existing = {row["name"] for row in connection.execute(f"PRAGMA table_info({table})")}
+    if not existing or column in existing:
+        return
+    connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+
+
+def _migration_1_filing_record(connection: sqlite3.Connection) -> None:
+    """Mirror the fields the Judiciary e-filing portal exposes per case.
+
+    The portal shows a Payment Reference Number against each fee and an
+    actioning state against each lodged document. Without them a firm cannot
+    reconcile an MPESA/KCB payment back to a filing, which is the whole point
+    of keeping an independent record.
+    """
+    _add_column(connection, "fee_entries", "prn", "TEXT NOT NULL DEFAULT ''")
+    _add_column(connection, "lodgings", "actioning_status", "TEXT NOT NULL DEFAULT ''")
+
+
+def _migration_2_filing_ledger(connection: sqlite3.Connection) -> None:
+    """Add the independent record of what was filed.
+
+    A portal submission proves a filing was made; it does not give the firm a
+    recoverable account of what was filed, when, by whom, what was served, what
+    came back, and what must happen next. Lodgings, receipts and activities each
+    hold a fragment of that, keyed to how the portal models a case rather than
+    how a firm has to answer "where is this matter". This table is the firm's
+    own continuity ledger over those fragments, and it survives the portal.
+    """
+    connection.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS matter_filing_records (
+            filing_record_id TEXT PRIMARY KEY,
+            matter_id TEXT NOT NULL,
+            tracking_number TEXT NOT NULL,
+            station TEXT NOT NULL,
+            case_number TEXT NOT NULL,
+            filed_at TEXT NOT NULL,
+            filed_by TEXT NOT NULL,
+            what_was_filed TEXT NOT NULL,
+            what_was_served TEXT NOT NULL,
+            what_was_received TEXT NOT NULL,
+            next_action TEXT NOT NULL,
+            next_action_date TEXT NOT NULL,
+            portal_status TEXT NOT NULL,
+            linked_lodging_id TEXT NOT NULL,
+            linked_receipt_id TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_filing_records_matter
+            ON matter_filing_records (matter_id);
+        """
+    )
+    # Which role a document plays in the filing trail: the filed copy, the
+    # payment receipt, or proof of service. Distinct from document_type, which
+    # says what the document is rather than what it evidences.
+    _add_column(connection, "documents", "filing_role", "TEXT NOT NULL DEFAULT ''")
+
+
+_MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (
+    _migration_1_filing_record,
+    _migration_2_filing_ledger,
+)
+
+
+def _migrate_schema(connection: sqlite3.Connection) -> None:
+    """Bring an existing database up to ``SCHEMA_VERSION``.
+
+    ``_create_schema`` is all ``CREATE TABLE IF NOT EXISTS``, so it is a no-op
+    against a database that already exists -- new columns on existing tables
+    would never appear, and the first query touching one would fail with
+    ``no such column``. Every schema change after the first release therefore
+    has to run through here.
+    """
+    current = int(connection.execute("PRAGMA user_version").fetchone()[0])
+    if current >= SCHEMA_VERSION:
+        return
+    for version in range(current + 1, SCHEMA_VERSION + 1):
+        _MIGRATIONS[version - 1](connection)
+    # PRAGMA does not accept bound parameters.
+    connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+
+
 def _create_schema(connection: sqlite3.Connection) -> None:
+    """Create the baseline schema.
+
+    This is the version-0 shape and should not be edited to add columns to
+    existing tables: it is all ``CREATE TABLE IF NOT EXISTS``, so edits here
+    reach new databases only. Evolve the schema in ``_MIGRATIONS`` instead,
+    which runs against new and existing databases alike.
+    """
     connection.executescript(
         """
         CREATE TABLE IF NOT EXISTS firm_config (
