@@ -13,6 +13,8 @@ from intake import (
     DUPLICATE_STATUS,
     REJECTED_STATUS,
     ExtractionError,
+    OcrRuntimeError,
+    discover_tesseract_runtime,
     extract_text,
     import_document,
 )
@@ -130,7 +132,7 @@ class ManualAppSession:
             try:
                 extraction = extract_text(
                     record.quarantine_path,
-                    ocr_engine=_sidecar_ocr_engine(source_path),
+                    ocr_engine=resolve_ocr_engine(source_path),
                 )
                 extraction_status = extraction.ocr_status
                 page_count = extraction.page_count
@@ -267,6 +269,29 @@ def _sidecar_ocr_engine(source_path: Path) -> SidecarOcrEngine | None:
     if not sidecar.exists():
         return None
     return SidecarOcrEngine(sidecar.read_text(encoding="utf-8"))
+
+
+def resolve_ocr_engine(source_path: Path) -> object | None:
+    """The OCR engine to use for one import.
+
+    A sidecar ``.ocr.txt`` beside the source wins, because tests and evidence
+    runs use it to supply deterministic text without a Tesseract install. Any
+    real import falls back to the bundled Tesseract runtime.
+
+    Returning ``None`` here means no OCR happens at all, so a scanned document
+    -- a stamped receipt, a title copy, a sealed order -- yields no text and
+    never reaches search or RAG. That was the shipped behaviour: the runtime
+    was bundled and validated at release but never wired to an import.
+    """
+    sidecar = _sidecar_ocr_engine(source_path)
+    if sidecar is not None:
+        return sidecar
+    try:
+        return discover_tesseract_runtime()
+    except OcrRuntimeError:
+        # No bundled runtime on this machine. Extraction still records
+        # ocr_status = pending_tesseract, so the gap stays visible.
+        return None
 
 
 def _content_type(detected_file_type: str) -> str:
