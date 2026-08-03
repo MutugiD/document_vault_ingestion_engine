@@ -130,6 +130,10 @@ jobs:
         if: steps.spec.outputs.present == 'true'
         run: python scripts/obfuscate_licensing.py
 
+      - name: Verify the compiled trust anchor survived obfuscation
+        if: steps.spec.outputs.present == 'true'
+        run: python scripts/verify_trust_anchor.py
+
       - name: Build one-folder bundle (PyInstaller)
         if: steps.spec.outputs.present == 'true'
         run: pyinstaller main.spec --noconfirm --clean

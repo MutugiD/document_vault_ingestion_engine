@@ -37,6 +37,7 @@ REQUIRED_DOCS = [
     "documentation/24-hosted-ai-llm-boundary.md",
     "documentation/25-jurisnuru-firm-management.md",
     "documentation/26-jurisnuru-seats-networking.md",
+    "documentation/27-jurisnuru-signing-key-decision.md",
     "documentation/enterprise/README.md",
     "documentation/enterprise/architecture.md",
     "documentation/enterprise/product-roadmap.md",

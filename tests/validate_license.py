@@ -157,8 +157,47 @@ def main() -> None:
         )
         _validate_payment_entitlements(active_result)
         _validate_clockguard()
+        _validate_embedded_trust_anchor(identity.installation_id)
 
     print("LICENSE VALIDATION PASS")
+
+
+def _validate_embedded_trust_anchor(installation_id: str) -> None:
+    """Validate the key the product actually ships with (spec §6.2).
+
+    Every other check in this file supplies its own ephemeral key, so the
+    embedded anchor was never exercised: swapping it -- by accident or by an
+    attacker substituting their own -- left the whole suite green.
+
+    Two properties are checked. The two places the key is published must
+    agree, and a license signed by any other key must be rejected.
+    """
+    from licensing.core import embedded_public_key_pem
+
+    def _normalize(pem: bytes) -> bytes:
+        return pem.replace(b"\r\n", b"\n").strip()
+
+    resources_pem = (ROOT / "resources" / "license_public_key.pem").read_bytes()
+    assert _normalize(embedded_public_key_pem()) == _normalize(resources_pem), (
+        "licensing/core.py and resources/license_public_key.pem publish different keys; "
+        "one of them was changed without the other"
+    )
+
+    foreign_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    forged = _signed_license(
+        private_key=foreign_key,
+        installation_id=installation_id,
+        expiry=date(2099, 12, 31),
+    )
+    forged_result = verify_license_document(
+        forged,
+        embedded_public_key_pem(),
+        installation_id,
+    )
+    assert forged_result.status == "bad_signature", forged_result.status
+    assert not forged_result.paid_features_enabled
+
+    print("  trust anchor: embedded key matches resources and rejects foreign signatures")
 
 
 def _validate_clockguard() -> None:
