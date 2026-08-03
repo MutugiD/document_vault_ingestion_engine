@@ -22,6 +22,26 @@ pip install ruff pytest coverage
 
 ## Start Testing Locally
 
+The application is license-first: it opens on the activation gate and stays there until a
+vendor-issued signed `license.key` is accepted. `resources/license_public_key.pem` is the
+verification key, not an activation license, and neither is the installation identity at
+`%APPDATA%\WakiliOS\settings\installation.json` — the gate rejects both by name.
+
+To work on the Dashboard, Workspace and Settings without a signed license, export the
+development bypass:
+
+```powershell
+$env:JURISNURU_DEV_UNLOCK = "1"
+python main.py
+```
+
+The bypass is a UI-layer flag only. Every licensing widget and code path stays instantiated and
+reachable, `licensing/` never consults it, and it is inert in packaged builds because PyInstaller
+sets `sys.frozen` — a shipped executable gates regardless of its environment. The license status
+reads `DEVELOPMENT BUILD - license gate bypassed` while it is active, so a screenshot of a
+bypassed build is self-evident. `tests\validate_ui.py` clears the variable before asserting the
+gated state, then tests the bypass and its frozen inertness explicitly.
+
 Run these commands from the repository root in PowerShell:
 
 ```powershell
@@ -116,7 +136,15 @@ pyinstaller main.spec
 The packaged executable must pass:
 
 ```powershell
-dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe --selftest
+& ".\dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe" --selftest
+```
+
+Use PowerShell's call operator `&` so the path is executed rather than parsed as a module name.
+Confirm the bypass is inert in the frozen build — this must still gate:
+
+```powershell
+$env:JURISNURU_DEV_UNLOCK = "1"
+& ".\dist\DocumentVaultIngestionEngine\DocumentVaultIngestionEngine.exe" --gui-smoke 3000
 ```
 
 ## Obfuscated Production Build (spec §6.3)

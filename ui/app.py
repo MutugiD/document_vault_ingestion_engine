@@ -42,6 +42,24 @@ from wakilios.client import (
 )
 from wakilios.core import WakiliOSBackend, initialize_firm_backend
 
+DEV_UNLOCK_ENV_VAR = "JURISNURU_DEV_UNLOCK"
+
+
+def _dev_unlock_requested() -> bool:
+    """Whether to open the license gate for local development.
+
+    This is a UI-layer bypass only: it flips the same gate state a real
+    activation produces, and leaves every licensing check, widget and code
+    path instantiated and reachable. Nothing in ``licensing/`` consults it,
+    so the compiled trust anchor in ``licensing/core.pyd`` is untouched.
+
+    It is inert in packaged builds -- PyInstaller sets ``sys.frozen`` -- so a
+    shipped executable gates regardless of the environment it runs in.
+    """
+    if getattr(sys, "frozen", False):
+        return False
+    return os.environ.get(DEV_UNLOCK_ENV_VAR) == "1"
+
 
 @dataclass(frozen=True)
 class ModuleStatus:
@@ -223,6 +241,8 @@ class MainWindow(QMainWindow):
         self._connect_workflow_controls()
         self._connect_backend_controls()
         self._set_license_state(False, "Not activated")
+        if _dev_unlock_requested():
+            self._set_license_state(True, "DEVELOPMENT BUILD - license gate bypassed")
 
     def _initialize_license_identity(self) -> None:
         from licensing.installation import ensure_installation_identity
