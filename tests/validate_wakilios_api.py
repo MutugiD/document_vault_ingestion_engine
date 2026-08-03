@@ -150,6 +150,38 @@ def main() -> None:
         )
         assert resp.status_code == 200
 
+        # Filing record: the firm's own account of what was filed, what came
+        # back, and what happens next -- independent of the portal.
+        resp = client.post(
+            f"/matters/{matter_id}/filing-records",
+            json={
+                "tracking_number": "AERJ2026",
+                "station": "Milimani High Court",
+                "case_number": "HCCOMM/E214/2026",
+                "filed_at": "2026-04-08",
+                "filed_by": "advocate1",
+                "what_was_filed": "Response and annexures",
+                "what_was_served": "Served on 1st Respondent",
+                "what_was_received": "Filing receipt E6EWRY6F",
+                "next_action": "Await response",
+                "next_action_date": "2026-09-22",
+                "portal_status": "not actioned",
+            },
+            headers={"Authorization": f"Bearer {advocate_token}"},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["tracking_number"] == "AERJ2026"
+
+        resp = client.get(
+            f"/matters/{matter_id}/filing-records",
+            headers={"Authorization": f"Bearer {advocate_token}"},
+        )
+        assert resp.status_code == 200, resp.text
+        records = resp.json()
+        assert len(records) == 1
+        assert records[0]["what_was_served"] == "Served on 1st Respondent"
+        assert records[0]["case_number"] == "HCCOMM/E214/2026"
+
         # Create accounts user
         resp = client.post(
             "/users",
@@ -221,6 +253,7 @@ def main() -> None:
         )
         assert len(workspace["parties"]) >= 1
         assert len(workspace["activities"]) >= 1
+        assert len(workspace["filing_records"]) == 1
 
         # Calendar export
         resp = client.get(
@@ -230,6 +263,9 @@ def main() -> None:
         assert resp.status_code == 200
         assert "VCALENDAR" in resp.text
         assert "Directions hearing" in resp.text
+        # A recorded next action is a date the firm must not miss, so it
+        # belongs in the same calendar as mentions and lodging deadlines.
+        assert "Next action: Await response" in resp.text
 
         # Offline cache
         resp = client.get("/offline-cache", headers={"Authorization": f"Bearer {advocate_token}"})

@@ -148,7 +148,23 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
         lambda row: _joined(
             row.get("title", "") or row.get("document_type", "Document"),
             row.get("lifecycle_status", ""),
+            row.get("filing_role", ""),
             f"id {row.get('document_id', '?')}",
+        ),
+    ),
+    MatterTabView(
+        "filingRecordTab",
+        "Filing record",
+        "filing_records",
+        "What was filed, served, received, and what happens next",
+        lambda row: _joined(
+            row.get("filed_at", "") or "not filed",
+            row.get("tracking_number", ""),
+            row.get("what_was_filed", ""),
+            row.get("portal_status", ""),
+            f"next: {row['next_action']} {row.get('next_action_date', '')}".strip()
+            if row.get("next_action")
+            else "",
         ),
     ),
 )
@@ -542,6 +558,7 @@ class MainWindow(QMainWindow):
             ("courtDecisionsTab", self._on_add_court_decision),
             ("feesTab", self._on_add_fee),
             ("receiptsTab", self._on_add_receipt),
+            ("filingRecordTab", self._on_add_filing_record),
         ]:
             object_name = f"{tab_object_name}AddButton"
             button = self.findChild(QPushButton, object_name)
@@ -695,6 +712,13 @@ class MainWindow(QMainWindow):
             return self._backend_local.add_court_decision(self._solo_token(), matter_id, **fields)
         if self._backend_client is not None:
             return self._backend_client.add_court_decision(matter_id, **fields)
+        return {}
+
+    def _backend_add_filing_record(self, matter_id: str, **fields: str) -> dict:
+        if self._backend_local is not None:
+            return self._backend_local.add_filing_record(self._solo_token(), matter_id, **fields)
+        if self._backend_client is not None:
+            return self._backend_client.add_filing_record(matter_id, **fields)
         return {}
 
     def _backend_add_fee(self, matter_id: str, **fields: object) -> dict:
@@ -859,6 +883,23 @@ class MainWindow(QMainWindow):
             self._refresh_matter_workspace()
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Add lodging failed: {exc}")
+
+    def _on_add_filing_record(self) -> None:
+        if (
+            self._backend_local is None and self._backend_client is None
+        ) or not self._current_matter_id:
+            return
+        try:
+            self._backend_add_filing_record(
+                self._current_matter_id,
+                what_was_filed="New filing",
+                filed_by=self._current_username,
+                portal_status="not actioned",
+            )
+            self.status_label.setText("Filing record added")
+            self._refresh_matter_workspace()
+        except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
+            self.status_label.setText(f"Add filing record failed: {exc}")
 
     def _on_add_court_decision(self) -> None:
         if (
