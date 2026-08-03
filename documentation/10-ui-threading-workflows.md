@@ -7,7 +7,7 @@ licensing, and local RAG.
 
 ## UI Stack
 
-PySide6 with a professional dark navy/blue theme (`ui/wakilios.qss`).
+PySide6 with a dark navy shell and white content cards (`ui/jurisnuru.qss`).
 
 ## Tab Layout (4 tabs)
 

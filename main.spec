@@ -37,7 +37,7 @@ datas = [
     ("products/product_catalog.json", "products"),
     ("resources/license_public_key.pem", "resources"),
     ("resources/public_kenyan_legal_docs.json", "resources"),
-    ("ui/wakilios.qss", "ui"),
+    ("ui/jurisnuru.qss", "ui"),
 ]
 datas += docling_datas
 docling_runtime = Path("runtime") / "docling"

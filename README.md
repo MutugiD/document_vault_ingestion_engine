@@ -15,7 +15,7 @@ is not considered release-ready while those gates are red or pending.
 ### What's implemented
 
 - **4-tab desktop UI**: Dashboard (setup + vault), Workspace (matters + sub-tabs), Settings (import + search/RAG + AI keys + backup + admin), About. Licensing is handled by the startup gate before these tabs open.
-- **Professional dark theme**: Navy/blue stylesheet (`ui/wakilios.qss`)
+- **Sidebar navigation**: Matters, Documents, Filing record, Search, Reports, Settings, over a dark navy stylesheet (`ui/jurisnuru.qss`)
 - **Solo mode**: In-process backend, no server needed; UI calls `wakilios.core` directly
 - **Multi-seat mode**: Optional FastAPI server (`wakilios.api`) with HTTP client (`wakilios.client`)
 - **Hard-coded RSA public key** (spec §6.2): No swappable `public_key.pem` on disk; Cython-compiled to `.pyd` in release builds

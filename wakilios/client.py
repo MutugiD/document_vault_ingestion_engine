@@ -207,6 +207,9 @@ class WakiliOSClient:
         result = self._get(f"/matters/{matter_id}/workspace")
         return list(result.get("receipts", []))
 
+    def firm_overview(self) -> dict[str, Any]:
+        return self._get("/firm/overview")
+
     def audit_log(self) -> dict[str, Any]:
         return self._get("/audit")
 

@@ -650,6 +650,48 @@ class WakiliOSBackend:
             matters=tuple(_matter_mapping(row) for row in rows),
         )
 
+    def firm_overview(self, token: str) -> dict[str, object]:
+        """Firm-wide counts and money, for the Reports destination.
+
+        Mirrors what the Judiciary portal dashboard shows a firm: how many
+        matters sit at each station and by status, and what has been charged
+        against what has been receipted.
+        """
+        self.require_authenticated(token)
+        with _connect(self.database_path) as connection:
+
+            def scalar(sql: str) -> float:
+                row = connection.execute(sql).fetchone()
+                value = row[0] if row is not None else 0
+                return float(value or 0)
+
+            by_station = [
+                {"station": str(row["station"] or "unassigned"), "matters": int(row["total"])}
+                for row in connection.execute(
+                    "SELECT station, COUNT(*) AS total FROM matters"
+                    " GROUP BY station ORDER BY total DESC"
+                )
+            ]
+            by_status = [
+                {"status": str(row["status"] or "unknown"), "matters": int(row["total"])}
+                for row in connection.execute(
+                    "SELECT status, COUNT(*) AS total FROM matters"
+                    " GROUP BY status ORDER BY total DESC"
+                )
+            ]
+            fees_raised = scalar("SELECT SUM(amount) FROM fee_entries")
+            receipts_total = scalar("SELECT SUM(amount) FROM receipts")
+            return {
+                "matters": int(scalar("SELECT COUNT(*) FROM matters")),
+                "documents": int(scalar("SELECT COUNT(*) FROM documents")),
+                "filing_records": int(scalar("SELECT COUNT(*) FROM matter_filing_records")),
+                "fees_raised": fees_raised,
+                "receipts_total": receipts_total,
+                "balance": round(fees_raised - receipts_total, 2),
+                "by_station": by_station,
+                "by_status": by_status,
+            }
+
     def audit_events(self, token: str) -> list[dict[str, object]]:
         self.require_role(token, {ADMIN_ROLE})
         with _connect(self.database_path) as connection:
