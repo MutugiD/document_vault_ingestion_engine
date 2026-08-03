@@ -1,0 +1,26 @@
+# Normalize line endings in the repository to LF.
+#
+# Without this, files committed from Windows checkouts landed with CRLF while
+# others stayed LF. A one-line change to licensing/core.py then presented as a
+# 470-line diff, which hid what had actually changed in the file that holds the
+# license trust anchor.
+#
+# Git converts to LF on commit and leaves working copies alone; editors on
+# Windows handle LF fine.
+* text=auto eol=lf
+
+# Windows-only shells must keep CRLF or they can misparse.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Never touch binaries.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary
+*.zip binary
+*.exe binary
+*.pyd binary
+*.ico binary
+*.ttf binary

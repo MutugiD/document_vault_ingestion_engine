@@ -83,6 +83,7 @@ def main() -> None:
         "feesTab",
         "receiptsTab",
         "matterDocumentsTab",
+        "filingRecordTab",
         "settingsPage",
         "importGroup",
         "documentReviewQueue",
@@ -165,6 +166,7 @@ def main() -> None:
         "Fees",
         "Receipts",
         "Documents",
+        "Filing record",
     ]
 
     openai_key = window.findChild(QLineEdit, "openaiApiKeyInput")
