@@ -272,6 +272,22 @@ class MainWindow(QMainWindow):
                 self._set_license_state(False, message)
                 self.status_label.setText(message)
                 return
+            try:
+                license_payload = json.loads(raw_license.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                license_payload = None
+            if (
+                isinstance(license_payload, dict)
+                and "installation_id" in license_payload
+                and "signature" not in license_payload
+            ):
+                message = (
+                    "This is the installation identity, not a license. "
+                    "Select a vendor-issued signed license.key file."
+                )
+                self._set_license_state(False, message)
+                self.status_label.setText(message)
+                return
             document = read_license_file(license_path)
             result = verify_license_document(
                 document,

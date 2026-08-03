@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -122,6 +124,20 @@ def main() -> None:
     activate_button.click()
     assert "public verification key" in license_status.text()
     assert "Expecting value" not in window.status_label.text()
+    assert window.application_stack.currentIndex() == 0
+
+    # The installation identity is the one file a user is most likely to
+    # mistake for a license: same directory, same .json shape, no signature.
+    with tempfile.TemporaryDirectory() as temp_dir:
+        identity_file = Path(temp_dir) / "installation.json"
+        identity_file.write_text(
+            json.dumps({"installation_id": "ec65d956-test", "created_at": "2026-01-01T00:00:00"}),
+            encoding="utf-8",
+        )
+        license_input.setText(str(identity_file))
+        activate_button.click()
+    assert "installation identity" in license_status.text()
+    assert window.application_stack.currentIndex() == 0
 
     window._set_license_state(True, "Active: validation")
     assert window.application_stack.currentIndex() == 1
