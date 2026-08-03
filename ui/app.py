@@ -332,11 +332,18 @@ class MainWindow(QMainWindow):
 
         self.tabs = QTabWidget()
         self.tabs.setObjectName("workflowTabs")
-        self.tabs.addTab(_scroll_page(_dashboard_page()), "Dashboard")
-        self.tabs.addTab(_scroll_page(_workspace_page()), "Workspace")
-        self.tabs.addTab(_scroll_page(_settings_page()), "Settings")
-        self.tabs.addTab(_about_page(modules), "About")
-        self.application_stack.addWidget(self.tabs)
+        # Navigation follows the product brief: the matter is the centre, the
+        # filing record is first-class, and search is its own destination
+        # rather than a box inside settings.
+        self.tabs.addTab(_scroll_page(_workspace_page()), "Matters")
+        self.tabs.addTab(_scroll_page(_documents_page()), "Documents")
+        self.tabs.addTab(_scroll_page(_filing_record_page()), "Filing record")
+        self.tabs.addTab(_scroll_page(_search_page()), "Search")
+        self.tabs.addTab(_scroll_page(_reports_page()), "Reports")
+        self.tabs.addTab(_scroll_page(_settings_page(modules)), "Settings")
+        # The sidebar goes inside the stack, not around it, so a locked
+        # application shows the gate alone and never the navigation.
+        self.application_stack.addWidget(self._build_workbench())
         root_layout.addWidget(self.application_stack, stretch=1)
 
         footer = QHBoxLayout()
@@ -368,6 +375,73 @@ class MainWindow(QMainWindow):
         self._set_license_state(False, "Not activated")
         if _dev_unlock_requested():
             self._set_license_state(True, "DEVELOPMENT BUILD - license gate bypassed")
+
+    def _build_workbench(self) -> QWidget:
+        """Sidebar navigation beside the tab content.
+
+        The tab bar itself is hidden: the sidebar drives it, and the two are
+        kept in sync in both directions so programmatic ``setCurrentIndex``
+        calls -- which the evidence runners and several handlers make -- still
+        move the visible selection.
+        """
+        workbench = QWidget()
+        workbench.setObjectName("workbench")
+        layout = QHBoxLayout(workbench)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        sidebar = QFrame()
+        sidebar.setObjectName("sidebarFrame")
+        sidebar.setFixedWidth(200)
+        sidebar_layout = QVBoxLayout(sidebar)
+        sidebar_layout.setContentsMargins(0, 12, 0, 12)
+        sidebar_layout.setSpacing(4)
+
+        branding = QLabel("JurisNuru")
+        branding.setObjectName("sidebarBranding")
+        branding.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sidebar_layout.addWidget(branding)
+
+        subtitle = QLabel("Matter records for Kenyan legal practice")
+        subtitle.setObjectName("sidebarSubtitle")
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setWordWrap(True)
+        sidebar_layout.addWidget(subtitle)
+
+        # Driven off the tabs so the two can never disagree about what exists.
+        self._sidebar_buttons: list[QPushButton] = []
+        for index in range(self.tabs.count()):
+            button = QPushButton(self.tabs.tabText(index))
+            button.setObjectName("sidebarNavButton")
+            button.setCheckable(True)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.clicked.connect(lambda _checked, i=index: self.tabs.setCurrentIndex(i))
+            self._sidebar_buttons.append(button)
+            sidebar_layout.addWidget(button)
+
+        sidebar_layout.addStretch(1)
+
+        # Imported here rather than at module scope: ui/__init__ defines
+        # APP_VERSION and then imports this module, so a top-level import
+        # would be circular.
+        from ui import APP_VERSION
+
+        version_label = QLabel(f"JurisNuru {APP_VERSION}")
+        version_label.setObjectName("sidebarVersionLabel")
+        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sidebar_layout.addWidget(version_label)
+
+        layout.addWidget(sidebar)
+
+        self.tabs.tabBar().setVisible(False)
+        self.tabs.currentChanged.connect(self._sync_sidebar_selection)
+        self._sync_sidebar_selection(self.tabs.currentIndex())
+        layout.addWidget(self.tabs, stretch=1)
+        return workbench
+
+    def _sync_sidebar_selection(self, index: int) -> None:
+        for position, button in enumerate(self._sidebar_buttons):
+            button.setChecked(position == index)
 
     def _initialize_license_identity(self) -> None:
         from licensing.installation import ensure_installation_identity
@@ -1218,7 +1292,7 @@ def create_app(argv: list[str] | None = None) -> QApplication:
         return app
     app = QApplication(list(sys.argv if argv is None else argv))
     # Load professional stylesheet
-    stylesheet_path = Path(__file__).parent / "wakilios.qss"
+    stylesheet_path = Path(__file__).parent / "jurisnuru.qss"
     if stylesheet_path.exists():
         app.setStyleSheet(stylesheet_path.read_text(encoding="utf-8"))
     return app
@@ -1432,13 +1506,8 @@ def _workspace_page() -> QWidget:
     return page
 
 
-def _settings_page() -> QWidget:
-    """Settings: AI keys, backup, admin, and audit log."""
-    page = QWidget()
-    page.setObjectName("settingsPage")
-    layout = QVBoxLayout(page)
+def _import_group() -> QFrame:
 
-    # --- Import section ---
     import_group = QFrame()
     import_group.setObjectName("importGroup")
     import_layout = QVBoxLayout(import_group)
@@ -1464,9 +1533,11 @@ def _settings_page() -> QWidget:
     controls.addStretch(1)
     import_layout.addWidget(queue)
     import_layout.addLayout(controls)
-    layout.addWidget(import_group)
+    return import_group
 
-    # --- Search & RAG section ---
+
+def _search_group() -> QFrame:
+
     search_group = QFrame()
     search_group.setObjectName("searchGroup")
     search_layout = QVBoxLayout(search_group)
@@ -1490,9 +1561,11 @@ def _settings_page() -> QWidget:
     search_layout.addWidget(ask_box)
     search_layout.addWidget(ask_button)
     search_layout.addWidget(answer_box)
-    layout.addWidget(search_group)
+    return search_group
 
-    # --- AI Keys section ---
+
+def _ai_keys_group() -> QFrame:
+
     ai_group = QFrame()
     ai_group.setObjectName("aiKeysGroup")
     ai_layout = QFormLayout(ai_group)
@@ -1514,9 +1587,11 @@ def _settings_page() -> QWidget:
     save.setObjectName("saveProviderSettingsButton")
     ai_layout.addRow("Status", ai_status)
     ai_layout.addRow("", save)
-    layout.addWidget(ai_group)
+    return ai_group
 
-    # --- Backup section ---
+
+def _backup_group() -> QFrame:
+
     backup_group = QFrame()
     backup_group.setObjectName("backupGroup")
     backup_layout = QFormLayout(backup_group)
@@ -1532,9 +1607,11 @@ def _settings_page() -> QWidget:
     backup_layout.addRow("Restore", restore_status)
     backup_layout.addRow("", backup_button)
     backup_layout.addRow("", restore_button)
-    layout.addWidget(backup_group)
+    return backup_group
 
-    # --- Admin & Audit section ---
+
+def _admin_group() -> QFrame:
+
     admin_group = QFrame()
     admin_group.setObjectName("adminGroup")
     admin_layout = QVBoxLayout(admin_group)
@@ -1558,8 +1635,101 @@ def _settings_page() -> QWidget:
     refresh_audit.setObjectName("refreshAuditLogButton")
     admin_layout.addWidget(audit_list)
     admin_layout.addWidget(refresh_audit)
-    layout.addWidget(admin_group)
+    return admin_group
 
+
+def _documents_page() -> QWidget:
+    """Intake and review queue for documents entering the vault."""
+    page = QWidget()
+    page.setObjectName("documentsPage")
+    layout = QVBoxLayout(page)
+    layout.addWidget(_import_group())
+    layout.addStretch(1)
+    return page
+
+
+def _filing_record_page() -> QWidget:
+    """The firm's own account of what was filed, served and received."""
+    page = QWidget()
+    page.setObjectName("filingRecordPage")
+    layout = QVBoxLayout(page)
+
+    group = QFrame()
+    group.setObjectName("filingRecordGroup")
+    group_layout = QVBoxLayout(group)
+    heading = QLabel("Filing record")
+    heading.setObjectName("filingRecordGroupLabel")
+    caption = QLabel(
+        "A portal submission proves a filing was made. This is the firm's "
+        "independent record of what was filed, when, by whom, what was served, "
+        "what came back, and what happens next."
+    )
+    caption.setObjectName("filingRecordCaption")
+    caption.setWordWrap(True)
+    listing = QListWidget()
+    listing.setObjectName("filingRecordPageList")
+    listing.addItem("Open a matter to see its filing record")
+    group_layout.addWidget(heading)
+    group_layout.addWidget(caption)
+    group_layout.addWidget(listing)
+
+    layout.addWidget(group)
+    layout.addStretch(1)
+    return page
+
+
+def _search_page() -> QWidget:
+    """Grounded search and RAG over the firm's own record."""
+    page = QWidget()
+    page.setObjectName("searchPage")
+    layout = QVBoxLayout(page)
+    layout.addWidget(_search_group())
+    layout.addStretch(1)
+    return page
+
+
+def _reports_page() -> QWidget:
+    """Firm-level counts across matters, filings and payments."""
+    page = QWidget()
+    page.setObjectName("reportsPage")
+    layout = QVBoxLayout(page)
+
+    group = QFrame()
+    group.setObjectName("reportsGroup")
+    form = QFormLayout(group)
+    for label, object_name in (
+        ("Matters", "reportMattersLabel"),
+        ("Documents in vault", "reportDocumentsLabel"),
+        ("Filing records", "reportFilingRecordsLabel"),
+        ("Fees raised", "reportFeesLabel"),
+        ("Receipts recorded", "reportReceiptsLabel"),
+    ):
+        value = QLabel("-")
+        value.setObjectName(object_name)
+        form.addRow(label, value)
+    refresh = QPushButton("Refresh reports")
+    refresh.setObjectName("refreshReportsButton")
+    form.addRow("", refresh)
+
+    layout.addWidget(group)
+    layout.addStretch(1)
+    return page
+
+
+def _settings_page(modules: tuple[ModuleStatus, ...] = DEFAULT_MODULES) -> QWidget:
+    """Connection, firm setup, vault, provider keys, backup, admin, about.
+
+    The brief's navigation has no About destination, so the release and module
+    status cards live at the bottom of Settings.
+    """
+    page = QWidget()
+    page.setObjectName("settingsPage")
+    layout = QVBoxLayout(page)
+    layout.addWidget(_dashboard_page())
+    layout.addWidget(_ai_keys_group())
+    layout.addWidget(_backup_group())
+    layout.addWidget(_admin_group())
+    layout.addWidget(_about_page(modules))
     layout.addStretch(1)
     return page
 
