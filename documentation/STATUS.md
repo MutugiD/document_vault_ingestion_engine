@@ -33,7 +33,7 @@ F38 Release hardening, CI/CD, and E2E validation complete. Ready for v0.1.0 tag.
 | F5 matter/search | Complete | Matter records, document versions, SQLite FTS5 (sanitized), matter-scoped search, `tests/validate_search.py` |
 | F6 backup/restore | Complete | Encrypted local backup package, manifest, restore drill, wrong-key behavior, `tests/validate_backup.py` |
 | F7 cloud boundary | Complete | Provider-neutral grants, metadata allowlist, encrypted-package-only upload boundary, `tests/validate_cloud_boundary.py` |
-| F8 UI/package | Complete | PySide6 shell, 4-tab UI (Dashboard/Workspace/Settings/About), dark theme (wakilios.qss), solo mode, role-aware controls, worker pattern, `tests/validate_ui.py` |
+| F8 UI/package | Complete | PySide6 shell, sidebar navigation (Matters/Documents/Filing record/Search/Reports/Settings), dark navy theme (jurisnuru.qss), solo mode, role-aware controls, worker pattern, `tests/validate_ui.py` |
 | F9 frozen build | Complete | Real PyInstaller one-folder build, frozen executable selftest, `tests/validate_frozen_build.py` |
 | F10 local matter RAG | Complete | Three-product strategy, `matter_rag` entitlement, local hybrid retrieval, citation packet, `tests/validate_rag.py` |
 | F11 end-to-end verification | Complete | Licensed intake-to-RAG-to-backup-to-restore workflow, `tests/validate_e2e.py` |
@@ -63,7 +63,7 @@ F38 Release hardening, CI/CD, and E2E validation complete. Ready for v0.1.0 tag.
 | F35 Wakili-Mkononi integration boundary | Complete | User-approved matter export packet, citation packet handoff, entitlement gating, audit event, privacy validator, `tests/validate_wakilios_integration.py`, `main.py --wakili-mkononi-e2e` |
 | F36 hosted AI/LLM boundary | Complete | Provider-key status, local-citation-only prompt boundary, entitlement gating, no-context blocking, local fallback, audit event, `tests/validate_hosted_ai_boundary.py`, `main.py --hosted-ai-e2e` |
 | F37 JurisNuru firm management | Complete | Multi-seat firm backend, standard roles, litigation matter workspace, court costs and receipts, `.ics` calendar export, read-only offline cache, AI summaries with citations, solo mode, in-process architecture, `tests/validate_wakilios_backend.py`, `main.py --wakilios-backend-e2e` |
-| F38 UI redesign and polish | Complete | 4-tab UI (Dashboard/Workspace/Settings/About), dark navy/blue theme (wakilios.qss), BackendConnectionDialog for solo/multi-seat, role-aware controls |
+| F38 UI redesign and polish | Complete | sidebar navigation (Matters/Documents/Filing record/Search/Reports/Settings), dark navy theme (jurisnuru.qss), BackendConnectionDialog for solo/multi-seat, role-aware controls |
 | F39 Licensing hardening and CI/CD | Complete | Hard-coded RSA public key (§6.2), clock-rollback guard, Cython obfuscation (§6.3), IFC-Converter CI/CD (lint+audit+coverage+build+CodeQL), release workflow, `tools/keygen.py`, `tools/sign_license.py` |
 
 ## Next Actions

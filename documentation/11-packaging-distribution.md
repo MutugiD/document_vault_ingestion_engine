@@ -17,7 +17,7 @@ PyInstaller one-folder build through `main.spec`.
 - License public key (hard-coded in `licensing/core.pyd` after obfuscation).
 - `resources/license_public_key.pem` (reference copy, not used at runtime).
 - `resources/public_kenyan_legal_docs.json`.
-- `ui/wakilios.qss` (dark theme stylesheet).
+- `ui/jurisnuru.qss` (stylesheet).
 - `products/product_catalog.json`.
 - Embedded `release-manifest.json`.
 
