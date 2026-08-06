@@ -48,6 +48,28 @@ from wakilios.client import (
 from wakilios.core import WakiliOSBackend, initialize_firm_backend
 
 DEV_UNLOCK_ENV_VAR = "JURISNURU_DEV_UNLOCK"
+# Paid features, and the controls each one governs. A licence carries these
+# switches; until now they were parsed, displayed and ignored, so every plan
+# behaved like enterprise.
+ENTITLEMENT_CONTROLS: dict[str, tuple[str, ...]] = {
+    "document_intake": (
+        "addFilesButton",
+        "runOcrButton",
+        "uploadDocumentButton",
+    ),
+    "cloud_backup": ("createBackupButton",),
+    "managed_restore": ("restoreDrillButton",),
+    "matter_rag": ("askRagButton", "generateSummaryButton"),
+    "hosted_ai": ("saveProviderSettingsButton",),
+}
+
+ENTITLEMENT_LABELS: dict[str, str] = {
+    "document_intake": "Document intake",
+    "cloud_backup": "Cloud backup",
+    "managed_restore": "Managed restore",
+    "matter_rag": "Matter search and RAG",
+    "hosted_ai": "Hosted AI",
+}
 
 
 def _choose_file(parent, caption: str, filters: str) -> str:
@@ -748,6 +770,7 @@ class MainWindow(QMainWindow):
 
         self._backend_client: WakiliOSClient | None = None
         self._backend_local: WakiliOSBackend | None = None
+        self._entitlements: dict[str, bool] = {}
         self._workspace_root = workspace
         self._current_role: str = ""
         self._current_username: str = ""
@@ -900,6 +923,31 @@ class MainWindow(QMainWindow):
         if installation_label is not None:
             installation_label.setText(f"Installation ID: {identity.installation_id}")
 
+    def _apply_entitlements(self) -> None:
+        """Disable the controls this licence does not pay for.
+
+        A withheld feature is disabled and says why, rather than being hidden.
+        A firm that cannot find a feature raises a support ticket; a firm that
+        can see it greyed out with the reason knows what to buy.
+
+        Local data is never gated. Reading, searching by name and exporting the
+        matter record stay available regardless, because a firm's own record
+        must not become unreadable when a licence lapses.
+        """
+        if not self._entitlements:
+            return
+        for name, controls in ENTITLEMENT_CONTROLS.items():
+            granted = self._entitlements.get(name, False)
+            for object_name in controls:
+                widget = self.findChild(QPushButton, object_name)
+                if widget is None:
+                    continue
+                widget.setEnabled(granted)
+                widget.setToolTip(
+                    "" if granted else f"{ENTITLEMENT_LABELS[name]} is not included in this licence"
+                )
+        self._publish_state()
+
     def _publish_state(self) -> None:
         """Publish what the window currently holds, for an automated harness.
 
@@ -926,6 +974,7 @@ class MainWindow(QMainWindow):
         write_state(
             {
                 "license_active": self._license_active,
+                "entitlements": dict(self._entitlements),
                 "gate_index": self.application_stack.currentIndex(),
                 "destination": self.tabs.tabText(self.tabs.currentIndex()),
                 "destination_index": self.tabs.currentIndex(),
@@ -1042,8 +1091,21 @@ class MainWindow(QMainWindow):
             self._set_license_state(False, message)
             self.status_label.setText(message)
             return
+        self._entitlements = {
+            name: bool(getattr(document.features, name, False)) for name in ENTITLEMENT_CONTROLS
+        }
         self._set_license_state(True, f"Active: {document.firm_display_name} ({document.plan})")
-        self.status_label.setText("License activated; JurisNuru is ready")
+        self._apply_entitlements()
+        withheld = [
+            ENTITLEMENT_LABELS[name]
+            for name, granted in sorted(self._entitlements.items())
+            if not granted
+        ]
+        self.status_label.setText(
+            f"License activated ({document.plan}); not included: {', '.join(withheld)}"
+            if withheld
+            else f"License activated; {document.plan} plan includes every feature"
+        )
 
     @Slot()
     def copy_installation_id(self) -> None:
@@ -1250,6 +1312,8 @@ class MainWindow(QMainWindow):
         new_matter = self.findChild(QPushButton, "newMatterButton")
         if new_matter is not None:
             new_matter.setEnabled(can_write)
+        # A role may narrow what a licence grants; it may never widen it.
+        self._apply_entitlements()
 
     def _solo_token(self) -> str:
         """Get a session token for solo mode operations."""
