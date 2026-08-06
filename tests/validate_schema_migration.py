@@ -41,9 +41,24 @@ MIGRATED_COLUMNS = {
 # Tables each migration creates outright.
 MIGRATED_TABLES = ("matter_filing_records",)
 
+# Indexes migration 3 adds. Without them every "what is due today" query is a
+# full scan of four tables, which is the query the daily reminder runs on a
+# timer and the phone runs on every sync.
+MIGRATED_INDEXES = {
+    "matter_activities": "idx_activities_starts_at",
+    "lodgings": "idx_lodgings_due_date",
+    "court_decisions": "idx_decisions_date",
+    "matter_filing_records": "idx_filing_next_action",
+    "receipts": "idx_receipts_date",
+}
+
 
 def _columns(connection: sqlite3.Connection, table: str) -> set[str]:
     return {row["name"] for row in connection.execute(f"PRAGMA table_info({table})")}
+
+
+def _indexes(connection: sqlite3.Connection, table: str) -> set[str]:
+    return {row["name"] for row in connection.execute(f"PRAGMA index_list({table})")}
 
 
 def _user_version(connection: sqlite3.Connection) -> int:
@@ -94,6 +109,10 @@ def main() -> None:
                     assert column in present, f"{table}.{column} missing after migration"
             for table in MIGRATED_TABLES:
                 assert _columns(connection, table), f"{table} was not created by migration"
+            for table, index in MIGRATED_INDEXES.items():
+                assert index in _indexes(connection, table), (
+                    f"{index} missing after migration; date range queries would full-scan {table}"
+                )
 
             row = connection.execute(
                 "SELECT fee_type, amount, prn FROM fee_entries WHERE fee_id = 'FEE-1'"
@@ -128,6 +147,8 @@ def main() -> None:
                     assert column in present, f"fresh database is missing {table}.{column}"
             for table in MIGRATED_TABLES:
                 assert _columns(connection, table), f"fresh database is missing {table}"
+            for table, index in MIGRATED_INDEXES.items():
+                assert index in _indexes(connection, table), f"fresh database is missing {index}"
 
     print(f"SCHEMA MIGRATION VALIDATION PASS: upgraded v0 -> v{SCHEMA_VERSION}")
 

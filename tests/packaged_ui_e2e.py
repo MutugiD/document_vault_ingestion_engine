@@ -451,15 +451,15 @@ def main() -> int:
             (identity, "installation identity"),
         ):
             if not app.type_into("License file", str(wrong)):
-                record(f"Gate: rejects {wrong.name}", False, "license input not reachable")
+                record(f"Gate: rejects the {expected}", False, "license input not reachable")
                 continue
             if not app.press("Activate license"):
-                record(f"Gate: rejects {wrong.name}", False, "Activate control not reachable")
+                record(f"Gate: rejects the {expected}", False, "Activate control not reachable")
                 continue
             time.sleep(1.5)
             still_locked = app.state().get("license_active") is False
             record(
-                f"Gate: rejects {wrong.name}",
+                f"Gate: rejects the {expected}",
                 still_locked,
                 "stayed locked" if still_locked else "GATE OPENED ON AN INVALID FILE",
             )

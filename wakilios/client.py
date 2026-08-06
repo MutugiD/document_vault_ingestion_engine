@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 
@@ -91,6 +92,14 @@ class WakiliOSClient:
                 "display_name": display_name,
             },
         )
+
+    def upcoming(
+        self, start: str, end: str, matter_id: str = "", limit: int = 500
+    ) -> list[dict[str, Any]]:
+        """Dated obligations across every matter, ``start`` inclusive, ``end`` exclusive."""
+        query = urlencode({"start": start, "end": end, "matter_id": matter_id, "limit": limit})
+        result = self._get(f"/calendar/upcoming?{query}")
+        return list(result.get("entries", []))
 
     def list_matters(self) -> list[dict[str, Any]]:
         result = self._get("/matters")

@@ -7,11 +7,12 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import sqlite3
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -37,6 +38,44 @@ DOCUMENT_ROLES = frozenset({ADMIN_ROLE, ADVOCATE_ROLE, CLERK_ROLE})
 ACCOUNTS_ROLES = frozenset({ADMIN_ROLE, ACCOUNTS_ROLE})
 SESSION_TTL_MINUTES = 90
 OFFLINE_CACHE_SCHEMA_VERSION = "1"
+
+NAIROBI = timezone(timedelta(hours=3), "EAT")
+"""Kenyan civil time.
+
+Fixed rather than looked up: Kenya has never observed daylight saving, and a
+frozen build cannot rely on ``tzdata`` being present.
+"""
+
+CALENDAR_DATE_COLUMNS: dict[str, tuple[str, ...]] = {
+    "matter_activities": ("starts_at",),
+    "lodgings": ("due_date", "lodged_date"),
+    "court_decisions": ("decision_date",),
+    "receipts": ("receipt_date",),
+    "matter_filing_records": ("filed_at", "next_action_date"),
+    "wakilios_matter_details": ("filing_date",),
+}
+"""Columns holding a date a firm cares about, as opposed to a log timestamp.
+
+These are stored as **Nairobi local wall time with no offset** -- ``YYYY-MM-DD``
+when only the day is known, ``YYYY-MM-DDTHH:MM:SS`` when a time is. Log columns
+(``created_at``, audit rows) keep UTC ``...Z`` via :func:`_datetime_to_text`.
+
+The split is deliberate and matters when reading queries here. Within a single
+timezone, lexicographic order over these strings *is* chronological order, so
+``ORDER BY`` and range comparisons work directly on TEXT. It also means the
+half-open day range ``col >= '2026-08-06' AND col < '2026-08-07'`` catches both
+shapes on the same day, because::
+
+    '2026-08-06' < '2026-08-06T09:00:00' < '2026-08-07'
+
+That property is what lets date-only and date-time columns share one query
+instead of needing a union of two. Storing UTC here would buy nothing and would
+put a 06:00 EAT hearing on the previous day.
+"""
+
+_DATE_ONLY_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_SLASHED_DATE_PATTERN = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")
+_ACCEPTED_DATE_FORMATS = "YYYY-MM-DD, DD/MM/YYYY, or YYYY-MM-DDTHH:MM:SS"
 
 
 class WakiliOSError(Exception):
@@ -193,6 +232,7 @@ class WakiliOSBackend:
         summary: str = "",
     ) -> dict[str, object]:
         actor = self.require_role(token, WRITE_ROLES)
+        filing_date = normalize_matter_date(filing_date, field="filing_date")
         matter = create_matter(
             self.vault_root,
             internal_reference=internal_reference,
@@ -290,7 +330,7 @@ class WakiliOSBackend:
             fields={
                 "activity_type": str(fields["activity_type"]),
                 "title": str(fields["title"]),
-                "starts_at": str(fields["starts_at"]),
+                "starts_at": normalize_matter_date(fields["starts_at"], field="starts_at"),
                 "court_session": str(fields.get("court_session", "")),
                 "status": str(fields.get("status", "scheduled")),
                 "notes": str(fields.get("notes", "")),
@@ -309,8 +349,10 @@ class WakiliOSBackend:
             fields={
                 "document_kind": fields["document_kind"],
                 "party": fields.get("party", ""),
-                "due_date": fields.get("due_date", ""),
-                "lodged_date": fields.get("lodged_date", ""),
+                "due_date": normalize_matter_date(fields.get("due_date", ""), field="due_date"),
+                "lodged_date": normalize_matter_date(
+                    fields.get("lodged_date", ""), field="lodged_date"
+                ),
                 "filing_status": fields.get("filing_status", "pending"),
                 "linked_document_id": fields.get("linked_document_id", ""),
                 "filing_reference": fields.get("filing_reference", ""),
@@ -329,7 +371,9 @@ class WakiliOSBackend:
             event_type="court_decision_created",
             fields={
                 "decision_type": fields["decision_type"],
-                "decision_date": fields["decision_date"],
+                "decision_date": normalize_matter_date(
+                    fields["decision_date"], field="decision_date"
+                ),
                 "court": fields.get("court", ""),
                 "decision_maker": fields.get("decision_maker", ""),
                 "outcome": fields.get("outcome", ""),
@@ -374,13 +418,15 @@ class WakiliOSBackend:
                 "tracking_number": str(fields.get("tracking_number", "")),
                 "station": str(fields.get("station", "")),
                 "case_number": str(fields.get("case_number", "")),
-                "filed_at": str(fields.get("filed_at", "")),
+                "filed_at": normalize_matter_date(fields.get("filed_at", ""), field="filed_at"),
                 "filed_by": str(fields.get("filed_by", "")),
                 "what_was_filed": str(fields.get("what_was_filed", "")),
                 "what_was_served": str(fields.get("what_was_served", "")),
                 "what_was_received": str(fields.get("what_was_received", "")),
                 "next_action": str(fields.get("next_action", "")),
-                "next_action_date": str(fields.get("next_action_date", "")),
+                "next_action_date": normalize_matter_date(
+                    fields.get("next_action_date", ""), field="next_action_date"
+                ),
                 "portal_status": str(fields.get("portal_status", "")),
                 "linked_lodging_id": str(fields.get("linked_lodging_id", "")),
                 "linked_receipt_id": str(fields.get("linked_receipt_id", "")),
@@ -407,7 +453,7 @@ class WakiliOSBackend:
                 "payer": str(fields.get("payer", "")),
                 "amount": float(fields["amount"]),
                 "currency": str(fields.get("currency", "KES")),
-                "receipt_date": str(fields["receipt_date"]),
+                "receipt_date": normalize_matter_date(fields["receipt_date"], field="receipt_date"),
                 "linked_fee_id": str(fields.get("linked_fee_id", "")),
                 "linked_document_id": str(fields.get("linked_document_id", "")),
             },
@@ -632,6 +678,58 @@ class WakiliOSBackend:
             )
         return _build_ics(events)
 
+    def upcoming_dates(
+        self,
+        token: str,
+        *,
+        start: str,
+        end: str,
+        matter_id: str = "",
+        limit: int = 500,
+    ) -> list[dict[str, object]]:
+        """Every dated obligation across the firm between ``start`` and ``end``.
+
+        Half-open: ``start`` is included, ``end`` is not, so one day is
+        ``start="2026-08-06", end="2026-08-07"``. See
+        :data:`CALENDAR_DATE_COLUMNS` for why that range catches both date-only
+        and date-time rows without a second query shape.
+
+        ``require_authenticated`` rather than a write role: a diary is a read,
+        and a read-only seat asking "what is on today" is the whole point.
+
+        Deliberately writes no audit row. The desktop polls this on a timer and
+        the phone on every sync; ``wakilios_audit_events`` has no retention
+        policy and no index on ``created_at``, so a row per poll would degrade
+        the admin view a little more each day for no investigative value.
+        """
+        self.require_authenticated(token)
+        window_start = normalize_matter_date(start, field="start")
+        window_end = normalize_matter_date(end, field="end")
+        parameters: list[object] = [window_start, window_end]
+        matter_filter = ""
+        if matter_id:
+            matter_filter = "AND entries.matter_id = ?"
+            parameters.append(matter_id)
+        parameters.append(int(limit))
+        with _connect(self.database_path) as connection:
+            rows = connection.execute(
+                f"""
+                SELECT
+                    entries.*,
+                    m.internal_reference AS matter_reference,
+                    m.case_number AS case_number,
+                    m.client_name AS client_name
+                FROM ({_UPCOMING_ENTRIES_SQL}) AS entries
+                JOIN matters m ON m.matter_id = entries.matter_id
+                WHERE entries.entry_date >= ? AND entries.entry_date < ?
+                {matter_filter}
+                ORDER BY entries.entry_date ASC, entries.title ASC
+                LIMIT ?
+                """,
+                parameters,
+            ).fetchall()
+        return [_upcoming_mapping(row) for row in rows]
+
     def build_offline_cache(self, token: str) -> OfflineCache:
         self.require_authenticated(token)
         with _connect(self.database_path) as connection:
@@ -826,7 +924,7 @@ def initialize_firm_backend(
     return backend
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 """Current schema generation.
 
 Bump this and add a matching entry to ``_MIGRATIONS`` whenever a column or
@@ -904,9 +1002,76 @@ def _migration_2_filing_ledger(connection: sqlite3.Connection) -> None:
     _add_column(connection, "documents", "filing_role", "TEXT NOT NULL DEFAULT ''")
 
 
+_CALENDAR_INDEXES = (
+    ("matter_activities", "idx_activities_starts_at", "starts_at"),
+    ("lodgings", "idx_lodgings_due_date", "due_date"),
+    ("court_decisions", "idx_decisions_date", "decision_date"),
+    ("matter_filing_records", "idx_filing_next_action", "next_action_date"),
+    ("receipts", "idx_receipts_date", "receipt_date"),
+)
+
+
+def _migration_3_calendar_dates(connection: sqlite3.Connection) -> None:
+    """Canonicalise every matter date, and make date ranges indexable.
+
+    These columns are ``TEXT NOT NULL`` and nothing has ever validated them, so
+    a database can hold ``2026-08-06``, ``2026-08-06T09:00:00Z`` and ``06/08/2026``
+    in the same column. That is survivable for display and fatal for a query:
+    "what is due today" has no answer over three formats, and the ``.ics``
+    export corrupted the whole file on the first value it could not parse.
+
+    See :data:`CALENDAR_DATE_COLUMNS` for the stored format and why it is
+    Nairobi local rather than UTC.
+
+    A value that will not parse is **left exactly as it was** and reported in an
+    audit row. A firm's record of what it typed is worth more than our
+    preference for a tidy column, and a lost date cannot be recovered from a
+    migration that has already run.
+    """
+    for table, columns in CALENDAR_DATE_COLUMNS.items():
+        present = {row["name"] for row in connection.execute(f"PRAGMA table_info({table})")}
+        if not present:
+            continue
+        for column in columns:
+            if column not in present:
+                continue
+            rows = connection.execute(
+                f"SELECT rowid AS rid, {column} AS value FROM {table} WHERE {column} <> ''"
+            ).fetchall()
+            unparsed: list[str] = []
+            for row in rows:
+                original = str(row["value"])
+                coerced = _coerce_matter_date(original)
+                if coerced is None:
+                    unparsed.append(original)
+                elif coerced != original:
+                    connection.execute(
+                        f"UPDATE {table} SET {column} = ? WHERE rowid = ?",
+                        (coerced, row["rid"]),
+                    )
+            if unparsed:
+                _audit(
+                    connection,
+                    actor_id="system",
+                    event_type="date_backfill_unparsed",
+                    target_id=f"{table}.{column}",
+                    details={"count": len(unparsed), "samples": sorted(set(unparsed))[:5]},
+                )
+
+    # A missing table is skipped rather than an error, for the same reason
+    # _add_column tolerates one: this database file is shared with the search
+    # store, and a migration may run against a shape that does not have every
+    # table yet.
+    for table, index, column in _CALENDAR_INDEXES:
+        if not connection.execute(f"PRAGMA table_info({table})").fetchone():
+            continue
+        connection.execute(f"CREATE INDEX IF NOT EXISTS {index} ON {table} ({column})")
+
+
 _MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (
     _migration_1_filing_record,
     _migration_2_filing_ledger,
+    _migration_3_calendar_dates,
 )
 
 
@@ -1188,6 +1353,88 @@ def _matter_mapping(row: sqlite3.Row) -> dict[str, object]:
     }
 
 
+_UPCOMING_ENTRIES_SQL = """
+SELECT
+    a.activity_id       AS entry_id,
+    'hearing'           AS kind,
+    a.matter_id         AS matter_id,
+    a.starts_at         AS entry_date,
+    a.title             AS title,
+    a.status            AS status,
+    a.court_session     AS detail,
+    'matter_activities' AS source_table
+FROM matter_activities a
+WHERE a.calendar_visible = 1 AND a.starts_at <> ''
+UNION ALL
+SELECT
+    l.lodging_id,
+    'lodging_due',
+    l.matter_id,
+    l.due_date,
+    'Lodging due: ' || l.document_kind,
+    l.filing_status,
+    l.filing_reference,
+    'lodgings'
+FROM lodgings l
+WHERE l.due_date <> ''
+UNION ALL
+SELECT
+    d.decision_id,
+    'decision',
+    d.matter_id,
+    d.decision_date,
+    'Court decision: ' || d.decision_type,
+    '',
+    d.outcome,
+    'court_decisions'
+FROM court_decisions d
+WHERE d.decision_date <> ''
+UNION ALL
+SELECT
+    f.filing_record_id,
+    'next_action',
+    f.matter_id,
+    f.next_action_date,
+    'Next action: ' || CASE WHEN f.next_action <> '' THEN f.next_action ELSE 'follow up' END,
+    f.portal_status,
+    f.tracking_number,
+    'matter_filing_records'
+FROM matter_filing_records f
+WHERE f.next_action_date <> ''
+"""
+"""The four things that put a date in an advocate's diary.
+
+One shape across four tables, so callers -- the daily reminder, the phone
+snapshot, the calendar destination -- ask one question instead of four. Each
+branch filters on a non-empty date so the indexes from migration 3 apply.
+"""
+
+
+def _upcoming_mapping(row: sqlite3.Row) -> dict[str, object]:
+    """Split the stored date into day and time for display.
+
+    ``time`` is empty for an all-day entry, which is the difference between "in
+    court at 09:00" and "due sometime on the 6th" -- a distinction the UI has to
+    make and the storage format deliberately preserves.
+    """
+    stored = str(row["entry_date"])
+    day, _, clock = stored.partition("T")
+    return {
+        "entry_id": str(row["entry_id"]),
+        "kind": str(row["kind"]),
+        "matter_id": str(row["matter_id"]),
+        "matter_reference": str(row["matter_reference"]),
+        "case_number": str(row["case_number"]),
+        "client_name": str(row["client_name"]),
+        "title": str(row["title"]),
+        "date": day,
+        "time": clock[:5],
+        "status": str(row["status"] or ""),
+        "detail": str(row["detail"] or ""),
+        "source_table": str(row["source_table"]),
+    }
+
+
 def _select_tab(
     connection: sqlite3.Connection,
     table: str,
@@ -1244,30 +1491,85 @@ def _build_ics(events: list[dict[str, str]]) -> str:
     lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        "PRODID:-//WakiliOS//Matter Calendar//EN",
+        "PRODID:-//JurisNuru//Matter Calendar//EN",
         "CALSCALE:GREGORIAN",
+        "X-WR-CALNAME:JurisNuru matters",
     ]
     now = _ics_datetime(_utc_now())
     for event in events:
+        bounds = _ics_event_bounds(event["date"])
+        if bounds is None:
+            # Skip rather than emit the raw value. A date that will not parse
+            # used to be written through verbatim, producing "DTSTART:TBC" --
+            # which is not a parse failure for that one event, it is a parse
+            # failure for the file, so no event at all reached the calendar.
+            continue
+        start, end = bounds
         lines.extend(
             [
                 "BEGIN:VEVENT",
-                f"UID:{_escape_ics(event['uid'])}@wakilios",
+                f"UID:{_escape_ics(event['uid'])}@jurisnuru",
                 f"DTSTAMP:{now}",
-                f"DTSTART:{_ics_date_or_datetime(event['date'])}",
+                start,
+                end,
                 f"SUMMARY:{_escape_ics(event['summary'])}",
                 f"DESCRIPTION:{_escape_ics(event['description'])}",
                 "END:VEVENT",
             ]
         )
     lines.append("END:VCALENDAR")
-    return "\r\n".join(lines) + "\r\n"
+    folded = [folded_line for line in lines for folded_line in _fold_ics(line)]
+    return "\r\n".join(folded) + "\r\n"
 
 
-def _ics_date_or_datetime(value: str) -> str:
-    if "T" in value:
-        return _ics_datetime(_parse_datetime(value))
-    return value.replace("-", "")
+def _ics_event_bounds(value: str) -> tuple[str, str] | None:
+    """Build DTSTART/DTEND for one event, or ``None`` if the date is unusable.
+
+    An all-day entry gets ``VALUE=DATE`` with an exclusive end on the next day,
+    which is how RFC 5545 spells "occupies this whole day". A timed entry is
+    written in Nairobi local time with an explicit TZID rather than converted to
+    UTC, so a 09:00 mention still reads 09:00 in the advocate's calendar.
+    """
+    coerced = _coerce_matter_date(value)
+    if not coerced:
+        return None
+    if "T" in coerced:
+        start = datetime.fromisoformat(coerced)
+        end = start + timedelta(hours=1)
+        return (
+            f"DTSTART;TZID=Africa/Nairobi:{start.strftime('%Y%m%dT%H%M%S')}",
+            f"DTEND;TZID=Africa/Nairobi:{end.strftime('%Y%m%dT%H%M%S')}",
+        )
+    day = date.fromisoformat(coerced)
+    return (
+        f"DTSTART;VALUE=DATE:{day.strftime('%Y%m%d')}",
+        f"DTEND;VALUE=DATE:{(day + timedelta(days=1)).strftime('%Y%m%d')}",
+    )
+
+
+def _fold_ics(line: str) -> list[str]:
+    """Wrap a content line to 75 octets, per RFC 5545 section 3.1.
+
+    Octets, not characters: the limit is on the encoded length, and a matter
+    title carrying a Kiswahili diacritic would otherwise be measured short and
+    emitted over-long. Continuation lines begin with a single space, which the
+    parser strips when unfolding.
+    """
+    encoded = line.encode("utf-8")
+    if len(encoded) <= 75:
+        return [line]
+    chunks: list[bytes] = []
+    limit = 75
+    while encoded:
+        head, encoded = encoded[:limit], encoded[limit:]
+        # Never split a multi-byte character: continuation bytes are 10xxxxxx,
+        # so push them back until the boundary sits on a lead byte.
+        while head and encoded and (encoded[0] & 0xC0) == 0x80:
+            encoded = head[-1:] + encoded
+            head = head[:-1]
+        chunks.append(head)
+        limit = 74  # the leading space costs one octet
+    return [chunks[0].decode("utf-8")] + [f" {chunk.decode('utf-8')}" for chunk in chunks[1:]]
 
 
 def _ics_datetime(value: datetime) -> str:
@@ -1310,6 +1612,58 @@ def _urlsafe_b64decode(value: str) -> bytes:
 
 def _datetime_to_text(value: datetime) -> str:
     return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+
+def _coerce_matter_date(value: str) -> str | None:
+    """Return the canonical stored form of a matter date, or ``None``.
+
+    ``None`` means "this is not a date", and callers differ on what to do about
+    it: :func:`normalize_matter_date` refuses the write, while the backfill
+    migration leaves the row alone. Returning a sentinel rather than raising is
+    what lets the migration keep a value it cannot understand instead of
+    destroying a firm's record.
+
+    A naive datetime is taken to already be Nairobi local -- that is what the
+    UI's own forms produce -- while anything carrying an offset is converted.
+    """
+    text = value.strip()
+    if not text:
+        return ""
+    slashed = _SLASHED_DATE_PATTERN.match(text)
+    if slashed is not None:
+        # Day-first: the convention on the Judiciary portal and on every
+        # Kenyan court form. Month-first would silently transpose 06/08.
+        day, month, year = (int(part) for part in slashed.groups())
+        try:
+            return date(year, month, day).isoformat()
+        except ValueError:
+            return None
+    if _DATE_ONLY_PATTERN.match(text):
+        try:
+            return date.fromisoformat(text).isoformat()
+        except ValueError:
+            return None
+    if "T" not in text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(NAIROBI)
+    return parsed.strftime("%Y-%m-%dT%H:%M:%S")
+
+
+def normalize_matter_date(value: object, *, field: str) -> str:
+    """Canonicalise a date on the way in, or refuse it.
+
+    Empty is allowed: these columns are legitimately optional, and a lodging
+    with no due date yet is an ordinary state rather than an error.
+    """
+    coerced = _coerce_matter_date(str(value))
+    if coerced is None:
+        raise WakiliOSError(f"{field} is not a date: {str(value)!r}. Use {_ACCEPTED_DATE_FORMATS}.")
+    return coerced
 
 
 def _parse_datetime(value: str) -> datetime:

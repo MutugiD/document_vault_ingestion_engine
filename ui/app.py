@@ -8,6 +8,7 @@ import sys
 import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, Signal, Slot
@@ -45,7 +46,13 @@ from wakilios.client import (
     WakiliOSClientError,
     WakiliOSConnectionError,
 )
-from wakilios.core import WakiliOSBackend, initialize_firm_backend
+from wakilios.core import (
+    NAIROBI,
+    WakiliOSBackend,
+    WakiliOSError,
+    initialize_firm_backend,
+    normalize_matter_date,
+)
 
 DEV_UNLOCK_ENV_VAR = "JURISNURU_DEV_UNLOCK"
 # Paid features, and the controls each one governs. A licence carries these
@@ -137,6 +144,15 @@ class FormField:
     choices: tuple[str, ...] = ()
     numeric: bool = False
     required: bool = False
+    is_date: bool = False
+    """Validated against the backend's own date rules before the form closes.
+
+    The backend refuses a date it cannot parse, which is right -- an
+    unparseable due date used to corrupt the whole calendar export. But a
+    rejection that arrives as a status-bar error after the dialog has closed
+    loses the user's typing and does not say which field was wrong. Checking
+    here means the message names the field while it is still on screen.
+    """
 
 
 class MatterRecordDialog(QDialog):
@@ -206,6 +222,14 @@ class MatterRecordDialog(QDialog):
                 except ValueError:
                     self.error_label.setText(f"{field.label} must be a number.")
                     return
+            if field.is_date and value:
+                try:
+                    normalize_matter_date(value, field=field.label)
+                except WakiliOSError:
+                    self.error_label.setText(
+                        f"{field.label} must be a date: 2026-08-06 or 06/08/2026."
+                    )
+                    return
         self.accept()
 
     def values(self) -> dict[str, object]:
@@ -255,7 +279,7 @@ MATTER_FIELDS: tuple[FormField, ...] = (
         ),
     ),
     FormField("filing_status", "Filing status", choices=("draft", "filed", "served", "closed")),
-    FormField("filing_date", "Filing date", "YYYY-MM-DD"),
+    FormField("filing_date", "Filing date", "YYYY-MM-DD", is_date=True),
 )
 
 
@@ -335,16 +359,37 @@ def _draft_matter_summary(workspace: dict) -> str:
         if str(item.get("starts_at") or "").strip()
     ]
     if upcoming:
-        soonest = sorted(upcoming, key=lambda item: str(item.get("starts_at")))[-1]
+        # Sorting is chronological because starts_at is stored as Nairobi local
+        # wall time (see wakilios.core.CALENDAR_DATE_COLUMNS). This used to take
+        # [-1] into a variable named "soonest" under a label reading "Recorded
+        # activity" -- three different intentions, and the one that shipped was
+        # the furthest-away date.
+        ordered = sorted(upcoming, key=lambda item: str(item.get("starts_at")))
+        today = _today_iso()
+        future = [item for item in ordered if str(item.get("starts_at")) >= today]
+        entry = future[0] if future else ordered[-1]
+        label = "Next activity" if future else "Last recorded activity"
         lines.append(
-            f"Recorded activity: {soonest.get('activity_type', '')} "
-            f"{soonest.get('starts_at', '')}".strip()
-            + "."
+            f"{label}: {entry.get('activity_type', '')} {entry.get('starts_at', '')}".strip() + "."
         )
 
     lines.append("")
     lines.append("Drafted from the matter record. Verify before relying on it.")
     return "\n".join(lines)
+
+
+def _today_iso() -> str:
+    """Today in Nairobi, as stored dates are written.
+
+    Not ``date.today()``: that follows the machine's clock, and an advocate
+    travelling would see yesterday's diary.
+    """
+    return datetime.now(NAIROBI).date().isoformat()
+
+
+def _tomorrow_iso() -> str:
+    """The exclusive end of today's half-open range."""
+    return (datetime.now(NAIROBI).date() + timedelta(days=1)).isoformat()
 
 
 def _next_reference() -> str:
@@ -511,7 +556,7 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
                 required=True,
             ),
             FormField("title", "Title", "what this activity is", required=True),
-            FormField("starts_at", "Date", "YYYY-MM-DD"),
+            FormField("starts_at", "Date", "YYYY-MM-DD", is_date=True),
             FormField("court_session", "Court room", "e.g. Courtroom 32, 2nd Floor"),
             FormField("status", "Actioned to", "e.g. Hon. Justice Peter Mulwa"),
             FormField("notes", "Outcome"),
@@ -533,8 +578,8 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
         fields=(
             FormField("document_kind", "Document", "what is being lodged", required=True),
             FormField("party", "Created by"),
-            FormField("due_date", "Due date", "YYYY-MM-DD"),
-            FormField("lodged_date", "Lodged date", "YYYY-MM-DD"),
+            FormField("due_date", "Due date", "YYYY-MM-DD", is_date=True),
+            FormField("lodged_date", "Lodged date", "YYYY-MM-DD", is_date=True),
             FormField(
                 "filing_status",
                 "Fee status",
@@ -563,7 +608,7 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
                 choices=("Ruling", "Judgment", "Order", "Direction"),
                 required=True,
             ),
-            FormField("decision_date", "Date", "YYYY-MM-DD"),
+            FormField("decision_date", "Date", "YYYY-MM-DD", is_date=True),
             FormField("court", "Court", "e.g. Milimani High Court"),
             FormField("decision_maker", "Decision maker", "e.g. Hon. Justice Francis Gikonyo"),
             FormField("outcome", "Outcome"),
@@ -606,7 +651,7 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
         fields=(
             FormField("receipt_number", "Customer ref#", "e.g. E6EWRY6F", required=True),
             FormField("amount", "Amount paid", "0.00", numeric=True, required=True),
-            FormField("receipt_date", "Date", "YYYY-MM-DD"),
+            FormField("receipt_date", "Date", "YYYY-MM-DD", is_date=True),
             FormField("issuer", "Channel", choices=("PYBL", "MPESA", "KCB", "Cash")),
             FormField("payer", "Payer"),
             FormField("linked_fee_id", "Against fee", "fee id, optional"),
@@ -644,13 +689,13 @@ MATTER_TAB_VIEWS: tuple[MatterTabView, ...] = (
         fields=(
             FormField("tracking_number", "Tracking number", "e.g. AERJ2026", required=True),
             FormField("what_was_filed", "What was filed", required=True),
-            FormField("filed_at", "Filed on", "YYYY-MM-DD"),
+            FormField("filed_at", "Filed on", "YYYY-MM-DD", is_date=True),
             FormField("station", "Station", "e.g. Milimani High Court"),
             FormField("case_number", "Case number", "e.g. HCCOMM/E214/2026"),
             FormField("what_was_served", "What was served"),
             FormField("what_was_received", "What came back", "e.g. filing receipt"),
             FormField("next_action", "Next action"),
-            FormField("next_action_date", "Next action date", "YYYY-MM-DD"),
+            FormField("next_action_date", "Next action date", "YYYY-MM-DD", is_date=True),
             FormField("portal_status", "Portal status", choices=("Not Actioned", "Actioned")),
         ),
     ),
@@ -1491,6 +1536,18 @@ class MainWindow(QMainWindow):
         if self._backend_client is not None:
             return self._backend_client.export_calendar(matter_id)
         return ""
+
+    def _backend_upcoming(
+        self, start: str, end: str, matter_id: str = "", limit: int = 500
+    ) -> list[dict]:
+        """Dated obligations across every matter, ``start`` inclusive, ``end`` exclusive."""
+        if self._backend_local is not None:
+            return self._backend_local.upcoming_dates(
+                self._solo_token(), start=start, end=end, matter_id=matter_id, limit=limit
+            )
+        if self._backend_client is not None:
+            return self._backend_client.upcoming(start, end, matter_id=matter_id, limit=limit)
+        return []
 
     def _backend_audit_log(self) -> dict:
         if self._backend_local is not None:

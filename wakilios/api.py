@@ -380,6 +380,23 @@ def create_app(
         except Exception as exc:
             raise handle_error(exc) from exc
 
+    @app.get("/calendar/upcoming")
+    def calendar_upcoming(
+        start: str,
+        end: str,
+        matter_id: str = "",
+        limit: int = 500,
+        token: str = Depends(token_from_header),
+    ) -> dict[str, object]:
+        """Dated obligations across every matter, for a half-open date range."""
+        try:
+            entries = backend.upcoming_dates(
+                token, start=start, end=end, matter_id=matter_id, limit=limit
+            )
+            return {"entries": entries}
+        except Exception as exc:
+            raise handle_error(exc) from exc
+
     @app.get("/offline-cache")
     def offline_cache(
         token: str = Depends(token_from_header),
