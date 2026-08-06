@@ -40,6 +40,18 @@ from PySide6.QtWidgets import (
 from ai import configured_provider_statuses, provider_env_var, supported_providers
 from core import ManualAppSession
 from ui.automation import automation_enabled, queued_selection, write_state
+from ui.reminders import (
+    DEFAULT_HORIZON_DAYS,
+    DEFAULT_HOUR,
+    DEFAULT_MINUTE,
+    ReminderSettings,
+    due_now,
+    load_settings,
+    mark_shown,
+    save_settings,
+    settings_path,
+)
+from ui.reminders import summarise as summarise_reminders
 from wakilios.client import (
     WakiliOSClient,
     WakiliOSClientConfig,
@@ -376,6 +388,16 @@ def _draft_matter_summary(workspace: dict) -> str:
     lines.append("")
     lines.append("Drafted from the matter record. Verify before relying on it.")
     return "\n".join(lines)
+
+
+def _settings_dir() -> Path:
+    """Where per-installation settings live.
+
+    The licence is bound to the installation identity stored here, so this path
+    cannot move without a migration -- see the pending WakiliOS -> JurisNuru
+    rename.
+    """
+    return Path(os.environ.get("APPDATA", tempfile.gettempdir())) / "WakiliOS" / "settings"
 
 
 def _today_iso() -> str:
@@ -840,6 +862,9 @@ class MainWindow(QMainWindow):
         self._current_username: str = ""
         self._current_matter_id: str = ""
         self._license_active = False
+        self._reminder_settings = ReminderSettings()
+        self._reminder_entries: list[dict[str, object]] = []
+        self._tray_icon = None
 
         root = QWidget()
         root_layout = QVBoxLayout(root)
@@ -906,6 +931,9 @@ class MainWindow(QMainWindow):
         self._connect_workflow_controls()
         self._connect_backend_controls()
         self._report_ocr_availability()
+        self._reminder_settings = self._load_reminder_settings()
+        self._apply_reminder_settings_to_form()
+        self._start_reminder_timer()
         self._start_state_publishing()
         self._set_license_state(False, "Not activated")
         if _dev_unlock_requested():
@@ -982,8 +1010,7 @@ class MainWindow(QMainWindow):
     def _initialize_license_identity(self) -> None:
         from licensing.installation import ensure_installation_identity
 
-        app_data = Path(os.environ.get("APPDATA", tempfile.gettempdir()))
-        identity_path = app_data / "WakiliOS" / "settings" / "installation.json"
+        identity_path = _settings_dir() / "installation.json"
         identity = ensure_installation_identity(identity_path)
         installation_label = self.findChild(QLabel, "licenseInstallationLabel")
         if installation_label is not None:
@@ -1032,6 +1059,159 @@ class MainWindow(QMainWindow):
             self.status_label.setText(
                 "No OCR engine found: scanned documents will import with no text"
             )
+
+    # ── Daily reminders ──────────────────────────────────────────────────
+
+    def _reminder_settings_file(self) -> Path:
+        return settings_path(_settings_dir())
+
+    def _load_reminder_settings(self) -> ReminderSettings:
+        return load_settings(self._reminder_settings_file())
+
+    def _store_reminder_settings(self, settings: ReminderSettings) -> None:
+        self._reminder_settings = settings
+        save_settings(self._reminder_settings_file(), settings)
+
+    def _apply_reminder_settings_to_form(self) -> None:
+        """Show what is stored, so the form is not lying on first open."""
+        enabled = self.findChild(QCheckBox, "dailyReminderEnabledCheckbox")
+        if enabled is not None:
+            enabled.setChecked(self._reminder_settings.enabled)
+        time_input = self.findChild(QLineEdit, "dailyReminderTimeInput")
+        if time_input is not None:
+            time_input.setText(
+                f"{self._reminder_settings.hour:02d}:{self._reminder_settings.minute:02d}"
+            )
+        horizon = self.findChild(QLineEdit, "dailyReminderHorizonInput")
+        if horizon is not None:
+            horizon.setText(str(self._reminder_settings.horizon_days))
+
+    def _start_reminder_timer(self) -> None:
+        """Check once a minute whether today's digest is owed.
+
+        A minute, not the automation timer's 400ms: the question is what day it
+        is and whether 08:00 has passed, and nothing about that needs sub-minute
+        resolution.
+        """
+        self._reminder_timer = QTimer(self)
+        self._reminder_timer.setInterval(60_000)
+        self._reminder_timer.timeout.connect(self._maybe_show_daily_reminder)
+        self._reminder_timer.start()
+
+    def _maybe_show_daily_reminder(self) -> None:
+        if self._backend_local is None and self._backend_client is None:
+            return
+        if not due_now(self._reminder_settings, now=datetime.now(NAIROBI)):
+            return
+        self._show_daily_reminder()
+
+    def _on_show_reminder_now(self) -> None:
+        """Raise the digest whatever the schedule says.
+
+        Present for support calls and for the packaged evidence run: without it
+        the only way to see this surface is to wait for a wall clock.
+        """
+        if self._backend_local is None and self._backend_client is None:
+            self.status_label.setText("Start solo mode or connect to a server first")
+            return
+        self._show_daily_reminder()
+
+    def _show_daily_reminder(self) -> None:
+        horizon = max(1, self._reminder_settings.horizon_days)
+        start = _today_iso()
+        end = (datetime.now(NAIROBI).date() + timedelta(days=horizon)).isoformat()
+        try:
+            entries = self._backend_upcoming(start, end)
+        except (WakiliOSError, WakiliOSClientError, WakiliOSConnectionError) as exc:
+            # Do not mark the day shown: a server that was down at 08:00 should
+            # still produce a digest once it is reachable.
+            self.status_label.setText(f"Could not read today's matters: {exc}")
+            return
+
+        self._reminder_entries = entries
+        self._store_reminder_settings(
+            mark_shown(self._reminder_settings, now=datetime.now(NAIROBI))
+        )
+        self.status_label.setText(summarise_reminders(entries))
+        self._notify_tray(summarise_reminders(entries))
+        self._publish_state()
+
+        dialog = DailyReminderDialog(entries, self)
+        dialog.exec()
+        if dialog.snoozed:
+            from ui.reminders import snooze as snooze_settings
+
+            self._store_reminder_settings(
+                snooze_settings(self._reminder_settings, now=datetime.now(NAIROBI))
+            )
+            self.status_label.setText("Reminder snoozed for an hour.")
+        elif dialog.selected_matter_id:
+            self._open_matter_by_id(dialog.selected_matter_id)
+        self._publish_state()
+
+    def _notify_tray(self, message: str) -> None:
+        """Nudge through the system tray where the platform has one.
+
+        Secondary to the dialog by design: there is no tray at all under the
+        offscreen platform, and Windows Focus Assist drops toasts without
+        telling anyone.
+        """
+        from PySide6.QtWidgets import QSystemTrayIcon
+
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            return
+        if getattr(self, "_tray_icon", None) is None:
+            from PySide6.QtWidgets import QStyle
+
+            icon = self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation)
+            self._tray_icon = QSystemTrayIcon(icon, self)
+            self._tray_icon.setToolTip("JurisNuru")
+            self._tray_icon.show()
+        if self._tray_icon.supportsMessages():
+            self._tray_icon.showMessage("JurisNuru", message)
+
+    def _on_save_reminder_settings(self) -> None:
+        enabled = self.findChild(QCheckBox, "dailyReminderEnabledCheckbox")
+        time_input = self.findChild(QLineEdit, "dailyReminderTimeInput")
+        horizon_input = self.findChild(QLineEdit, "dailyReminderHorizonInput")
+        raw_time = time_input.text().strip() if time_input else ""
+        hour, _, minute = raw_time.partition(":")
+        try:
+            parsed_hour, parsed_minute = int(hour), int(minute or 0)
+            if not (0 <= parsed_hour <= 23 and 0 <= parsed_minute <= 59):
+                raise ValueError(raw_time)
+        except ValueError:
+            self.status_label.setText("Reminder time must be HH:MM, for example 08:00.")
+            return
+        try:
+            horizon = max(1, int(horizon_input.text().strip())) if horizon_input else 1
+        except ValueError:
+            self.status_label.setText("Days ahead must be a whole number.")
+            return
+        # Changing the schedule clears "already shown today", so moving the time
+        # forward takes effect now rather than tomorrow.
+        self._store_reminder_settings(
+            ReminderSettings(
+                enabled=bool(enabled.isChecked()) if enabled else True,
+                hour=parsed_hour,
+                minute=parsed_minute,
+                horizon_days=horizon,
+                snooze_minutes=self._reminder_settings.snooze_minutes,
+            )
+        )
+        self.status_label.setText(
+            f"Daily reminders {'on' if self._reminder_settings.enabled else 'off'}, "
+            f"from {parsed_hour:02d}:{parsed_minute:02d}."
+        )
+        self._publish_state()
+
+    def _open_matter_by_id(self, matter_id: str) -> None:
+        """Jump to a matter named in the digest."""
+        if not matter_id:
+            return
+        self._current_matter_id = matter_id
+        self.tabs.setCurrentIndex(0)
+        self._refresh_matter_workspace()
 
     def _start_state_publishing(self) -> None:
         """Publish state on a timer while an automated harness is driving.
@@ -1100,6 +1280,17 @@ class MainWindow(QMainWindow):
                 "review_queue": rows("documentReviewQueue"),
                 "audit_events": len(rows("auditLogList")),
                 "matter_summary": summary.toPlainText() if summary is not None else "",
+                "daily_reminder": {
+                    "enabled": self._reminder_settings.enabled,
+                    "hour": self._reminder_settings.hour,
+                    "minute": self._reminder_settings.minute,
+                    "horizon_days": self._reminder_settings.horizon_days,
+                    "last_shown_date": self._reminder_settings.last_shown_date,
+                    "snoozed_until": self._reminder_settings.snoozed_until,
+                    "due": due_now(self._reminder_settings, now=datetime.now(NAIROBI)),
+                    "entry_count": len(self._reminder_entries),
+                    "entries": [_reminder_row(entry) for entry in self._reminder_entries],
+                },
                 "matter_ai_sources": (
                     sources.text()
                     if (sources := self.findChild(QLabel, "matterAiSourcesLabel"))
@@ -1136,8 +1327,7 @@ class MainWindow(QMainWindow):
             self.status_label.setText(message)
             return
         try:
-            app_data = Path(os.environ.get("APPDATA", tempfile.gettempdir()))
-            identity_path = app_data / "WakiliOS" / "settings" / "installation.json"
+            identity_path = _settings_dir() / "installation.json"
             identity = ensure_installation_identity(identity_path)
             raw_license = license_path.read_bytes()
             if license_path.suffix.lower() == ".pem" or b"BEGIN PUBLIC KEY" in raw_license:
@@ -1333,6 +1523,14 @@ class MainWindow(QMainWindow):
         matter_ai_button = self.findChild(QPushButton, "matterAiAskButton")
         if matter_ai_button is not None:
             matter_ai_button.clicked.connect(self._on_ask_matter_ai)
+
+        for button_name, reminder_handler in (
+            ("saveReminderSettingsButton", self._on_save_reminder_settings),
+            ("testDailyReminderButton", self._on_show_reminder_now),
+        ):
+            reminder_button = self.findChild(QPushButton, button_name)
+            if reminder_button is not None:
+                reminder_button.clicked.connect(reminder_handler)
 
         generate_button = self.findChild(QPushButton, "generateSummaryButton")
         if generate_button is not None:
@@ -2647,12 +2845,140 @@ def _settings_page(modules: tuple[ModuleStatus, ...] = DEFAULT_MODULES) -> QWidg
     page.setObjectName("settingsPage")
     layout = QVBoxLayout(page)
     layout.addWidget(_dashboard_page())
+    layout.addWidget(_reminder_settings_group())
     layout.addWidget(_ai_keys_group())
     layout.addWidget(_backup_group())
     layout.addWidget(_admin_group())
     layout.addWidget(_about_page(modules))
     layout.addStretch(1)
     return page
+
+
+KIND_LABELS = {
+    "hearing": "Hearing",
+    "lodging_due": "Lodging due",
+    "decision": "Decision",
+    "next_action": "Next action",
+}
+
+
+class DailyReminderDialog(QDialog):
+    """The day's matters, shown once a day.
+
+    Deliberately a dialog rather than only a tray balloon. Under
+    ``QT_QPA_PLATFORM=offscreen`` there is no tray at all, so a balloon-only
+    design could never be tested; and on a real desktop Windows Focus Assist
+    swallows toasts silently, which is the worst possible failure for a
+    reminder -- the firm believes it is covered and never learns otherwise. The
+    balloon is an extra nudge where the platform offers one.
+
+    Modal, and once a day. A digest that can be missed is not a reminder, and
+    one click dismisses it.
+    """
+
+    def __init__(self, entries: list[dict[str, object]], parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("dailyReminderDialog")
+        self.setWindowTitle("Today's matters")
+        self.setMinimumWidth(520)
+        self.selected_matter_id = ""
+        self.snoozed = False
+
+        layout = QVBoxLayout(self)
+
+        heading = QLabel("Today's matters")
+        heading.setObjectName("dailyReminderHeading")
+        layout.addWidget(heading)
+
+        summary = QLabel(summarise_reminders(entries))
+        summary.setObjectName("dailyReminderSummaryLabel")
+        summary.setWordWrap(True)
+        layout.addWidget(summary)
+
+        self.listing = QListWidget()
+        self.listing.setObjectName("dailyReminderList")
+        for entry in entries:
+            self.listing.addItem(QListWidgetItem(_reminder_row(entry)))
+        layout.addWidget(self.listing)
+
+        buttons = QHBoxLayout()
+        open_matter = QPushButton("Open matter")
+        open_matter.setObjectName("dailyReminderOpenButton")
+        open_matter.clicked.connect(lambda: self._on_open(entries))
+        snooze_button = QPushButton("Snooze 1 hour")
+        snooze_button.setObjectName("dailyReminderSnoozeButton")
+        snooze_button.clicked.connect(self._on_snooze)
+        dismiss = QPushButton("Dismiss")
+        dismiss.setObjectName("dailyReminderDismissButton")
+        dismiss.clicked.connect(self.accept)
+        for widget in (open_matter, snooze_button, dismiss):
+            buttons.addWidget(widget)
+        layout.addLayout(buttons)
+
+    def _on_open(self, entries: list[dict[str, object]]) -> None:
+        row = self.listing.currentRow()
+        if row < 0 and entries:
+            row = 0
+        if 0 <= row < len(entries):
+            self.selected_matter_id = str(entries[row].get("matter_id", ""))
+        self.accept()
+
+    def _on_snooze(self) -> None:
+        self.snoozed = True
+        self.accept()
+
+
+def _reminder_row(entry: dict[str, object]) -> str:
+    """One line an advocate can act on without opening anything."""
+    kind = KIND_LABELS.get(str(entry.get("kind", "")), str(entry.get("kind", "")))
+    clock = str(entry.get("time") or "all day")
+    reference = str(entry.get("case_number") or entry.get("matter_reference") or "")
+    title = str(entry.get("title", ""))
+    return f"{clock}  {kind}  -  {title}" + (f"  [{reference}]" if reference else "")
+
+
+def _reminder_settings_group() -> QWidget:
+    group = QFrame()
+    group.setObjectName("dailyReminderGroup")
+    layout = QFormLayout(group)
+
+    heading = QLabel("Daily reminders")
+    heading.setObjectName("dailyReminderSettingsHeading")
+    layout.addRow(heading)
+
+    enabled = QCheckBox("Show the day's matters when I open JurisNuru")
+    enabled.setObjectName("dailyReminderEnabledCheckbox")
+    enabled.setChecked(True)
+    layout.addRow("Enabled", enabled)
+
+    time_input = QLineEdit(f"{DEFAULT_HOUR:02d}:{DEFAULT_MINUTE:02d}")
+    time_input.setObjectName("dailyReminderTimeInput")
+    time_input.setPlaceholderText("HH:MM")
+    layout.addRow("Show from", time_input)
+
+    horizon = QLineEdit(str(DEFAULT_HORIZON_DAYS))
+    horizon.setObjectName("dailyReminderHorizonInput")
+    horizon.setPlaceholderText("days ahead to include")
+    layout.addRow("Days ahead", horizon)
+
+    save = QPushButton("Save reminder settings")
+    save.setObjectName("saveReminderSettingsButton")
+    layout.addRow(save)
+
+    show_now = QPushButton("Show today's matters now")
+    show_now.setObjectName("testDailyReminderButton")
+    show_now.setToolTip("Raise the digest immediately, whatever the schedule says")
+    layout.addRow(show_now)
+
+    caption = QLabel(
+        "The digest appears the first time you open JurisNuru at or after this "
+        "time each day. It is a digest on first sight, not an alarm: JurisNuru "
+        "does not run in the background."
+    )
+    caption.setObjectName("dailyReminderCaption")
+    caption.setWordWrap(True)
+    layout.addRow(caption)
+    return group
 
 
 def _matter_ai_context_panel() -> QWidget:
