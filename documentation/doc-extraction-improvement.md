@@ -285,6 +285,51 @@ above can be justified.
 - **Harness**: `tests/validate_extraction_accuracy.py`, run manually rather
   than in CI — it needs the corpus and takes minutes.
 
+### 5.1 Baseline as measured
+
+`tests/validate_extraction_accuracy.py` now exists and has been run. Numbers
+below are from that run, not estimates.
+
+| Measure | Result |
+|---|---|
+| Mean character error rate | **0.078** |
+| Mean word error rate | **0.070** |
+| Number recall (money, PRNs, case references) | **98.7%** |
+| Synthetic pages, exact ground truth | **CER 0.000** |
+| Matter-detail fields, exact match | **7/7** |
+
+Read them with their limits in mind:
+
+- **Ground truth is not hand-transcribed.** It is text this repository owns
+  (rendered, then flattened to an image) and the born-digital text layer of real
+  judgments. Both are clean typeset text. A genuinely scanned Kenyan filing --
+  photographed, skewed, stamped -- is *not* represented, and is where accuracy
+  will be worst.
+- **Number recall matters more than CER here.** A fee table with one wrong digit
+  is worse than a paragraph with several wrong letters. 98.7% recall means
+  roughly one figure in eighty was not recovered intact.
+- **The measurement used a system Tesseract**, because the application finds no
+  runtime on this machine (see below). It measures the OCR engine, not the
+  application's runtime discovery.
+
+### 5.2 The shipped bundle contains no OCR engine
+
+Found while establishing the baseline, and more serious than any accuracy
+figure: `main.spec` bundles the Tesseract runtime only `if
+tesseract_runtime.exists()`, and `runtime/tesseract/` is not in the repository.
+`discover_tesseract_runtime()` requires a signed manifest, so a system install
+is not accepted either, and `resolve_ocr_engine()` returns `None`.
+
+The consequence is that OCR is correctly wired and cannot run in the packaged
+product: a scanned receipt still yields nothing, and `ocr_status` records
+`pending_tesseract` rather than failing loudly. `DOCUMENT_VAULT_REQUIRE_TESSERACT_BUNDLE`
+exists to make the release bundle assert the runtime is present, and is not set
+by default.
+
+Either ship the runtime and set that variable in the release workflow, or have
+the application say plainly at import time that OCR is unavailable. Silently
+producing empty text for a scanned document is the worst of the three.
+
 Without this, "improving accuracy" is unfalsifiable. The figures in
 `evidence.md` (RAG confidence 0.49–0.69) measure the system's confidence in
 itself, not its correctness — those are not the same thing, and should not be
@@ -294,9 +339,9 @@ cited as accuracy.
 
 ## 6. What was not verified
 
-- **No accuracy measurement was run.** Every claim here is about code paths,
-  not measured error rates. The defects are read from the source; their
-  *magnitude* on real documents is unquantified until §5 exists.
+- **Accuracy is now measured, on clean text only.** §5.1 records the baseline.
+  No hand-transcribed scan was used, so accuracy on photographed and stamped
+  originals -- the hard case, and the common one -- is still unquantified.
 - **Docling's behaviour on Kenyan judiciary documents was not tested.** Stage 3
   assumes its layout detection generalises to these filings; that assumption
   needs a spike before committing to the work.

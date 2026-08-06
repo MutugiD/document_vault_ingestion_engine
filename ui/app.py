@@ -38,6 +38,7 @@ from PySide6.QtWidgets import (
 
 from ai import configured_provider_statuses, provider_env_var, supported_providers
 from core import ManualAppSession
+from ui.automation import automation_enabled, queued_selection, write_state
 from wakilios.client import (
     WakiliOSClient,
     WakiliOSClientConfig,
@@ -47,6 +48,32 @@ from wakilios.client import (
 from wakilios.core import WakiliOSBackend, initialize_firm_backend
 
 DEV_UNLOCK_ENV_VAR = "JURISNURU_DEV_UNLOCK"
+
+
+def _choose_file(parent, caption: str, filters: str) -> str:
+    """A single file, from the automation queue or the native picker."""
+    queued = queued_selection()
+    if queued:
+        return queued[0]
+    selected, _ = QFileDialog.getOpenFileName(parent, caption, "", filters)
+    return selected
+
+
+def _choose_files(parent, caption: str, filters: str) -> list[str]:
+    """Several files, from the automation queue or the native picker."""
+    queued = queued_selection()
+    if queued:
+        return queued
+    selected, _ = QFileDialog.getOpenFileNames(parent, caption, "", filters)
+    return list(selected)
+
+
+def _choose_save_path(parent, caption: str, filters: str) -> str:
+    """A destination path, from the automation queue or the native picker."""
+    queued = queued_selection()
+    if queued:
+        return queued[0]
+    return QFileDialog.getSaveFileName(parent, caption, "", filters)[0]
 
 
 def _joined(*parts: object) -> str:
@@ -861,6 +888,7 @@ class MainWindow(QMainWindow):
     def _sync_sidebar_selection(self, index: int) -> None:
         for position, button in enumerate(self._sidebar_buttons):
             button.setChecked(position == index)
+        self._publish_state()
 
     def _initialize_license_identity(self) -> None:
         from licensing.installation import ensure_installation_identity
@@ -872,6 +900,54 @@ class MainWindow(QMainWindow):
         if installation_label is not None:
             installation_label.setText(f"Installation ID: {identity.installation_id}")
 
+    def _publish_state(self) -> None:
+        """Publish what the window currently holds, for an automated harness.
+
+        A harness that scrapes label text is reading prose written for humans
+        and inferring state from it. This reports the state directly, so a test
+        asserts on what the application believes rather than on how it phrased
+        it.
+        """
+        if not automation_enabled():
+            return
+        # Publishing is wired to widget signals, some of which fire while the
+        # window is still being built.
+        if not hasattr(self, "status_label") or not hasattr(self, "application_stack"):
+            return
+
+        def rows(object_name: str) -> list[str]:
+            listing = self.findChild(QListWidget, object_name)
+            if listing is None:
+                return []
+            return [listing.item(i).text() for i in range(listing.count())]
+
+        tabs = {view.object_name: rows(f"{view.object_name}List") for view in MATTER_TAB_VIEWS}
+        summary = self.findChild(QTextEdit, "aiMatterSummaryOutput")
+        write_state(
+            {
+                "license_active": self._license_active,
+                "gate_index": self.application_stack.currentIndex(),
+                "destination": self.tabs.tabText(self.tabs.currentIndex()),
+                "destination_index": self.tabs.currentIndex(),
+                "destinations": [self.tabs.tabText(i) for i in range(self.tabs.count())],
+                "backend": (
+                    "solo"
+                    if self._backend_local is not None
+                    else ("firm" if self._backend_client is not None else "none")
+                ),
+                "role": self._current_role,
+                "username": self._current_username,
+                "current_matter_id": self._current_matter_id,
+                "matters": rows("matterList"),
+                "matter_tabs": tabs,
+                "filing_record_page": rows("filingRecordPageList"),
+                "review_queue": rows("documentReviewQueue"),
+                "audit_events": len(rows("auditLogList")),
+                "matter_summary": summary.toPlainText() if summary is not None else "",
+                "status": self.status_label.text(),
+            }
+        )
+
     def _set_license_state(self, active: bool, status: str) -> None:
         self._license_active = active
         status_label = self.findChild(QLabel, "licenseStatusLabel")
@@ -880,6 +956,7 @@ class MainWindow(QMainWindow):
         self.application_stack.setCurrentIndex(1 if active else 0)
         if active:
             self.tabs.setCurrentIndex(0)
+        self._publish_state()
 
     @Slot()
     def activate_license(self) -> None:
@@ -982,11 +1059,8 @@ class MainWindow(QMainWindow):
         self.status_label.setText(f"Installation ID copied: {identity}")
 
     def browse_for_license(self) -> None:
-        selected, _ = QFileDialog.getOpenFileName(
-            self,
-            "Select signed license",
-            "",
-            "License files (*.key *.json);;All files (*)",
+        selected = _choose_file(
+            self, "Select signed license", "License files (*.key *.json);;All files (*)"
         )
         if selected:
             license_input = self.findChild(QLineEdit, "licenseFileInput")
@@ -1121,6 +1195,7 @@ class MainWindow(QMainWindow):
             role_label.setText(f"Role: {role}")
         self.status_label.setText(f"Connected to backend as {username} ({role})")
         self._apply_role_permissions(role)
+        self._publish_state()
 
     @Slot(str, str)
     def _on_solo_mode_started(self, username: str, role: str) -> None:
@@ -1149,6 +1224,7 @@ class MainWindow(QMainWindow):
             role_label.setText(f"Role: {role} (solo)")
         self.status_label.setText(f"Running in solo mode as {username} ({role})")
         self._apply_role_permissions(role)
+        self._publish_state()
 
     def _apply_role_permissions(self, role: str) -> None:
         """Enable/disable controls based on user role."""
@@ -1303,11 +1379,8 @@ class MainWindow(QMainWindow):
         if self._backend_local is None and self._backend_client is None:
             self.status_label.setText("Start solo mode or connect to a server first")
             return
-        selected, _ = QFileDialog.getOpenFileName(
-            self,
-            "Open a matter from a document",
-            "",
-            "Documents (*.pdf *.docx);;All files (*)",
+        selected = _choose_file(
+            self, "Open a matter from a document", "Documents (*.pdf *.docx);;All files (*)"
         )
         if not selected:
             return
@@ -1364,6 +1437,7 @@ class MainWindow(QMainWindow):
             self._refresh_matter_workspace()
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Failed to create matter: {exc}")
+        self._publish_state()
 
     def _on_export_calendar(self) -> None:
         if self._backend_local is None and self._backend_client is None:
@@ -1374,9 +1448,7 @@ class MainWindow(QMainWindow):
             return
         try:
             ics = self._backend_export_calendar(self._current_matter_id)
-            dest = QFileDialog.getSaveFileName(self, "Save Calendar", "", "Calendar Files (*.ics)")[
-                0
-            ]
+            dest = _choose_save_path(self, "Save Calendar", "Calendar Files (*.ics)")
             if dest:
                 Path(dest).write_text(ics, encoding="utf-8")
                 self.status_label.setText(f"Calendar exported to {dest}")
@@ -1401,6 +1473,7 @@ class MainWindow(QMainWindow):
                     matter_list.addItem(item)
         except (WakiliOSClientError, WakiliOSConnectionError, Exception) as exc:
             self.status_label.setText(f"Failed to list matters: {exc}")
+        self._publish_state()
 
     def _on_matter_selected(self, item: QListWidgetItem | None) -> None:
         """Open the selected matter in the workspace tabs."""
@@ -1438,6 +1511,7 @@ class MainWindow(QMainWindow):
         summary = _draft_matter_summary(workspace)
         summary_box.setPlainText(summary)
         self.status_label.setText("Summary drafted from the matter record; review before saving")
+        self._publish_state()
 
     def _on_update_summary(self) -> None:
         if (
@@ -1460,10 +1534,9 @@ class MainWindow(QMainWindow):
         if not self._current_matter_id:
             self.status_label.setText("Select a matter first")
             return
-        file_paths, _ = QFileDialog.getOpenFileNames(
+        file_paths = _choose_files(
             self,
             "Upload document to matter",
-            "",
             "Documents (*.pdf *.docx *.doc *.png *.jpg *.jpeg *.tif *.tiff *.txt);;All files (*)",
         )
         if not file_paths:
@@ -1570,6 +1643,7 @@ class MainWindow(QMainWindow):
                     page_list.addItem(filing_view.format_row(row))
             else:
                 page_list.addItem("No filing recorded for this matter yet")
+        self._publish_state()
         matter_label = self.findChild(QLabel, "filingRecordMatterLabel")
         if matter_label is not None:
             matter = workspace.get("matter") or {}
@@ -1694,10 +1768,9 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def choose_and_import_files(self) -> None:
-        selected, _ = QFileDialog.getOpenFileNames(
+        selected = _choose_files(
             self,
             "Add legal documents",
-            "",
             "Legal documents (*.pdf *.docx *.doc *.png *.jpg *.jpeg *.tif *.tiff);;All files (*)",
         )
         self.import_files([Path(item) for item in selected])
