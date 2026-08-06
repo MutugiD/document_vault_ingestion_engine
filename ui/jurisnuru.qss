@@ -530,3 +530,57 @@ QLabel#filingRecordGroupLabel {
 QLabel#roleStatusLabel {
     color: #9FB3CC;
 }
+
+/* ── Trusted AI layer, beside the matter (brief slide 14) ── */
+QFrame#matterAiPanel {
+    background-color: #16263C;
+    border: 1px solid #24384F;
+    border-radius: 10px;
+    padding: 14px;
+}
+
+QFrame#matterAiPanel QLabel {
+    color: #B9C8DA;
+}
+
+QLabel#matterAiHeading {
+    font-size: 15px;
+    font-weight: 700;
+    color: #F5A623;
+}
+
+QLabel#matterAiCaption {
+    font-size: 12px;
+    color: #8FA3BC;
+}
+
+QLabel#matterAiSourcesLabel {
+    font-size: 11px;
+    color: #0F9B8E;
+    font-weight: 600;
+}
+
+QLabel#matterAiReviewLabel {
+    font-size: 11px;
+    font-weight: 600;
+    color: #F5A623;
+}
+
+QFrame#matterAiPanel QTextEdit {
+    background-color: #0F1B2E;
+    border: 1px solid #2A4058;
+    color: #E6EDF6;
+}
+
+QFrame#matterAiPanel QPushButton {
+    background-color: #0F9B8E;
+}
+
+QFrame#matterAiPanel QPushButton:hover {
+    background-color: #12B3A4;
+}
+
+QFrame#matterAiPanel QPushButton:disabled {
+    background-color: #24384F;
+    color: #6F86A3;
+}

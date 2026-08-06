@@ -59,7 +59,7 @@ ENTITLEMENT_CONTROLS: dict[str, tuple[str, ...]] = {
     ),
     "cloud_backup": ("createBackupButton",),
     "managed_restore": ("restoreDrillButton",),
-    "matter_rag": ("askRagButton", "generateSummaryButton"),
+    "matter_rag": ("askRagButton", "generateSummaryButton", "matterAiAskButton"),
     "hosted_ai": ("saveProviderSettingsButton",),
 }
 
@@ -70,6 +70,25 @@ ENTITLEMENT_LABELS: dict[str, str] = {
     "matter_rag": "Matter search and RAG",
     "hosted_ai": "Hosted AI",
 }
+
+
+def _extracted_text_for(source: Path) -> str:
+    """The document's text, for search and RAG.
+
+    Decoding the raw bytes was indexing PDF internals -- xref tables and stream
+    dictionaries -- so every uploaded document was unsearchable and any answer
+    drawn from one cited gibberish. Run the extraction pipeline instead, which
+    also means a scanned upload goes through OCR.
+    """
+    from core.manual_app import resolve_ocr_engine
+    from intake.extraction import ExtractionError, extract_text
+
+    try:
+        return extract_text(source, ocr_engine=resolve_ocr_engine(source)).text
+    except (ExtractionError, Exception):
+        # An unreadable document is still worth storing; it simply has no text
+        # to search. Never fall back to raw bytes.
+        return ""
 
 
 def _choose_file(parent, caption: str, filters: str) -> str:
@@ -993,6 +1012,11 @@ class MainWindow(QMainWindow):
                 "review_queue": rows("documentReviewQueue"),
                 "audit_events": len(rows("auditLogList")),
                 "matter_summary": summary.toPlainText() if summary is not None else "",
+                "matter_ai_sources": (
+                    sources.text()
+                    if (sources := self.findChild(QLabel, "matterAiSourcesLabel"))
+                    else ""
+                ),
                 "status": self.status_label.text(),
             }
         )
@@ -1217,6 +1241,10 @@ class MainWindow(QMainWindow):
         from_document_button = self.findChild(QPushButton, "newMatterFromDocumentButton")
         if from_document_button is not None:
             from_document_button.clicked.connect(self._on_new_matter_from_document)
+
+        matter_ai_button = self.findChild(QPushButton, "matterAiAskButton")
+        if matter_ai_button is not None:
+            matter_ai_button.clicked.connect(self._on_ask_matter_ai)
 
         generate_button = self.findChild(QPushButton, "generateSummaryButton")
         if generate_button is not None:
@@ -1550,6 +1578,75 @@ class MainWindow(QMainWindow):
         self.status_label.setText(f"Opened matter: {item.text()}")
         self._refresh_matter_workspace()
 
+    def _on_ask_matter_ai(self) -> None:
+        """Answer a question from this matter's documents, or decline.
+
+        Scoped to the open matter, and refuses rather than guessing when the
+        matter has nothing to answer from. An answer with no source is the
+        failure this panel exists to prevent, so it is never rendered as one.
+        """
+        question_box = self.findChild(QTextEdit, "matterAiQuestionInput")
+        answer_box = self.findChild(QTextEdit, "matterAiAnswerOutput")
+        sources_label = self.findChild(QLabel, "matterAiSourcesLabel")
+        if question_box is None or answer_box is None or sources_label is None:
+            return
+        if not self._current_matter_id:
+            answer_box.setPlainText("")
+            sources_label.setText("Open a matter first")
+            return
+        question = question_box.toPlainText().strip()
+        if not question:
+            sources_label.setText("Type a question about this matter")
+            return
+
+        from rag import build_answer_packet, build_rag_index
+
+        # The matter's documents live in the backend's vault, not the manual
+        # session's. Indexing the wrong one answers every question with
+        # "no source", which reads like a careful refusal and is really a bug.
+        if self._backend_local is None:
+            answer_box.setPlainText("")
+            sources_label.setText(
+                "Matter search runs against the local vault; connect in solo mode to use it"
+            )
+            return
+
+        try:
+            vault_root = self._backend_local.vault_root
+            build_rag_index(vault_root, matter_id=self._current_matter_id)
+            packet = build_answer_packet(vault_root, question, matter_id=self._current_matter_id)
+        except Exception as exc:
+            answer_box.setPlainText("")
+            sources_label.setText(f"Could not search this matter: {exc}")
+            return
+
+        citations = tuple(getattr(packet, "citations", ()) or ())
+        if not citations:
+            answer_box.setPlainText(
+                "No document in this matter supports an answer to that question."
+            )
+            sources_label.setText("Sources: none - nothing was answered")
+            self._publish_state()
+            return
+
+        # The packet is retrieval, not generation: it carries the passages that
+        # support an answer and a safety notice, not prose. Rendering it as an
+        # "answer" would claim more than the system did.
+        passages = str(getattr(packet, "grounded_context", "") or "").strip()
+        notice = str(getattr(packet, "safety_notice", "") or "").strip()
+        answer_box.setPlainText("\n\n".join(part for part in (passages, notice) if part))
+        confidence = float(getattr(packet, "confidence", 0.0) or 0.0)
+        titles = []
+        for citation in citations:
+            title = str(getattr(citation, "document_title", "") or getattr(citation, "title", ""))
+            if title and title not in titles:
+                titles.append(title)
+        sources_label.setText(
+            f"Sources: {len(citations)} passage(s) from {len(titles)} document(s) "
+            f"in this matter (confidence {confidence:.2f})"
+        )
+        self._publish_state()
+
     def _on_generate_summary(self) -> None:
         """Draft a matter summary from what the matter already holds.
 
@@ -1609,16 +1706,17 @@ class MainWindow(QMainWindow):
             try:
                 if self._backend_local is not None:
                     token = self._backend_local.login(self._current_username, "admin-pass").token
-                    content = Path(file_path).read_bytes()
+                    source = Path(file_path)
+                    content = source.read_bytes()
                     result = self._backend_local.upload_document(
                         token,
                         self._current_matter_id,
-                        title=Path(file_path).name,
+                        title=source.name,
                         document_type="general",
                         content=content,
-                        original_name=Path(file_path).name,
+                        original_name=source.name,
                         content_type="application/octet-stream",
-                        extracted_text=content.decode("utf-8", errors="replace"),
+                        extracted_text=_extracted_text_for(source),
                     )
                 elif self._backend_client is not None:
                     result = self._backend_client.upload_document(
@@ -2201,7 +2299,13 @@ def _workspace_page() -> QWidget:
 
     layout.addLayout(header)
     layout.addWidget(matter_list)
-    layout.addWidget(workspace_tabs, stretch=1)
+
+    # Matter content on the left, the AI layer beside it -- the brief's
+    # product map, rather than an AI box in a settings page.
+    split = QHBoxLayout()
+    split.addWidget(workspace_tabs, stretch=3)
+    split.addWidget(_matter_ai_context_panel(), stretch=1)
+    layout.addLayout(split, stretch=1)
     return page
 
 
@@ -2449,6 +2553,50 @@ def _settings_page(modules: tuple[ModuleStatus, ...] = DEFAULT_MODULES) -> QWidg
     layout.addWidget(_about_page(modules))
     layout.addStretch(1)
     return page
+
+
+def _matter_ai_context_panel() -> QWidget:
+    """The brief's trusted AI layer: ask about *this* matter, sources visible.
+
+    Slide 14 puts this beside the matter, not in a settings page, and the
+    distinction is the product's whole argument. A question asked here is
+    scoped to the open matter, the answer names how many of its documents
+    supported it, and nothing is presented as settled: a lawyer verifies and
+    remains accountable.
+    """
+    panel = QFrame()
+    panel.setObjectName("matterAiPanel")
+    layout = QVBoxLayout(panel)
+
+    heading = QLabel("Trusted AI layer")
+    heading.setObjectName("matterAiHeading")
+    caption = QLabel("Ask about this matter using only authorised sources.")
+    caption.setObjectName("matterAiCaption")
+    caption.setWordWrap(True)
+
+    question = QTextEdit()
+    question.setObjectName("matterAiQuestionInput")
+    question.setFixedHeight(64)
+    question.setPlaceholderText("What was filed and what is the next recorded step?")
+
+    ask = QPushButton("Ask this matter")
+    ask.setObjectName("matterAiAskButton")
+
+    answer = QTextEdit()
+    answer.setObjectName("matterAiAnswerOutput")
+    answer.setReadOnly(True)
+    answer.setPlaceholderText("The answer and its sources appear here.")
+
+    sources = QLabel("Sources: none yet")
+    sources.setObjectName("matterAiSourcesLabel")
+    sources.setWordWrap(True)
+
+    review = QLabel("Lawyer review required")
+    review.setObjectName("matterAiReviewLabel")
+
+    for widget in (heading, caption, question, ask, answer, sources, review):
+        layout.addWidget(widget)
+    return panel
 
 
 def _matter_summary_tab() -> QWidget:

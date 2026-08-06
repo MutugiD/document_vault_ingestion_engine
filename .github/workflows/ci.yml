@@ -84,6 +84,7 @@ jobs:
             "tests/validate_matter_details.py",
             "tests/validate_automation_seam.py",
             "tests/validate_entitlements.py",
+            "tests/validate_matter_ai_panel.py",
             "tests/validate_e2e.py",
             "tests/validate_ui.py"
           )
