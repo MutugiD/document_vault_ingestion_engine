@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from backup import create_local_backup, restore_backup_package  # noqa: E402
+from core.manual_app import resolve_ocr_engine  # noqa: E402
 from intake import (  # noqa: E402
     ACCEPTED_STATUS,
     DUPLICATE_STATUS,
@@ -26,7 +27,6 @@ from intake import (  # noqa: E402
     extract_text,
     import_document,
 )
-from intake.ocr_runtime import discover_tesseract_runtime  # noqa: E402
 from rag import build_answer_packet, build_rag_index  # noqa: E402
 from search import (  # noqa: E402
     DRAFT_STATUS,
@@ -122,7 +122,13 @@ def run_smoke(input_root: Path, workspace: Path) -> dict[str, object]:
     duplicate_root = workspace / "duplicate-source"
     duplicate_root.mkdir(parents=True, exist_ok=True)
 
-    ocr_engine = discover_tesseract_runtime()
+    # The adapter, not the runtime. discover_tesseract_runtime() returns a
+    # validated runtime description with no recognize_image on it, so passing it
+    # straight to extract_text raised AttributeError several frames down and
+    # surfaced as "PDF extraction failed" -- reading as a broken document rather
+    # than a broken call. The same mistake was fixed in core/manual_app.py and
+    # survived here, so it now goes through the one resolver that gets it right.
+    ocr_engine = resolve_ocr_engine(Path(__file__))
     vault_session = initialize_vault(vault_root, recovery_key)
     matter = create_matter(
         vault_root,

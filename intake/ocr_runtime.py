@@ -73,13 +73,25 @@ class TesseractOcrEngine:
                 env=environment,
                 check=False,
                 capture_output=True,
-                text=True,
+                # Tesseract writes UTF-8 whatever the machine's locale is.
+                # `text=True` alone decodes with the locale codec, which on a
+                # Windows install is cp1252 -- so a curly quote, an en-dash or a
+                # Kiswahili diacritic in a scan raised UnicodeDecodeError inside
+                # subprocess and the call returned stdout as None. That is every
+                # real judgment, on the platform this product ships to.
+                encoding="utf-8",
+                errors="replace",
                 timeout=DEFAULT_OCR_TIMEOUT_SECONDS,
             )
         except subprocess.TimeoutExpired as exc:
             raise OcrRuntimeError("Tesseract OCR timed out") from exc
         if result.returncode != 0:
-            raise OcrRuntimeError(result.stderr.strip() or "Tesseract OCR failed")
+            raise OcrRuntimeError((result.stderr or "").strip() or "Tesseract OCR failed")
+        if result.stdout is None:
+            # Should be unreachable now that decoding is pinned to UTF-8, but
+            # a None here previously surfaced as AttributeError several frames
+            # away, which read as a broken document rather than a broken decode.
+            raise OcrRuntimeError("Tesseract OCR produced no readable output")
         return result.stdout.strip()
 
 
