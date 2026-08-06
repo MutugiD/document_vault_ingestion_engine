@@ -14,6 +14,8 @@ from intake import (
     REJECTED_STATUS,
     ExtractionError,
     OcrRuntimeError,
+    TesseractOcrEngine,
+    TesseractRuntime,
     discover_tesseract_runtime,
     extract_text,
     import_document,
@@ -271,27 +273,89 @@ def _sidecar_ocr_engine(source_path: Path) -> SidecarOcrEngine | None:
     return SidecarOcrEngine(sidecar.read_text(encoding="utf-8"))
 
 
+def describe_ocr_availability() -> tuple[bool, str]:
+    """Whether OCR can run, and where the engine came from.
+
+    Reported rather than inferred, because the failure mode is silence: with no
+    engine a scanned receipt yields empty text and an ``ocr_status`` a user
+    never sees. The application says this plainly at startup instead.
+    """
+    runtime = _bundled_runtime()
+    if runtime is not None:
+        return True, f"bundled Tesseract {runtime.version}"
+    system = _system_tesseract()
+    if system is not None:
+        return True, f"system Tesseract at {system}"
+    return False, "no OCR engine: scanned documents will yield no text"
+
+
+def _bundled_runtime():
+    """The runtime shipped with the application, if one was bundled."""
+    try:
+        return discover_tesseract_runtime()
+    except OcrRuntimeError:
+        return None
+
+
+def _system_tesseract() -> Path | None:
+    """A Tesseract on this machine, used only when nothing was bundled.
+
+    Unmanifested, so it carries none of the integrity guarantees a bundled
+    runtime does. It is accepted anyway because a firm with Tesseract installed
+    would otherwise get silent empty text, which is worse than a runtime whose
+    exact build is unverified.
+    """
+    from shutil import which
+
+    found = which("tesseract")
+    if found:
+        return Path(found)
+    for candidate in (
+        Path("C:/Program Files/Tesseract-OCR/tesseract.exe"),
+        Path("C:/Program Files (x86)/Tesseract-OCR/tesseract.exe"),
+    ):
+        if candidate.exists():
+            return candidate
+    return None
+
+
 def resolve_ocr_engine(source_path: Path) -> object | None:
     """The OCR engine to use for one import.
 
-    A sidecar ``.ocr.txt`` beside the source wins, because tests and evidence
-    runs use it to supply deterministic text without a Tesseract install. Any
-    real import falls back to the bundled Tesseract runtime.
+    Tried in order of trust:
 
-    Returning ``None`` here means no OCR happens at all, so a scanned document
-    -- a stamped receipt, a title copy, a sealed order -- yields no text and
-    never reaches search or RAG. That was the shipped behaviour: the runtime
-    was bundled and validated at release but never wired to an import.
+    1. A sidecar ``.ocr.txt`` beside the source, so evidence runs can supply
+       deterministic text without any engine at all.
+    2. The runtime bundled with the application and validated against its
+       signed manifest.
+    3. A Tesseract installed on this machine, unmanifested but real.
+
+    Returning ``None`` means no OCR happens, so a scanned document -- a stamped
+    receipt, a title copy, a sealed order -- yields no text and never reaches
+    search or RAG.
     """
     sidecar = _sidecar_ocr_engine(source_path)
     if sidecar is not None:
         return sidecar
-    try:
-        return discover_tesseract_runtime()
-    except OcrRuntimeError:
-        # No bundled runtime on this machine. Extraction still records
-        # ocr_status = pending_tesseract, so the gap stays visible.
-        return None
+
+    runtime = _bundled_runtime()
+    if runtime is not None:
+        # discover_* returns a validated runtime; the engine is the adapter
+        # that actually runs it. Returning the runtime itself gave callers an
+        # object with no recognize_image, so OCR failed even when present.
+        return TesseractOcrEngine(runtime)
+
+    system = _system_tesseract()
+    if system is not None:
+        return TesseractOcrEngine(
+            TesseractRuntime(
+                root=system.parent,
+                executable=system,
+                languages=("eng",),
+                version="system",
+            )
+        )
+    return None
 
 
 def _content_type(detected_file_type: str) -> str:

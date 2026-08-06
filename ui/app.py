@@ -860,6 +860,7 @@ class MainWindow(QMainWindow):
         )
         self._connect_workflow_controls()
         self._connect_backend_controls()
+        self._report_ocr_availability()
         self._set_license_state(False, "Not activated")
         if _dev_unlock_requested():
             self._set_license_state(True, "DEVELOPMENT BUILD - license gate bypassed")
@@ -967,6 +968,25 @@ class MainWindow(QMainWindow):
                 )
         self._publish_state()
 
+    def _report_ocr_availability(self) -> None:
+        """Say plainly whether scanned documents can be read.
+
+        Without an engine, OCR does not fail -- it produces empty text and an
+        ``ocr_status`` nobody reads, so a firm believes a scanned receipt was
+        imported when nothing was captured. Silence is the failure; this makes
+        it visible before anything is imported.
+        """
+        from core.manual_app import describe_ocr_availability
+
+        available, detail = describe_ocr_availability()
+        label = self.findChild(QLabel, "ocrStatusLabel")
+        if label is not None:
+            label.setText(f"OCR: {detail}" if available else f"OCR unavailable - {detail}")
+        if not available:
+            self.status_label.setText(
+                "No OCR engine found: scanned documents will import with no text"
+            )
+
     def _publish_state(self) -> None:
         """Publish what the window currently holds, for an automated harness.
 
@@ -993,6 +1013,9 @@ class MainWindow(QMainWindow):
         write_state(
             {
                 "license_active": self._license_active,
+                "ocr_available": __import__(
+                    "core.manual_app", fromlist=["describe_ocr_availability"]
+                ).describe_ocr_availability()[0],
                 "entitlements": dict(self._entitlements),
                 "gate_index": self.application_stack.currentIndex(),
                 "destination": self.tabs.tabText(self.tabs.currentIndex()),

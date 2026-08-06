@@ -73,6 +73,10 @@ def run_selftest() -> int:
     print(f"Imported modules: {', '.join(CORE_MODULES)}")
     print("Licensing installation identity check: pass")
     print("Clock guard check: pass")
+    from core.manual_app import describe_ocr_availability
+
+    ocr_available, ocr_detail = describe_ocr_availability()
+    print(f"OCR: {ocr_detail}")
     print(f"App version: {APP_VERSION}")
     _write_selftest_result("PASS", [])
     return 0

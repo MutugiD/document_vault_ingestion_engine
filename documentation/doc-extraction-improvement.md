@@ -312,6 +312,27 @@ Read them with their limits in mind:
   runtime on this machine (see below). It measures the OCR engine, not the
   application's runtime discovery.
 
+### 5.1a Reference codes are the weak spot, not prose
+
+Character error rate understates the risk, because the errors are not evenly
+distributed over things a firm cares about. Measured on a scanned receipt:
+
+| Field | Ground truth | Recovered |
+|---|---|---|
+| Amount | `KES 4,000.00` | `KES 4,000.00` — exact |
+| Case number | `HCCOMM/E214/2026` | `HCCOMM/E21 4/2026` — spacing damage |
+| Customer reference | `E6EWRY6F` | `EEEWRY6F` — `6` read as `E` |
+
+Money survives, because digits with separators are well constrained. Mixed
+alphanumeric references do not: `6`/`E`, `0`/`O`, `1`/`I` and `5`/`S` are the
+usual confusions, and a reference has no grammar to correct against.
+
+That is exactly the field the portal uses to reconcile a payment. A PRN or
+customer reference recovered with one wrong character will not match, and the
+failure looks like a missing payment rather than a misread. Any feature that
+matches on these codes should compare loosely, or ask the user to confirm the
+reference rather than trusting the scan.
+
 ### 5.2 The shipped bundle contains no OCR engine
 
 Found while establishing the baseline, and more serious than any accuracy
@@ -326,9 +347,27 @@ product: a scanned receipt still yields nothing, and `ocr_status` records
 exists to make the release bundle assert the runtime is present, and is not set
 by default.
 
-Either ship the runtime and set that variable in the release workflow, or have
-the application say plainly at import time that OCR is unavailable. Silently
-producing empty text for a scanned document is the worst of the three.
+**Both were done.** `scripts/stage_tesseract_runtime.py` stages a minimal
+runtime (82 MiB: the executable, its libraries and one language, rather than the
+87 MiB full install with training tools) and writes the hashed manifest
+discovery validates. The binaries are gitignored -- the script is the
+reproducible artefact, because 80+ MB in git history is permanent.
+
+`resolve_ocr_engine()` now tries, in order of trust: a sidecar for evidence
+runs, the bundled runtime, then an unmanifested system install. It also fixes a
+second defect that would have kept OCR broken even once the runtime shipped: it
+returned the *runtime* rather than the engine adapter, so callers got an object
+with no `recognize_image`. That never surfaced because a runtime was never
+found.
+
+And availability is now reported rather than inferred. `main.py --selftest`
+prints it, and the window says so before anything is imported. Silence was the
+real failure: a scanned receipt imported as empty text with an `ocr_status`
+nobody reads.
+
+Measured through the application's own resolver: **11 of 11 scanned documents**
+in the practice corpus now yield text and report `completed_tesseract`, where
+all 11 previously yielded nothing.
 
 Without this, "improving accuracy" is unfalsifiable. The figures in
 `evidence.md` (RAG confidence 0.49–0.69) measure the system's confidence in

@@ -85,6 +85,7 @@ jobs:
             "tests/validate_automation_seam.py",
             "tests/validate_entitlements.py",
             "tests/validate_matter_ai_panel.py",
+            "tests/validate_ocr_availability.py",
             "tests/validate_e2e.py",
             "tests/validate_ui.py"
           )
@@ -141,6 +142,16 @@ jobs:
       - name: Verify the compiled trust anchor survived obfuscation
         if: steps.spec.outputs.present == 'true'
         run: python scripts/verify_trust_anchor.py
+
+      - name: Stage the OCR runtime for bundling
+        if: steps.spec.outputs.present == 'true'
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          # A CI runner has no Tesseract install, so this stages one only when
+          # a source is available. The release workflow requires it; here a
+          # missing runtime must not fail the smoke build.
+          python scripts/stage_tesseract_runtime.py
 
       - name: Build one-folder bundle (PyInstaller)
         if: steps.spec.outputs.present == 'true'

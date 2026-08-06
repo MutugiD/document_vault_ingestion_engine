@@ -18,6 +18,11 @@ build-*/
 dist-*/
 *.spec.bak
 
+# Bundled third-party runtimes are staged at build time by
+# scripts/stage_tesseract_runtime.py, never committed: 80+ MB of binaries in
+# git history is permanent, and the script is the reproducible artefact.
+runtime/
+
 .env
 .env.*
 !.env.example
