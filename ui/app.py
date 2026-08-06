@@ -866,6 +866,7 @@ class MainWindow(QMainWindow):
         self._reminder_settings = ReminderSettings()
         self._reminder_entries: list[dict[str, object]] = []
         self._reminder_inbox: list[dict[str, object]] = []
+        self._paired_devices: list[dict[str, object]] = []
         self._tray_icon = None
 
         root = QWidget()
@@ -1209,6 +1210,95 @@ class MainWindow(QMainWindow):
         self.status_label.setText("Reminder acknowledged.")
         self._on_refresh_reminders()
 
+    # ── Paired phones ────────────────────────────────────────────────────
+
+    def _backend_create_pairing(self) -> dict:
+        if self._backend_local is not None:
+            return self._backend_local.create_pairing_code(self._solo_token())
+        if self._backend_client is not None:
+            return self._backend_client.create_pairing_code()
+        return {}
+
+    def _backend_list_devices(self) -> list[dict]:
+        if self._backend_local is not None:
+            return self._backend_local.list_paired_devices(self._solo_token())
+        if self._backend_client is not None:
+            return self._backend_client.list_devices()
+        return []
+
+    def _backend_revoke_device(self, device_id: str) -> dict:
+        if self._backend_local is not None:
+            return self._backend_local.revoke_device(self._solo_token(), device_id)
+        if self._backend_client is not None:
+            return self._backend_client.revoke_device(device_id)
+        return {}
+
+    def _on_pair_device(self) -> None:
+        if self._backend_local is None and self._backend_client is None:
+            self.status_label.setText("Start solo mode or connect to a server first")
+            return
+        try:
+            offer = self._backend_create_pairing()
+        except (WakiliOSError, WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Could not create a pairing code: {exc}")
+            return
+        label = self.findChild(QLabel, "pairingCodeLabel")
+        if label is not None:
+            server = ""
+            if self._backend_client is not None:
+                server = f"  Server: {self._backend_client.config.base_url}"
+            label.setText(
+                f"Pairing code: {offer.get('pairing_code', '')}   "
+                f"(valid {offer.get('expires_in_minutes', '')} minutes){server}"
+            )
+        self.status_label.setText("Enter this code on the phone within a few minutes.")
+        self._on_refresh_devices()
+
+    def _on_refresh_devices(self) -> None:
+        if self._backend_local is None and self._backend_client is None:
+            self.status_label.setText("Start solo mode or connect to a server first")
+            return
+        try:
+            devices = self._backend_list_devices()
+        except (WakiliOSError, WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Could not read paired phones: {exc}")
+            return
+        self._paired_devices = devices
+        listing = self.findChild(QListWidget, "pairedDevicesList")
+        if listing is not None:
+            listing.clear()
+            for device in devices:
+                state = "unpaired" if device.get("revoked") else "active"
+                listing.addItem(
+                    QListWidgetItem(
+                        f"{device.get('device_name', '')} ({device.get('platform', '')}) "
+                        f"- last synced {device.get('last_seen_at', 'never')} [{state}]"
+                    )
+                )
+        empty = self.findChild(QLabel, "pairedDevicesEmptyLabel")
+        if empty is not None:
+            empty.setVisible(not devices)
+        self._publish_state()
+
+    def _on_revoke_device(self) -> None:
+        listing = self.findChild(QListWidget, "pairedDevicesList")
+        if listing is None:
+            return
+        row = listing.currentRow()
+        if row < 0 or row >= len(self._paired_devices):
+            self.status_label.setText("Select a phone to unpair.")
+            return
+        device = self._paired_devices[row]
+        try:
+            self._backend_revoke_device(str(device.get("device_id", "")))
+        except (WakiliOSError, WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Could not unpair: {exc}")
+            return
+        self.status_label.setText(
+            f"{device.get('device_name', 'That phone')} is unpaired and will stop syncing."
+        )
+        self._on_refresh_devices()
+
     def _start_connection_health_timer(self) -> None:
         """Poll the firm backend so an outage is visible, not inferred.
 
@@ -1442,6 +1532,10 @@ class MainWindow(QMainWindow):
                 "review_queue": rows("documentReviewQueue"),
                 "audit_events": len(rows("auditLogList")),
                 "matter_summary": summary.toPlainText() if summary is not None else "",
+                "paired_devices": [
+                    f"{d.get('device_name', '')}:{'revoked' if d.get('revoked') else 'active'}"
+                    for d in self._paired_devices
+                ],
                 "reminders_inbox": [_reminder_inbox_row(i) for i in self._reminder_inbox],
                 "reminders_unread": sum(
                     1 for i in self._reminder_inbox if i.get("state") == "unread"
@@ -1696,6 +1790,9 @@ class MainWindow(QMainWindow):
             ("refreshRemindersButton", self._on_refresh_reminders),
             ("sendReminderButton", self._on_send_reminder),
             ("acknowledgeReminderButton", self._on_acknowledge_reminder),
+            ("pairDeviceButton", self._on_pair_device),
+            ("refreshDevicesButton", self._on_refresh_devices),
+            ("revokeDeviceButton", self._on_revoke_device),
         ):
             reminder_button = self.findChild(QPushButton, button_name)
             if reminder_button is not None:
@@ -3056,6 +3153,7 @@ def _settings_page(modules: tuple[ModuleStatus, ...] = DEFAULT_MODULES) -> QWidg
     layout = QVBoxLayout(page)
     layout.addWidget(_dashboard_page())
     layout.addWidget(_reminder_settings_group())
+    layout.addWidget(_paired_devices_group())
     layout.addWidget(_ai_keys_group())
     layout.addWidget(_backup_group())
     layout.addWidget(_admin_group())
@@ -3203,6 +3301,58 @@ def _reminder_settings_group() -> QWidget:
     caption.setObjectName("dailyReminderCaption")
     caption.setWordWrap(True)
     layout.addRow(caption)
+    return group
+
+
+def _paired_devices_group() -> QWidget:
+    """Pair a phone, see what is paired, and unpair it.
+
+    The revoke control is the reason this surface exists at all. A device token
+    lasts months, so without a visible way to withdraw it a lost phone stays
+    authorised until it expires.
+    """
+    group = QFrame()
+    group.setObjectName("pairedDevicesGroup")
+    layout = QVBoxLayout(group)
+
+    heading = QLabel("Paired phones")
+    heading.setObjectName("pairedDevicesHeading")
+    layout.addWidget(heading)
+
+    caption = QLabel(
+        "A paired phone syncs the diary, matter status and reminders while on "
+        "the firm network, then works offline. It cannot open documents, create "
+        "matters or read the audit log."
+    )
+    caption.setObjectName("pairedDevicesCaption")
+    caption.setWordWrap(True)
+    layout.addWidget(caption)
+
+    code_label = QLabel("No pairing code yet")
+    code_label.setObjectName("pairingCodeLabel")
+    code_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+    layout.addWidget(code_label)
+
+    listing = QListWidget()
+    listing.setObjectName("pairedDevicesList")
+    layout.addWidget(listing)
+
+    empty = QLabel("No phone is paired. Use 'Pair a phone' to add one.")
+    empty.setObjectName("pairedDevicesEmptyLabel")
+    empty.setWordWrap(True)
+    layout.addWidget(empty)
+
+    buttons = QHBoxLayout()
+    pair = QPushButton("Pair a phone")
+    pair.setObjectName("pairDeviceButton")
+    revoke = QPushButton("Unpair selected")
+    revoke.setObjectName("revokeDeviceButton")
+    refresh = QPushButton("Refresh")
+    refresh.setObjectName("refreshDevicesButton")
+    for widget in (pair, revoke, refresh):
+        buttons.addWidget(widget)
+    buttons.addStretch(1)
+    layout.addLayout(buttons)
     return group
 
 

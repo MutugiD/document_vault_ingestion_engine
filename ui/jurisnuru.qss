@@ -296,6 +296,7 @@ QFrame#reportsGroup,
 QFrame#dailyReminderGroup,
 QFrame#remindersInboxGroup,
 QFrame#remindersSendGroup,
+QFrame#pairedDevicesGroup,
 QFrame#moduleCard {
     background-color: #FFFFFF;
     border: 1px solid #E2E9F2;
@@ -679,7 +680,8 @@ QLabel#remindersCaption {
 /* Inside the white cards, so dark. */
 QLabel#remindersInboxHeading,
 QLabel#remindersSendHeading,
-QLabel#remindersSentHeading {
+QLabel#remindersSentHeading,
+QLabel#pairedDevicesHeading {
     font-size: 15px;
     font-weight: 600;
     color: #0E1A2B;
@@ -687,10 +689,24 @@ QLabel#remindersSentHeading {
 }
 
 /* An empty list should say what would fill it, not sit there blank. */
-QLabel#remindersInboxEmptyLabel {
+QLabel#remindersInboxEmptyLabel,
+QLabel#pairedDevicesEmptyLabel,
+QLabel#pairedDevicesCaption {
     color: #5F7186;
     font-size: 12px;
     padding: 6px 2px;
+}
+
+/* The code is read off this screen and typed into a phone across a desk. */
+QLabel#pairingCodeLabel {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0E1A2B;
+    background-color: #EEF4FB;
+    border: 1px solid #C6D9EC;
+    border-radius: 8px;
+    padding: 12px 14px;
 }
 
 /* ── Trusted AI layer, beside the matter (brief slide 14) ── */

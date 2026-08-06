@@ -8,6 +8,7 @@ import hmac
 import json
 import os
 import re
+import secrets
 import sqlite3
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -71,6 +72,19 @@ shapes on the same day, because::
 That property is what lets date-only and date-time columns share one query
 instead of needing a union of two. Storing UTC here would buy nothing and would
 put a 06:00 EAT hearing on the previous day.
+"""
+
+SESSION_TOKEN_TYPE = "session"
+DEVICE_TOKEN_TYPE = "device"
+PAIRING_CODE_TTL_MINUTES = 10
+DEVICE_TOKEN_TTL_DAYS = 90
+DEVICE_SNAPSHOT_LIMIT = 500
+DEVICE_CALENDAR_HORIZON_DAYS = 120
+PAIRING_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+"""Unambiguous when read aloud or copied by hand.
+
+No I/1, O/0, or L: a pairing code is typed from a screen into a phone across a
+desk, and a transcription failure looks identical to a rejected code.
 """
 
 REMINDER_UNREAD = "unread"
@@ -712,7 +726,7 @@ class WakiliOSBackend:
         policy and no index on ``created_at``, so a row per poll would degrade
         the admin view a little more each day for no investigative value.
         """
-        self.require_authenticated(token)
+        self.require_authenticated(token, allow_device=True)
         window_start = normalize_matter_date(start, field="start")
         window_end = normalize_matter_date(end, field="end")
         parameters: list[object] = [window_start, window_end]
@@ -750,7 +764,7 @@ class WakiliOSBackend:
         that is unremarkable, but it is a change worth stating. Password hashes
         and salts are never included.
         """
-        self.require_authenticated(token)
+        self.require_authenticated(token, allow_device=True)
         with _connect(self.database_path) as connection:
             rows = connection.execute(
                 """
@@ -793,7 +807,7 @@ class WakiliOSBackend:
         silently refuse most legitimate sends -- the worst kind of permission
         check, because it looks principled and behaves arbitrarily.
         """
-        actor = self.require_role(token, WRITE_ROLES)
+        actor = self.require_role(token, WRITE_ROLES, allow_device=True)
         subject = subject.strip()
         if not subject:
             raise WakiliOSError("a reminder needs a subject")
@@ -863,7 +877,7 @@ class WakiliOSBackend:
         confidentiality problem, and there is no consent model here that would
         make it defensible -- so the capability simply does not exist.
         """
-        actor = self.require_authenticated(token)
+        actor = self.require_authenticated(token, allow_device=True)
         clauses = ["r.recipient_id = ?"]
         parameters: list[object] = [actor["user_id"]]
         if state:
@@ -910,7 +924,7 @@ class WakiliOSBackend:
         self, token: str, reminder_id: str, *, state: str = REMINDER_ACKNOWLEDGED
     ) -> dict[str, object]:
         """Mark one of the caller's own reminders read, acknowledged or dismissed."""
-        actor = self.require_authenticated(token)
+        actor = self.require_authenticated(token, allow_device=True)
         if state not in REMINDER_STATES:
             raise WakiliOSError(f"unsupported reminder state: {state}")
         with _connect(self.database_path) as connection:
@@ -960,6 +974,225 @@ class WakiliOSBackend:
                 f"reminder limit reached: {REMINDER_DAILY_LIMIT} in 24 hours. "
                 f"If this is legitimate, wait or raise it with the administrator."
             )
+
+    # ── Paired devices ───────────────────────────────────────────────────
+
+    def create_pairing_code(self, token: str) -> dict[str, object]:
+        """Mint a short-lived code that a phone can exchange for a token.
+
+        The code is displayed on the desktop and typed into the phone. It is
+        deliberately not a QR image: a QR needs a new dependency, a bundling
+        entry and an image path, and eight characters read aloud across a desk
+        works today. A QR is a later convenience, not a prerequisite.
+        """
+        actor = self.require_authenticated(token)
+        code = _pairing_code()
+        expires_at = _utc_now() + timedelta(minutes=PAIRING_CODE_TTL_MINUTES)
+        with _connect(self.database_path) as connection:
+            connection.execute(
+                """
+                INSERT INTO device_pairings (
+                    pairing_code, user_id, expires_at, consumed, created_at
+                ) VALUES (?, ?, ?, 0, ?)
+                """,
+                (
+                    code,
+                    actor["user_id"],
+                    _datetime_to_text(expires_at),
+                    _datetime_to_text(_utc_now()),
+                ),
+            )
+            _audit(
+                connection,
+                actor_id=actor["user_id"],
+                event_type="device_pairing_offered",
+                target_id=actor["user_id"],
+                details={"expires_in_minutes": PAIRING_CODE_TTL_MINUTES},
+            )
+        return {
+            "pairing_code": code,
+            "expires_at": _datetime_to_text(expires_at),
+            "expires_in_minutes": PAIRING_CODE_TTL_MINUTES,
+        }
+
+    def claim_pairing_code(
+        self, pairing_code: str, *, device_name: str, platform: str = "android"
+    ) -> dict[str, object]:
+        """Exchange a pairing code for a device token.
+
+        Unauthenticated on purpose: the short-lived, single-use code *is* the
+        credential, and requiring a password here would mean typing a firm
+        password into a phone, which is the thing pairing exists to avoid.
+        """
+        code = pairing_code.strip().upper()
+        with _connect(self.database_path) as connection:
+            row = connection.execute(
+                "SELECT user_id, expires_at, consumed FROM device_pairings WHERE pairing_code = ?",
+                (code,),
+            ).fetchone()
+            if row is None:
+                raise AuthenticationError("unknown pairing code")
+            if int(row["consumed"]) != 0:
+                raise AuthenticationError("this pairing code has already been used")
+            if _parse_datetime(str(row["expires_at"])) <= _utc_now():
+                raise AuthenticationError("this pairing code has expired")
+
+            user = connection.execute(
+                "SELECT user_id, username, role, active FROM firm_users WHERE user_id = ?",
+                (row["user_id"],),
+            ).fetchone()
+            if user is None or int(user["active"]) != 1:
+                raise AuthenticationError("the user this code belongs to is inactive")
+
+            connection.execute(
+                "UPDATE device_pairings SET consumed = 1 WHERE pairing_code = ?", (code,)
+            )
+            device_id = str(uuid4())
+            now = _datetime_to_text(_utc_now())
+            connection.execute(
+                """
+                INSERT INTO paired_devices (
+                    device_id, user_id, device_name, platform, created_at, last_seen_at, revoked
+                ) VALUES (?, ?, ?, ?, ?, ?, 0)
+                """,
+                (device_id, str(user["user_id"]), device_name, platform, now, now),
+            )
+            expires_at = _utc_now() + timedelta(days=DEVICE_TOKEN_TTL_DAYS)
+            device_token = _sign_device_token(
+                connection,
+                device_id=device_id,
+                user_id=str(user["user_id"]),
+                role=str(user["role"]),
+                expires_at=expires_at,
+            )
+            _audit(
+                connection,
+                actor_id=str(user["user_id"]),
+                event_type="device_paired",
+                target_id=device_id,
+                details={"device_name": device_name, "platform": platform},
+            )
+        return {
+            "device_id": device_id,
+            "device_token": device_token,
+            "username": str(user["username"]),
+            "role": str(user["role"]),
+            "expires_at": _datetime_to_text(expires_at),
+        }
+
+    def list_paired_devices(self, token: str) -> list[dict[str, object]]:
+        """The caller's own devices, so a lost phone can be found and revoked."""
+        actor = self.require_authenticated(token)
+        with _connect(self.database_path) as connection:
+            rows = connection.execute(
+                """
+                SELECT device_id, device_name, platform, created_at, last_seen_at, revoked
+                FROM paired_devices
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+                """,
+                (actor["user_id"],),
+            ).fetchall()
+        return [_row_mapping(row) | {"revoked": bool(int(row["revoked"]))} for row in rows]
+
+    def revoke_device(self, token: str, device_id: str) -> dict[str, object]:
+        """Unpair a device. Takes effect on its next request.
+
+        Permitted to the device's owner and to an administrator. Unlike reading
+        a colleague's reminders, an administrator revoking a device is a
+        security action with no confidentiality cost -- and a firm whose
+        administrator cannot cut off a stolen phone is worse off than one whose
+        administrator can.
+        """
+        actor = self.require_authenticated(token)
+        with _connect(self.database_path) as connection:
+            row = connection.execute(
+                "SELECT user_id FROM paired_devices WHERE device_id = ?", (device_id,)
+            ).fetchone()
+            if row is None:
+                raise WakiliOSError(f"device does not exist: {device_id}")
+            if str(row["user_id"]) != actor["user_id"] and actor["role"] != ADMIN_ROLE:
+                raise PermissionDeniedError("only the device owner or an administrator may unpair")
+            connection.execute(
+                "UPDATE paired_devices SET revoked = 1 WHERE device_id = ?", (device_id,)
+            )
+            _audit(
+                connection,
+                actor_id=actor["user_id"],
+                event_type="device_revoked",
+                target_id=device_id,
+                details={"owner": str(row["user_id"])},
+            )
+        return {"device_id": device_id, "revoked": True}
+
+    def build_device_snapshot(
+        self, token: str, *, since: str = "", limit: int = DEVICE_SNAPSHOT_LIMIT
+    ) -> dict[str, object]:
+        """Everything a phone needs, and deliberately nothing more.
+
+        Documents and extracted text are excluded. They are what would make
+        this large, and they are what one least wants sitting on a phone that
+        can be left in a taxi. The phone shows what is happening and when; the
+        documents stay in the vault.
+
+        ``since`` filters on ``created_at`` and therefore returns **appends
+        only**. The schema has no ``updated_at`` and no soft delete, so a
+        rescheduled hearing or a closed matter cannot appear in a delta. The
+        client is expected to take a full snapshot periodically rather than
+        trust a chain of deltas, and this is named here rather than described
+        as complete delta sync, which it is not.
+        """
+        actor = self.require_authenticated(token, allow_device=True)
+        horizon_start = (datetime.now(NAIROBI).date() - timedelta(days=7)).isoformat()
+        horizon_end = (
+            datetime.now(NAIROBI).date() + timedelta(days=DEVICE_CALENDAR_HORIZON_DAYS)
+        ).isoformat()
+
+        with _connect(self.database_path) as connection:
+            clauses = []
+            parameters: list[object] = []
+            if since:
+                clauses.append("m.created_at > ?")
+                parameters.append(since)
+            where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+            parameters.append(int(limit))
+            matters = connection.execute(
+                f"""
+                SELECT m.*, d.filing_status, d.filing_date, d.summary
+                FROM matters m
+                LEFT JOIN wakilios_matter_details d ON d.matter_id = m.matter_id
+                {where}
+                ORDER BY m.created_at DESC
+                LIMIT ?
+                """,
+                parameters,
+            ).fetchall()
+
+        calendar = self.upcoming_dates(
+            token, start=horizon_start, end=horizon_end, limit=DEVICE_SNAPSHOT_LIMIT
+        )
+        reminders = self.list_reminders(token, since=since, limit=DEVICE_SNAPSHOT_LIMIT)
+        people = [
+            {
+                "user_id": person["user_id"],
+                "display_name": person["display_name"],
+                "role": person["role"],
+            }
+            for person in self.list_firm_users(token)
+            if person.get("active")
+        ]
+
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "generated_at": _datetime_to_text(_utc_now()),
+            "since": since,
+            "complete": not since,
+            "user": {"username": actor["username"], "role": actor["role"]},
+            "matters": [_snapshot_matter(row) for row in matters],
+            "calendar": calendar,
+            "reminders": reminders,
+            "users": people,
+        }
 
     def build_offline_cache(self, token: str) -> OfflineCache:
         self.require_authenticated(token)
@@ -1035,7 +1268,16 @@ class WakiliOSBackend:
             _row_mapping(row) | {"details": json.loads(str(row["details_json"]))} for row in rows
         ]
 
-    def require_authenticated(self, token: str) -> dict[str, str]:
+    def require_authenticated(self, token: str, *, allow_device: bool = False) -> dict[str, str]:
+        """Resolve a token to an actor, refusing paired devices by default.
+
+        ``allow_device`` is opt-in rather than opt-out, and that direction is
+        the point. A device token lives on a phone for months and is the one
+        credential here likely to be lost with the hardware, so a phone must
+        reach only the handful of things it has been reasoned about. A method
+        added later is device-denied until someone decides otherwise, which is
+        the safe way for that decision to be forgotten.
+        """
         with _connect(self.database_path) as connection:
             payload = _verify_session_token(connection, token)
             row = connection.execute(
@@ -1048,14 +1290,22 @@ class WakiliOSBackend:
             ).fetchone()
         if row is None or int(row["active"]) != 1:
             raise AuthenticationError("session user is inactive")
+        if payload["typ"] == DEVICE_TOKEN_TYPE and not allow_device:
+            raise PermissionDeniedError(
+                "a paired device cannot do this. Sign in on a desktop seat."
+            )
         return {
             "user_id": str(row["user_id"]),
             "username": str(row["username"]),
             "role": str(row["role"]),
+            "typ": payload["typ"],
+            "device_id": payload["device_id"],
         }
 
-    def require_role(self, token: str, roles: frozenset[str] | set[str]) -> dict[str, str]:
-        actor = self.require_authenticated(token)
+    def require_role(
+        self, token: str, roles: frozenset[str] | set[str], *, allow_device: bool = False
+    ) -> dict[str, str]:
+        actor = self.require_authenticated(token, allow_device=allow_device)
         if actor["role"] not in roles:
             raise PermissionDeniedError(f"role cannot perform this action: {actor['role']}")
         return actor
@@ -1155,7 +1405,7 @@ def initialize_firm_backend(
     return backend
 
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 """Current schema generation.
 
 Bump this and add a matching entry to ``_MIGRATIONS`` whenever a column or
@@ -1335,11 +1585,47 @@ def _migration_4_matter_reminders(connection: sqlite3.Connection) -> None:
     )
 
 
+def _migration_5_device_pairing(connection: sqlite3.Connection) -> None:
+    """Let a phone be paired to a person, and unpaired again.
+
+    ``revoked`` is the column that matters. A device token is long-lived by
+    necessity -- a phone that syncs weekly cannot re-authenticate every ninety
+    minutes -- and a long-lived credential with no way to withdraw it is an
+    unbounded one. A lost phone has to be answerable in the minute it is
+    reported, not in ninety days.
+    """
+    connection.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS device_pairings (
+            pairing_code TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            consumed INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS paired_devices (
+            device_id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            device_name TEXT NOT NULL,
+            platform TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            last_seen_at TEXT NOT NULL,
+            revoked INTEGER NOT NULL DEFAULT 0
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_paired_devices_user
+            ON paired_devices (user_id, revoked);
+        """
+    )
+
+
 _MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (
     _migration_1_filing_record,
     _migration_2_filing_ledger,
     _migration_3_calendar_dates,
     _migration_4_matter_reminders,
+    _migration_5_device_pairing,
 )
 
 
@@ -1541,6 +1827,40 @@ def _sign_session_token(
     return f"{encoded_payload}.{_urlsafe_b64encode(signature)}"
 
 
+def _sign_device_token(
+    connection: sqlite3.Connection,
+    *,
+    device_id: str,
+    user_id: str,
+    role: str,
+    expires_at: datetime,
+) -> str:
+    """A long-lived credential for one paired phone.
+
+    Same signature scheme and same firm secret as a session token, with
+    ``typ`` set so the two can never be confused. A device token is not a
+    session: it lasts months rather than minutes, and it carries a narrower set
+    of capabilities than the person it belongs to.
+    """
+    payload = {
+        "typ": DEVICE_TOKEN_TYPE,
+        "device_id": device_id,
+        "user_id": user_id,
+        "role": role,
+        "expires_at": _datetime_to_text(expires_at),
+        "nonce": str(uuid4()),
+    }
+    encoded_payload = _urlsafe_b64encode(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    )
+    signature = hmac.new(
+        _session_secret(connection),
+        encoded_payload.encode("ascii"),
+        hashlib.sha256,
+    ).digest()
+    return f"{encoded_payload}.{_urlsafe_b64encode(signature)}"
+
+
 def _verify_session_token(connection: sqlite3.Connection, token: str) -> dict[str, str]:
     try:
         encoded_payload, encoded_signature = token.split(".", 1)
@@ -1557,7 +1877,28 @@ def _verify_session_token(connection: sqlite3.Connection, token: str) -> dict[st
     expires_at = _parse_datetime(str(payload["expires_at"]))
     if expires_at <= _utc_now():
         raise AuthenticationError("session token expired")
-    return {"user_id": str(payload["user_id"]), "role": str(payload["role"])}
+
+    device_id = str(payload.get("device_id", ""))
+    if str(payload.get("typ", "")) == DEVICE_TOKEN_TYPE:
+        # The only revocable credential in the product. A session token expires
+        # in ninety minutes and needs no withdrawal path; a device token lasts
+        # months, so a lost phone must be answerable the minute it is reported.
+        row = connection.execute(
+            "SELECT revoked FROM paired_devices WHERE device_id = ?", (device_id,)
+        ).fetchone()
+        if row is None or int(row["revoked"]) != 0:
+            raise AuthenticationError("this device has been unpaired")
+        connection.execute(
+            "UPDATE paired_devices SET last_seen_at = ? WHERE device_id = ?",
+            (_datetime_to_text(_utc_now()), device_id),
+        )
+
+    return {
+        "user_id": str(payload["user_id"]),
+        "role": str(payload["role"]),
+        "typ": str(payload.get("typ", SESSION_TOKEN_TYPE)),
+        "device_id": device_id,
+    }
 
 
 def _enforce_seat_limit(connection: sqlite3.Connection) -> None:
@@ -1676,6 +2017,23 @@ One shape across four tables, so callers -- the daily reminder, the phone
 snapshot, the calendar destination -- ask one question instead of four. Each
 branch filters on a non-empty date so the indexes from migration 3 apply.
 """
+
+
+def _pairing_code() -> str:
+    return "".join(secrets.choice(PAIRING_CODE_ALPHABET) for _ in range(8))
+
+
+def _snapshot_matter(row: sqlite3.Row) -> dict[str, object]:
+    """A matter as a phone needs it: enough to recognise, not enough to weigh.
+
+    The summary is truncated. A phone screen cannot show more, and the whole
+    point of the snapshot's size budget is that nobody later adds document text
+    to it one field at a time.
+    """
+    mapping = _matter_mapping(row)
+    summary = str(mapping.get("summary") or "")
+    mapping["summary"] = summary if len(summary) <= 500 else f"{summary[:497].rstrip()}..."
+    return mapping
 
 
 def _upcoming_mapping(row: sqlite3.Row) -> dict[str, object]:

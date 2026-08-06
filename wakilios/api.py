@@ -145,6 +145,12 @@ class ReminderStateRequest(BaseModel):
     state: str = REMINDER_ACKNOWLEDGED
 
 
+class ClaimDeviceRequest(BaseModel):
+    pairing_code: str
+    device_name: str
+    platform: str = "android"
+
+
 def create_app(
     *,
     root: Path,
@@ -478,6 +484,59 @@ def create_app(
     ) -> dict[str, object]:
         try:
             return backend.acknowledge_reminder(token, reminder_id, state=request.state)
+        except Exception as exc:
+            raise handle_error(exc) from exc
+
+    @app.post("/devices/pairing")
+    def create_pairing(token: str = Depends(token_from_header)) -> dict[str, object]:
+        """Mint a short-lived code the user reads off the desktop into a phone."""
+        try:
+            return backend.create_pairing_code(token)
+        except Exception as exc:
+            raise handle_error(exc) from exc
+
+    @app.post("/devices/claim")
+    def claim_pairing(request: ClaimDeviceRequest) -> dict[str, object]:
+        """Exchange a pairing code for a device token.
+
+        Unauthenticated by design: the short-lived, single-use code is the
+        credential. Requiring a password here would mean typing a firm password
+        into a phone, which is what pairing exists to avoid.
+        """
+        try:
+            return backend.claim_pairing_code(
+                request.pairing_code,
+                device_name=request.device_name,
+                platform=request.platform,
+            )
+        except Exception as exc:
+            raise handle_error(exc) from exc
+
+    @app.get("/devices")
+    def list_devices(token: str = Depends(token_from_header)) -> dict[str, object]:
+        try:
+            return {"devices": backend.list_paired_devices(token)}
+        except Exception as exc:
+            raise handle_error(exc) from exc
+
+    @app.delete("/devices/{device_id}")
+    def revoke_device(
+        device_id: str,
+        token: str = Depends(token_from_header),
+    ) -> dict[str, object]:
+        try:
+            return backend.revoke_device(token, device_id)
+        except Exception as exc:
+            raise handle_error(exc) from exc
+
+    @app.get("/sync/snapshot")
+    def sync_snapshot(
+        since: str = "",
+        token: str = Depends(token_from_header),
+    ) -> dict[str, object]:
+        """What a paired phone syncs. No documents, no extracted text."""
+        try:
+            return backend.build_device_snapshot(token, since=since)
         except Exception as exc:
             raise handle_error(exc) from exc
 

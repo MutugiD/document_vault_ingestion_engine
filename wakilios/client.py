@@ -101,6 +101,29 @@ class WakiliOSClient:
         result = self._get(f"/calendar/upcoming?{query}")
         return list(result.get("entries", []))
 
+    def create_pairing_code(self) -> dict[str, Any]:
+        return self._post("/devices/pairing", {})
+
+    def claim_pairing_code(
+        self, pairing_code: str, device_name: str, platform: str = "android"
+    ) -> dict[str, Any]:
+        """Exchange a pairing code for a device token. Sends no bearer token."""
+        return self._request(
+            "POST",
+            "/devices/claim",
+            {"pairing_code": pairing_code, "device_name": device_name, "platform": platform},
+            include_auth=False,
+        )
+
+    def list_devices(self) -> list[dict[str, Any]]:
+        return list(self._get("/devices").get("devices", []))
+
+    def revoke_device(self, device_id: str) -> dict[str, Any]:
+        return self._request("DELETE", f"/devices/{device_id}")
+
+    def sync_snapshot(self, since: str = "") -> dict[str, Any]:
+        return self._get(f"/sync/snapshot?{urlencode({'since': since})}")
+
     def list_firm_users(self) -> list[dict[str, Any]]:
         return list(self._get("/firm/users").get("users", []))
 
