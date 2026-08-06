@@ -49,6 +49,25 @@ FORBIDDEN_RELEASE_NAME_MARKERS = (
     "secret",
 )
 
+FORBIDDEN_SUFFIXES = {
+    ".jks",
+    ".keystore",
+    ".p12",
+    ".pfx",
+}
+"""Extensions that hold nothing but private key material.
+
+Caught by extension because these carry no distinguishing name. An Android
+release keystore is conventionally ``release.jks`` and matches none of the name
+markers above; committed once it is in the history permanently, and the app's
+signing identity has to be replaced.
+
+Deliberately excludes ``.key``. A JurisNuru licence file is ``license.key`` and
+is a *signed public document* -- the thing the private key produces, not the key
+itself. Blocking it would flag `resources/license.key`, which is meant to be
+distributable, and a rule that fires on correct files gets disabled.
+"""
+
 BINARY_SUFFIXES = {
     ".db",
     ".dll",
@@ -98,12 +117,21 @@ def scan_repository(root: Path) -> tuple[SecurityFinding, ...]:
 def scan_paths(paths: list[Path], root: Path) -> tuple[SecurityFinding, ...]:
     findings: list[SecurityFinding] = []
     for path in paths:
-        if not path.exists() or path.suffix.lower() in BINARY_SUFFIXES:
+        if not path.exists():
             continue
         relative = _relative_name(path, root)
         lowered = relative.lower().replace("\\", "/")
+
+        # Name checks run before the binary skip. They used to run after, so a
+        # secret carrying a binary extension -- private_key.pdf, or any signing
+        # keystore -- was never examined at all.
         if any(marker in lowered for marker in FORBIDDEN_RELEASE_NAME_MARKERS):
             findings.append(SecurityFinding(relative, "forbidden_filename", lowered))
+        if path.suffix.lower() in FORBIDDEN_SUFFIXES:
+            findings.append(SecurityFinding(relative, "signing_material_filename", lowered))
+
+        if path.suffix.lower() in BINARY_SUFFIXES:
+            continue
         text = _read_text_safely(path)
         if text is None:
             continue
@@ -129,6 +157,8 @@ def scan_release_zip(zip_path: Path) -> tuple[SecurityFinding, ...]:
             lowered = name.lower().replace("\\", "/")
             if any(marker in lowered for marker in FORBIDDEN_RELEASE_NAME_MARKERS):
                 findings.append(SecurityFinding(name, "forbidden_release_filename", lowered))
+            if any(lowered.endswith(suffix) for suffix in FORBIDDEN_SUFFIXES):
+                findings.append(SecurityFinding(name, "signing_material_in_release", lowered))
     return tuple(findings)
 
 

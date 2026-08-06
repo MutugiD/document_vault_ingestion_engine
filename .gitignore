@@ -38,3 +38,14 @@ evidence/
 
 # Vendor private keys (never commit)
 _vendor/
+
+# Android companion. `build/` above already covers android/app/build/.
+# The signing keystore must never enter history: committed once, the app's
+# signing identity has to be replaced. security_checks/scanner.py fails the
+# build if one is tracked, so this and that rule are two halves of one guard.
+*.jks
+*.keystore
+*.p12
+*.pfx
+android/local.properties
+android/.gradle/
