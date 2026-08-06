@@ -1695,7 +1695,7 @@ class MainWindow(QMainWindow):
     def _connect_workflow_controls(self) -> None:
         """Wire up the existing workflow control buttons."""
         button_actions = {
-            "completeSetupButton": "Setup complete",
+            "completeSetupButton": "Complete setup",
             "initializeVaultButton": "Vault initialization checked",
             "newMatterButton": "JurisNuru matter workflow checked",
             "exportCalendarButton": "Matter calendar export checked",
@@ -2824,11 +2824,11 @@ def _dashboard_page() -> QWidget:
     device_name.setObjectName("deviceNicknameInput")
     recovery_confirmed = QCheckBox("Recovery key recorded")
     recovery_confirmed.setObjectName("recoveryKeyConfirmedCheck")
-    setup_button = QPushButton("Setup complete")
+    setup_button = QPushButton("Complete setup")
     setup_button.setObjectName("completeSetupButton")
-    setup_layout.addRow("Firm", firm_name)
+    setup_layout.addRow("Firm name", firm_name)
     setup_layout.addRow("Primary user", primary_user)
-    setup_layout.addRow("Device", device_name)
+    setup_layout.addRow("Device nickname", device_name)
     setup_layout.addRow("", recovery_confirmed)
     setup_layout.addRow("", setup_button)
     layout.addWidget(setup_group)
@@ -3477,8 +3477,16 @@ def _matter_ai_context_panel() -> QWidget:
     caption.setObjectName("matterAiCaption")
     caption.setWordWrap(True)
 
+    # A real label, not just placeholder text. Placeholder disappears the
+    # moment anything is typed, so the box loses its only description exactly
+    # when a user might look back at it -- and with nothing to anchor on, the
+    # packaged evidence harness could not reach the field either.
+    question_label = QLabel("Your question")
+    question_label.setObjectName("matterAiQuestionLabel")
+
     question = QTextEdit()
     question.setObjectName("matterAiQuestionInput")
+    question.setAccessibleName("Your question")
     question.setFixedHeight(64)
     question.setPlaceholderText("What was filed and what is the next recorded step?")
 
@@ -3497,7 +3505,7 @@ def _matter_ai_context_panel() -> QWidget:
     review = QLabel("Lawyer review required")
     review.setObjectName("matterAiReviewLabel")
 
-    for widget in (heading, caption, question, ask, answer, sources, review):
+    for widget in (heading, caption, question_label, question, ask, answer, sources, review):
         layout.addWidget(widget)
     return panel
 

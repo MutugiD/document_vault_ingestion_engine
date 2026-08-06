@@ -346,7 +346,13 @@ def main() -> int:
         )
 
         for index, question in enumerate(QUESTIONS, start=1):
-            typed = app.type_into_panel("Trusted AI layer", question)
+            # Anchored on the question box's own label rather than the panel
+            # heading. Counting forward from the heading crossed the caption and
+            # picked up whatever Edit came first, which is why six of these
+            # reported the field unreachable on the last run.
+            typed = app.type_into("Your question", question) or app.type_into_panel(
+                "Trusted AI layer", question
+            )
             if not typed:
                 check(
                     app,
@@ -428,6 +434,44 @@ def main() -> int:
             "reports",
         )
 
+        # ── The calendar, across matters ─────────────────────────────────
+        app.navigate("Matters")
+        check(
+            app,
+            "Connection health reported",
+            True,
+            app.state().get("backend", "?"),
+            "connection-health",
+        )
+        app.queue_files(run_root / "matters.ics")
+        check(
+            app,
+            "Calendar export",
+            app.press("Export calendar"),
+            app.state().get("status", "?")[:70],
+            "calendar-export",
+        )
+        exported = run_root / "matters.ics"
+        if exported.exists():
+            body = exported.read_text(encoding="utf-8", errors="replace")
+            lines = body.split("\r\n")
+            widest = max((len(line.encode("utf-8")) for line in lines), default=0)
+            check(
+                app,
+                "Exported calendar is well formed",
+                "BEGIN:VCALENDAR" in body and "DTEND" in body and widest <= 75,
+                f"{body.count('BEGIN:VEVENT')} event(s), widest line {widest} octets",
+                "calendar-ics-valid",
+            )
+        else:
+            check(
+                app,
+                "Exported calendar is well formed",
+                False,
+                "no .ics was written",
+                "calendar-ics-missing",
+            )
+
         app.navigate("Filing record")
         page = app.state().get("filing_record_page", [])
         check(app, "Filing record destination", bool(page), f"{len(page)} row(s)", "filing-record")
@@ -467,6 +511,127 @@ def main() -> int:
         time.sleep(20)
         check(
             app, "Workflow finished", True, app.state().get("status", "?")[:70], "workflow-complete"
+        )
+
+        # ── The day's matters ────────────────────────────────────────────
+        # Shown on demand rather than waiting for a wall clock: the schedule
+        # itself is covered by tests/validate_daily_reminder.py, and this is
+        # about the surface a firm actually sees.
+        app.navigate("Settings")
+        check(
+            app,
+            "Daily reminder settings visible",
+            bool(app.state().get("daily_reminder")),
+            f"{app.state().get('daily_reminder', {})}",
+            "reminder-settings",
+        )
+        for label, value, name in (
+            ("Show from", "08:00", "time"),
+            ("Days ahead", "7", "horizon"),
+        ):
+            check(
+                app,
+                f"Reminder setting: {label}",
+                app.type_into(label, value),
+                value,
+                f"reminder-setting-{name}",
+            )
+        check(
+            app,
+            "Reminder settings saved",
+            app.press("Save reminder settings"),
+            app.state().get("status", "?")[:70],
+            "reminder-settings-saved",
+        )
+        settings_state = app.state().get("daily_reminder", {})
+        check(
+            app,
+            "Reminder schedule stored",
+            settings_state.get("hour") == 8 and settings_state.get("horizon_days") == 7,
+            f"hour={settings_state.get('hour')} horizon={settings_state.get('horizon_days')}",
+            "reminder-schedule-stored",
+        )
+
+        if app.press_modal("Show today's matters now"):
+            digest = app.dialog("Today's matters")
+            check(
+                app,
+                "Daily digest raised",
+                digest is not None,
+                "the day's matters dialog opened",
+                "reminder-digest",
+                keep_dialog=True,
+            )
+            if digest is not None:
+                app.accept_dialog(digest)
+            shown = app.state().get("daily_reminder", {})
+            check(
+                app,
+                "Digest marked shown for today",
+                bool(shown.get("last_shown_date")),
+                f"entries={shown.get('entry_count')} shown={shown.get('last_shown_date')}",
+                "reminder-digest-dismissed",
+            )
+        else:
+            check(
+                app,
+                "Daily digest raised",
+                False,
+                "'Show today's matters now' not reachable",
+                "reminder-digest-unreachable",
+            )
+
+        # ── Reminders between colleagues ─────────────────────────────────
+        app.navigate("Reminders")
+        check(
+            app,
+            "Reminders destination",
+            app.state().get("destination", "").startswith("Reminders"),
+            f"inbox={len(app.state().get('reminders_inbox', []))}",
+            "reminders-destination",
+        )
+        check(
+            app,
+            "Reminders inbox refresh",
+            app.press("Refresh"),
+            app.state().get("status", "?")[:70],
+            "reminders-inbox",
+        )
+        # Solo mode is a firm of one, so there is nobody to send to. The
+        # interface must say that rather than failing silently, and that is
+        # what is photographed here.
+        app.type_into("Subject", "Serve the defence before Friday")
+        app.type_into("Detail", "The response has not been lodged.")
+        check(
+            app,
+            "Reminder compose form",
+            app.press("Send reminder"),
+            app.state().get("status", "?")[:70],
+            "reminders-send",
+        )
+
+        # ── Pairing a phone ──────────────────────────────────────────────
+        app.navigate("Settings")
+        check(
+            app,
+            "Paired phones: pair",
+            app.press("Pair a phone"),
+            app.state().get("status", "?")[:70],
+            "device-pairing-code",
+        )
+        check(
+            app,
+            "Paired phones: list",
+            app.press("Refresh"),
+            f"{len(app.state().get('paired_devices', []))} device(s)",
+            "device-list",
+        )
+        check(
+            app,
+            "Paired phones: unpair guard",
+            app.press("Unpair selected"),
+            app.state().get("status", "?")[:70],
+            "device-unpair",
         )
 
         # ── A final pass over every destination, populated ───────────────
