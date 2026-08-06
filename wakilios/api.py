@@ -6,10 +6,12 @@ from fastapi import Depends, FastAPI, Header, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from wakilios.core import (
+    SCHEMA_VERSION,
     AuthenticationError,
     PermissionDeniedError,
     SeatLimitError,
     WakiliOSError,
+    _utc_now,
     initialize_firm_backend,
 )
 
@@ -164,9 +166,23 @@ def create_app(
             return HTTPException(status_code=400, detail=str(exc))
         return HTTPException(status_code=500, detail="wakilios backend error")
 
+    started_at = _utc_now()
+
     @app.get("/health")
-    def health() -> dict[str, str]:
-        return {"status": "ok", "product": "WakiliOS"}
+    def health() -> dict[str, object]:
+        """Unauthenticated liveness, plus enough to spot a mismatched seat.
+
+        The schema version is here because the failure it catches is silent: a
+        seat running an older build against a migrated vault does not fail to
+        connect, it fails later on a column it does not know about.
+        """
+        return {
+            "status": "ok",
+            "product": "JurisNuru",
+            "firm_name": firm_name,
+            "schema_version": SCHEMA_VERSION,
+            "uptime_seconds": int((_utc_now() - started_at).total_seconds()),
+        }
 
     @app.post("/auth/login")
     def login(request: LoginRequest) -> dict[str, object]:

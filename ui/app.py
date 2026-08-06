@@ -60,6 +60,7 @@ from wakilios.client import (
 )
 from wakilios.core import (
     NAIROBI,
+    SCHEMA_VERSION,
     WakiliOSBackend,
     WakiliOSError,
     initialize_firm_backend,
@@ -934,6 +935,8 @@ class MainWindow(QMainWindow):
         self._reminder_settings = self._load_reminder_settings()
         self._apply_reminder_settings_to_form()
         self._start_reminder_timer()
+        self._start_connection_health_timer()
+        self._refresh_connection_health()
         self._start_state_publishing()
         self._set_license_state(False, "Not activated")
         if _dev_unlock_requested():
@@ -1085,6 +1088,45 @@ class MainWindow(QMainWindow):
         horizon = self.findChild(QLineEdit, "dailyReminderHorizonInput")
         if horizon is not None:
             horizon.setText(str(self._reminder_settings.horizon_days))
+
+    def _start_connection_health_timer(self) -> None:
+        """Poll the firm backend so an outage is visible, not inferred.
+
+        Without this, a server that has gone away shows up as an operation
+        failing for no stated reason, and the firm concludes the product is
+        broken rather than that the office machine is off.
+        """
+        self._health_timer = QTimer(self)
+        self._health_timer.setInterval(30_000)
+        self._health_timer.timeout.connect(self._refresh_connection_health)
+        self._health_timer.start()
+
+    def _refresh_connection_health(self) -> None:
+        label = self.findChild(QLabel, "connectionHealthLabel")
+        if label is None:
+            return
+        if self._backend_local is not None:
+            label.setText("Solo - this machine")
+            return
+        if self._backend_client is None:
+            label.setText("Not connected")
+            return
+        try:
+            health = self._backend_client.health()
+        except (WakiliOSClientError, WakiliOSConnectionError) as exc:
+            label.setText("Firm backend unreachable")
+            label.setToolTip(str(exc))
+            return
+        firm = str(health.get("firm_name") or "firm backend")
+        schema = health.get("schema_version")
+        label.setText(f"Connected - {firm}")
+        # A seat running an older build against a migrated vault does not fail
+        # to connect; it fails later, on a column it has never heard of.
+        if schema is not None and int(schema) != SCHEMA_VERSION:
+            label.setText(
+                f"Connected - {firm} (schema {schema}, this seat expects {SCHEMA_VERSION})"
+            )
+        label.setToolTip("")
 
     def _start_reminder_timer(self) -> None:
         """Check once a minute whether today's digest is owed.
@@ -2560,6 +2602,9 @@ def _workspace_page() -> QWidget:
     header = QHBoxLayout()
     role_status = QLabel("Role: not connected")
     role_status.setObjectName("roleStatusLabel")
+    connection_health = QLabel("Not connected")
+    connection_health.setObjectName("connectionHealthLabel")
+    connection_health.setToolTip("Whether the firm backend is answering")
     export_calendar = QPushButton("Export calendar")
     export_calendar.setObjectName("exportCalendarButton")
     add_matter = QPushButton("New matter")
@@ -2570,6 +2615,7 @@ def _workspace_page() -> QWidget:
     refresh_matters = QPushButton("Refresh")
     refresh_matters.setObjectName("refreshMatterListButton")
     header.addWidget(role_status)
+    header.addWidget(connection_health)
     header.addStretch(1)
     header.addWidget(refresh_matters)
     header.addWidget(export_calendar)

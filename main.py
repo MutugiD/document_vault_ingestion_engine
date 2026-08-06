@@ -100,7 +100,51 @@ def _write_selftest_result(status: str, failures: list[str]) -> None:
         pass  # degrade gracefully, never crash at launch
 
 
+def run_firm_server(args: argparse.Namespace) -> int:
+    """Serve the firm backend so other seats and paired phones can reach it."""
+    from wakilios.server import (
+        FirmServerConfig,
+        ServerConfigurationError,
+        resolve_bind_host,
+        resolve_vault_passphrase,
+        serve,
+    )
+
+    if args.firm_root is None:
+        print("--serve needs --firm-root, the directory holding the firm vault", file=sys.stderr)
+        return 2
+    try:
+        host = resolve_bind_host(args.serve_host, allow_public=args.allow_public)
+        passphrase = resolve_vault_passphrase()
+    except ServerConfigurationError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    if not args.admin_password:
+        print(
+            "--serve needs --admin-password when initialising a firm vault. "
+            "It is ignored once the administrator exists.",
+            file=sys.stderr,
+        )
+        return 2
+    return serve(
+        FirmServerConfig(
+            root=args.firm_root,
+            firm_name=args.firm_name,
+            admin_username=args.admin_username,
+            admin_password=args.admin_password,
+            vault_passphrase=passphrase,
+            host=host,
+            port=args.serve_port,
+            max_seats=args.max_seats,
+        )
+    )
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
+    # Imported here rather than at module scope to keep launch lazy, as every
+    # other subsystem in this file is.
+    from wakilios.server import DEFAULT_PORT
+
     parser = argparse.ArgumentParser(description="Document Vault Ingestion Engine")
     parser.add_argument("--selftest", action="store_true", help="run packaged-app smoke checks")
     parser.add_argument("--gui", action="store_true", help="launch the Windows desktop shell")
@@ -163,6 +207,34 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="run the WakiliOS multi-seat backend verification with redacted output",
     )
+    parser.add_argument(
+        "--serve",
+        action="store_true",
+        help="serve the firm backend on the local network for other seats",
+    )
+    parser.add_argument("--firm-root", type=Path, default=None, help="firm vault directory")
+    parser.add_argument("--firm-name", default="JurisNuru Firm", help="firm name")
+    parser.add_argument("--admin-username", default="admin", help="firm administrator username")
+    parser.add_argument(
+        "--admin-password",
+        default="",
+        help="firm administrator password, used only when initialising a new vault",
+    )
+    parser.add_argument(
+        "--serve-host",
+        default="",
+        help="interface to bind; defaults to this machine's private network address",
+    )
+    parser.add_argument("--serve-port", type=int, default=DEFAULT_PORT, help="port to bind")
+    parser.add_argument("--max-seats", type=int, default=5, help="licensed seat count")
+    parser.add_argument(
+        "--allow-public",
+        action="store_true",
+        help=(
+            "permit binding a non-private address. This publishes the firm's entire "
+            "matter database to that network over an unencrypted transport."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -170,6 +242,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(list(sys.argv[1:] if argv is None else argv))
     if args.selftest:
         return run_selftest()
+    if args.serve:
+        return run_firm_server(args)
     if args.gui:
         from ui import run_gui
 

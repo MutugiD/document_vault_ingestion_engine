@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 from starlette.testclient import TestClient  # noqa: E402
 
 from wakilios.api import create_app  # noqa: E402
+from wakilios.core import SCHEMA_VERSION  # noqa: E402
 
 
 def main() -> None:
@@ -27,10 +28,16 @@ def main() -> None:
         )
         client = TestClient(app)
 
-        # Health
+        # Health, unauthenticated, and carrying enough to spot a seat running
+        # an older build against a migrated vault -- a failure that otherwise
+        # only appears later, on a column that seat has never heard of.
         resp = client.get("/health")
         assert resp.status_code == 200
-        assert resp.json()["product"] == "WakiliOS"
+        health = resp.json()
+        assert health["product"] == "JurisNuru", health
+        assert health["status"] == "ok", health
+        assert health["schema_version"] == SCHEMA_VERSION, health
+        assert "firm_name" in health, health
 
         # Auth: bad login
         resp = client.post("/auth/login", json={"username": "admin", "password": "wrong"})
