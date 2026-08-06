@@ -73,6 +73,16 @@ instead of needing a union of two. Storing UTC here would buy nothing and would
 put a 06:00 EAT hearing on the previous day.
 """
 
+REMINDER_UNREAD = "unread"
+REMINDER_READ = "read"
+REMINDER_ACKNOWLEDGED = "acknowledged"
+REMINDER_DISMISSED = "dismissed"
+REMINDER_STATES = frozenset(
+    {REMINDER_UNREAD, REMINDER_READ, REMINDER_ACKNOWLEDGED, REMINDER_DISMISSED}
+)
+REMINDER_PRIORITIES = frozenset({"normal", "urgent"})
+REMINDER_DAILY_LIMIT = 50
+
 _DATE_ONLY_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _SLASHED_DATE_PATTERN = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")
 _ACCEPTED_DATE_FORMATS = "YYYY-MM-DD, DD/MM/YYYY, or YYYY-MM-DDTHH:MM:SS"
@@ -730,6 +740,227 @@ class WakiliOSBackend:
             ).fetchall()
         return [_upcoming_mapping(row) for row in rows]
 
+    # ── Reminders between colleagues ─────────────────────────────────────
+
+    def list_firm_users(self, token: str) -> list[dict[str, object]]:
+        """Who is in the firm, so a reminder can be addressed to someone.
+
+        No route listed users before this, which meant a send dialog had nobody
+        to name. It does newly expose the roster to every seat; inside one firm
+        that is unremarkable, but it is a change worth stating. Password hashes
+        and salts are never included.
+        """
+        self.require_authenticated(token)
+        with _connect(self.database_path) as connection:
+            rows = connection.execute(
+                """
+                SELECT user_id, username, display_name, role, active
+                FROM firm_users
+                ORDER BY display_name ASC, username ASC
+                """
+            ).fetchall()
+        return [
+            {
+                "user_id": str(row["user_id"]),
+                "username": str(row["username"]),
+                "display_name": str(row["display_name"]),
+                "role": str(row["role"]),
+                "active": bool(int(row["active"])),
+            }
+            for row in rows
+        ]
+
+    def send_reminder(
+        self,
+        token: str,
+        *,
+        recipient_ids: list[str] | tuple[str, ...],
+        subject: str,
+        body: str = "",
+        matter_id: str = "",
+        due_date: str = "",
+        priority: str = "normal",
+    ) -> list[dict[str, object]]:
+        """Put something on a colleague's desk about a matter.
+
+        Any writing role may send, including clerks and accounts. A clerk who
+        notices a filing deadline is exactly the person who needs to prompt the
+        advocate, so restricting this to advocates would remove the main use.
+        Read-only seats may not.
+
+        Deliberately not gated on ``matter_assignments``. That table is written
+        once at matter creation and enforced nowhere, so gating on it would
+        silently refuse most legitimate sends -- the worst kind of permission
+        check, because it looks principled and behaves arbitrarily.
+        """
+        actor = self.require_role(token, WRITE_ROLES)
+        subject = subject.strip()
+        if not subject:
+            raise WakiliOSError("a reminder needs a subject")
+        if priority not in REMINDER_PRIORITIES:
+            raise WakiliOSError(f"unsupported priority: {priority}")
+        recipients = [str(value) for value in dict.fromkeys(recipient_ids) if str(value).strip()]
+        if not recipients:
+            raise WakiliOSError("a reminder needs at least one recipient")
+        due_date = normalize_matter_date(due_date, field="due_date")
+
+        created: list[dict[str, object]] = []
+        with _connect(self.database_path) as connection:
+            if matter_id:
+                _require_existing_matter(connection, matter_id)
+            self._enforce_reminder_rate_limit(connection, actor["user_id"])
+            for recipient_id in recipients:
+                row = connection.execute(
+                    "SELECT active FROM firm_users WHERE user_id = ?", (recipient_id,)
+                ).fetchone()
+                if row is None or int(row["active"]) != 1:
+                    raise WakiliOSError(f"not an active firm user: {recipient_id}")
+                reminder_id = str(uuid4())
+                connection.execute(
+                    """
+                    INSERT INTO matter_reminders (
+                        reminder_id, matter_id, sender_id, recipient_id, subject,
+                        body, due_date, priority, state, acknowledged_at, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?)
+                    """,
+                    (
+                        reminder_id,
+                        matter_id,
+                        actor["user_id"],
+                        recipient_id,
+                        subject,
+                        body,
+                        due_date,
+                        priority,
+                        REMINDER_UNREAD,
+                        _datetime_to_text(_utc_now()),
+                    ),
+                )
+                created.append(
+                    _row_mapping(
+                        connection.execute(
+                            "SELECT * FROM matter_reminders WHERE reminder_id = ?",
+                            (reminder_id,),
+                        ).fetchone()
+                    )
+                )
+            _audit(
+                connection,
+                actor_id=actor["user_id"],
+                event_type="reminder_sent",
+                target_id=matter_id or "firm",
+                details={"recipients": len(recipients), "priority": priority},
+            )
+        return created
+
+    def list_reminders(
+        self, token: str, *, state: str = "", since: str = "", limit: int = 200
+    ) -> list[dict[str, object]]:
+        """The caller's own inbox.
+
+        The recipient is always the caller, and an administrator gets no
+        override. Reading a colleague's reminders in a law firm is a
+        confidentiality problem, and there is no consent model here that would
+        make it defensible -- so the capability simply does not exist.
+        """
+        actor = self.require_authenticated(token)
+        clauses = ["r.recipient_id = ?"]
+        parameters: list[object] = [actor["user_id"]]
+        if state:
+            clauses.append("r.state = ?")
+            parameters.append(state)
+        if since:
+            clauses.append("r.created_at > ?")
+            parameters.append(since)
+        parameters.append(int(limit))
+        with _connect(self.database_path) as connection:
+            rows = connection.execute(
+                f"""
+                SELECT r.*, u.display_name AS sender_name, u.username AS sender_username,
+                       m.internal_reference AS matter_reference
+                FROM matter_reminders r
+                LEFT JOIN firm_users u ON u.user_id = r.sender_id
+                LEFT JOIN matters m ON m.matter_id = r.matter_id
+                WHERE {" AND ".join(clauses)}
+                ORDER BY r.created_at DESC
+                LIMIT ?
+                """,
+                parameters,
+            ).fetchall()
+        return [_row_mapping(row) for row in rows]
+
+    def list_sent_reminders(self, token: str, *, limit: int = 200) -> list[dict[str, object]]:
+        """What the caller has sent, so acknowledgement is visible to them."""
+        actor = self.require_authenticated(token)
+        with _connect(self.database_path) as connection:
+            rows = connection.execute(
+                """
+                SELECT r.*, u.display_name AS recipient_name, u.username AS recipient_username
+                FROM matter_reminders r
+                LEFT JOIN firm_users u ON u.user_id = r.recipient_id
+                WHERE r.sender_id = ?
+                ORDER BY r.created_at DESC
+                LIMIT ?
+                """,
+                (actor["user_id"], int(limit)),
+            ).fetchall()
+        return [_row_mapping(row) for row in rows]
+
+    def acknowledge_reminder(
+        self, token: str, reminder_id: str, *, state: str = REMINDER_ACKNOWLEDGED
+    ) -> dict[str, object]:
+        """Mark one of the caller's own reminders read, acknowledged or dismissed."""
+        actor = self.require_authenticated(token)
+        if state not in REMINDER_STATES:
+            raise WakiliOSError(f"unsupported reminder state: {state}")
+        with _connect(self.database_path) as connection:
+            row = connection.execute(
+                "SELECT recipient_id FROM matter_reminders WHERE reminder_id = ?",
+                (reminder_id,),
+            ).fetchone()
+            if row is None:
+                raise WakiliOSError(f"reminder does not exist: {reminder_id}")
+            if str(row["recipient_id"]) != actor["user_id"]:
+                raise PermissionDeniedError("only the recipient can act on a reminder")
+            connection.execute(
+                "UPDATE matter_reminders SET state = ?, acknowledged_at = ? WHERE reminder_id = ?",
+                (
+                    state,
+                    _datetime_to_text(_utc_now()) if state == REMINDER_ACKNOWLEDGED else "",
+                    reminder_id,
+                ),
+            )
+            _audit(
+                connection,
+                actor_id=actor["user_id"],
+                event_type="reminder_acknowledged",
+                target_id=reminder_id,
+                details={"state": state},
+            )
+            return _row_mapping(
+                connection.execute(
+                    "SELECT * FROM matter_reminders WHERE reminder_id = ?", (reminder_id,)
+                ).fetchone()
+            )
+
+    def _enforce_reminder_rate_limit(self, connection: sqlite3.Connection, sender_id: str) -> None:
+        """Cap what one seat can send in a day.
+
+        Not an abuse problem at five seats so much as an accident one: a loop in
+        a future integration, or a stuck button, should not fill every
+        colleague's inbox before anyone notices.
+        """
+        since = _datetime_to_text(_utc_now() - timedelta(days=1))
+        sent = connection.execute(
+            "SELECT COUNT(*) FROM matter_reminders WHERE sender_id = ? AND created_at > ?",
+            (sender_id, since),
+        ).fetchone()[0]
+        if int(sent) >= REMINDER_DAILY_LIMIT:
+            raise WakiliOSError(
+                f"reminder limit reached: {REMINDER_DAILY_LIMIT} in 24 hours. "
+                f"If this is legitimate, wait or raise it with the administrator."
+            )
+
     def build_offline_cache(self, token: str) -> OfflineCache:
         self.require_authenticated(token)
         with _connect(self.database_path) as connection:
@@ -924,7 +1155,7 @@ def initialize_firm_backend(
     return backend
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 """Current schema generation.
 
 Bump this and add a matching entry to ``_MIGRATIONS`` whenever a column or
@@ -1068,10 +1299,47 @@ def _migration_3_calendar_dates(connection: sqlite3.Connection) -> None:
         connection.execute(f"CREATE INDEX IF NOT EXISTS {index} ON {table} ({column})")
 
 
+def _migration_4_matter_reminders(connection: sqlite3.Connection) -> None:
+    """Let one person in the firm put something on another's desk.
+
+    This is the first user-to-user surface in a product that has only ever been
+    one user per session, so it is also the first place where one seat's data is
+    addressed to another. The shape reflects that: one row per recipient, so
+    read and acknowledged state is per-person by construction rather than by
+    convention. A reminder sent to five advocates is five rows, which at this
+    scale costs nothing and removes an entire class of "who has seen this" bug.
+    """
+    connection.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS matter_reminders (
+            reminder_id TEXT PRIMARY KEY,
+            matter_id TEXT NOT NULL,
+            sender_id TEXT NOT NULL,
+            recipient_id TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            body TEXT NOT NULL,
+            due_date TEXT NOT NULL,
+            priority TEXT NOT NULL,
+            state TEXT NOT NULL,
+            acknowledged_at TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_reminders_recipient
+            ON matter_reminders (recipient_id, state);
+        CREATE INDEX IF NOT EXISTS idx_reminders_due
+            ON matter_reminders (due_date);
+        CREATE INDEX IF NOT EXISTS idx_reminders_sender
+            ON matter_reminders (sender_id);
+        """
+    )
+
+
 _MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (
     _migration_1_filing_record,
     _migration_2_filing_ledger,
     _migration_3_calendar_dates,
+    _migration_4_matter_reminders,
 )
 
 

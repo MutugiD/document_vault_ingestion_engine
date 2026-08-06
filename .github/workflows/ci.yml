@@ -83,6 +83,7 @@ jobs:
             "tests/validate_daily_reminder.py",
             "tests/validate_contrast.py",
             "tests/validate_lan_server.py",
+            "tests/validate_reminders.py",
             "tests/validate_mixed_document_ocr.py",
             "tests/validate_long_path_bundle.py",
             "tests/validate_matter_details.py",

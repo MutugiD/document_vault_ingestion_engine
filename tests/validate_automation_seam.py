@@ -107,6 +107,7 @@ def main() -> None:
             "Documents",
             "Filing record",
             "Search",
+            "Reminders",
             "Reports",
             "Settings",
         ], state["destinations"]

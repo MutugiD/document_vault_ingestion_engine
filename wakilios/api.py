@@ -6,6 +6,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from wakilios.core import (
+    REMINDER_ACKNOWLEDGED,
     SCHEMA_VERSION,
     AuthenticationError,
     PermissionDeniedError,
@@ -129,6 +130,19 @@ class CreateUserRequest(BaseModel):
 class SummaryRequest(BaseModel):
     document_id: str
     question: str = Field(default="Summarize the key information in this matter.")
+
+
+class ReminderRequest(BaseModel):
+    recipient_ids: list[str]
+    subject: str
+    body: str = ""
+    matter_id: str = ""
+    due_date: str = ""
+    priority: str = "normal"
+
+
+class ReminderStateRequest(BaseModel):
+    state: str = REMINDER_ACKNOWLEDGED
 
 
 def create_app(
@@ -410,6 +424,60 @@ def create_app(
                 token, start=start, end=end, matter_id=matter_id, limit=limit
             )
             return {"entries": entries}
+        except Exception as exc:
+            raise handle_error(exc) from exc
+
+    @app.get("/firm/users")
+    def firm_users(token: str = Depends(token_from_header)) -> dict[str, object]:
+        """Who a reminder can be addressed to. Never returns password material."""
+        try:
+            return {"users": backend.list_firm_users(token)}
+        except Exception as exc:
+            raise handle_error(exc) from exc
+
+    @app.post("/reminders")
+    def send_reminder(
+        request: ReminderRequest,
+        token: str = Depends(token_from_header),
+    ) -> dict[str, object]:
+        try:
+            return {"reminders": backend.send_reminder(token, **request.model_dump())}
+        except Exception as exc:
+            raise handle_error(exc) from exc
+
+    @app.get("/reminders")
+    def list_reminders(
+        state: str = "",
+        since: str = "",
+        limit: int = 200,
+        token: str = Depends(token_from_header),
+    ) -> dict[str, object]:
+        """The caller's own inbox. There is no way to read anyone else's."""
+        try:
+            return {
+                "reminders": backend.list_reminders(token, state=state, since=since, limit=limit)
+            }
+        except Exception as exc:
+            raise handle_error(exc) from exc
+
+    @app.get("/reminders/sent")
+    def list_sent_reminders(
+        limit: int = 200,
+        token: str = Depends(token_from_header),
+    ) -> dict[str, object]:
+        try:
+            return {"reminders": backend.list_sent_reminders(token, limit=limit)}
+        except Exception as exc:
+            raise handle_error(exc) from exc
+
+    @app.post("/reminders/{reminder_id}/acknowledge")
+    def acknowledge_reminder(
+        reminder_id: str,
+        request: ReminderStateRequest,
+        token: str = Depends(token_from_header),
+    ) -> dict[str, object]:
+        try:
+            return backend.acknowledge_reminder(token, reminder_id, state=request.state)
         except Exception as exc:
             raise handle_error(exc) from exc
 

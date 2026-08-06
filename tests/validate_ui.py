@@ -37,12 +37,13 @@ def main() -> None:
     assert window.minimumWidth() >= 900
     assert len(DEFAULT_MODULES) >= 7
     # Navigation follows the product brief's product map.
-    assert window.tabs.count() == 6
+    assert window.tabs.count() == 7
     assert [window.tabs.tabText(index) for index in range(window.tabs.count())] == [
         "Matters",
         "Documents",
         "Filing record",
         "Search",
+        "Reminders",
         "Reports",
         "Settings",
     ]

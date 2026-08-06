@@ -865,6 +865,7 @@ class MainWindow(QMainWindow):
         self._license_active = False
         self._reminder_settings = ReminderSettings()
         self._reminder_entries: list[dict[str, object]] = []
+        self._reminder_inbox: list[dict[str, object]] = []
         self._tray_icon = None
 
         root = QWidget()
@@ -898,6 +899,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(_scroll_page(_documents_page()), "Documents")
         self.tabs.addTab(_scroll_page(_filing_record_page()), "Filing record")
         self.tabs.addTab(_scroll_page(_search_page()), "Search")
+        self.tabs.addTab(_scroll_page(_reminders_page()), "Reminders")
         self.tabs.addTab(_scroll_page(_reports_page()), "Reports")
         self.tabs.addTab(_scroll_page(_settings_page(modules)), "Settings")
         # The sidebar goes inside the stack, not around it, so a locked
@@ -1088,6 +1090,124 @@ class MainWindow(QMainWindow):
         horizon = self.findChild(QLineEdit, "dailyReminderHorizonInput")
         if horizon is not None:
             horizon.setText(str(self._reminder_settings.horizon_days))
+
+    # ── Reminders from colleagues ────────────────────────────────────────
+
+    def _on_refresh_reminders(self) -> None:
+        if self._backend_local is None and self._backend_client is None:
+            self.status_label.setText("Start solo mode or connect to a server first")
+            return
+        try:
+            inbox = self._backend_list_reminders()
+            sent = self._backend_list_sent_reminders()
+            people = self._backend_firm_users()
+        except (WakiliOSError, WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Could not read reminders: {exc}")
+            return
+
+        self._reminder_inbox = inbox
+        inbox_list = self.findChild(QListWidget, "remindersInboxList")
+        if inbox_list is not None:
+            inbox_list.clear()
+            for item in inbox:
+                inbox_list.addItem(QListWidgetItem(_reminder_inbox_row(item)))
+        empty = self.findChild(QLabel, "remindersInboxEmptyLabel")
+        if empty is not None:
+            empty.setVisible(not inbox)
+
+        sent_list = self.findChild(QListWidget, "remindersSentList")
+        if sent_list is not None:
+            sent_list.clear()
+            for item in sent:
+                sent_list.addItem(
+                    QListWidgetItem(
+                        f"{item.get('subject', '')} -> "
+                        f"{item.get('recipient_name') or item.get('recipient_username', '')} "
+                        f"[{item.get('state', '')}]"
+                    )
+                )
+
+        recipient = self.findChild(QComboBox, "reminderRecipientInput")
+        if recipient is not None:
+            current = recipient.currentData()
+            recipient.clear()
+            for person in people:
+                # Filtered by username rather than id: the id is not tracked in
+                # the window, and sending yourself a reminder is not a feature.
+                if not person.get("active") or person.get("username") == self._current_username:
+                    continue
+                label = f"{person.get('display_name') or person.get('username')} "
+                recipient.addItem(f"{label}({person.get('role')})", person.get("user_id"))
+            index = recipient.findData(current)
+            if index >= 0:
+                recipient.setCurrentIndex(index)
+
+        unread = sum(1 for item in inbox if item.get("state") == "unread")
+        self._set_reminder_badge(unread)
+        self._publish_state()
+
+    def _set_reminder_badge(self, unread: int) -> None:
+        """Put the unread count where it will be seen without opening the page."""
+        for index in range(self.tabs.count()):
+            if self.tabs.tabText(index).startswith("Reminders"):
+                self.tabs.setTabText(index, f"Reminders ({unread})" if unread else "Reminders")
+                if index < len(self._sidebar_buttons):
+                    self._sidebar_buttons[index].setText(
+                        f"Reminders ({unread})" if unread else "Reminders"
+                    )
+                return
+
+    def _on_send_reminder(self) -> None:
+        recipient = self.findChild(QComboBox, "reminderRecipientInput")
+        subject = self.findChild(QLineEdit, "reminderSubjectInput")
+        body = self.findChild(QLineEdit, "reminderBodyInput")
+        due = self.findChild(QLineEdit, "reminderDueDateInput")
+        priority = self.findChild(QComboBox, "reminderPriorityInput")
+        if recipient is None or subject is None:
+            return
+        recipient_id = str(recipient.currentData() or "")
+        if not recipient_id:
+            self.status_label.setText("Choose who the reminder is for.")
+            return
+        if not subject.text().strip():
+            self.status_label.setText("A reminder needs a subject.")
+            return
+        try:
+            self._backend_send_reminder(
+                recipient_ids=[recipient_id],
+                subject=subject.text().strip(),
+                body=body.text().strip() if body else "",
+                matter_id=self._current_matter_id,
+                due_date=due.text().strip() if due else "",
+                priority=priority.currentText() if priority else "normal",
+            )
+        except (WakiliOSError, WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Reminder not sent: {exc}")
+            return
+        subject.clear()
+        if body is not None:
+            body.clear()
+        if due is not None:
+            due.clear()
+        self.status_label.setText(f"Reminder sent to {recipient.currentText().strip()}.")
+        self._on_refresh_reminders()
+
+    def _on_acknowledge_reminder(self) -> None:
+        listing = self.findChild(QListWidget, "remindersInboxList")
+        if listing is None:
+            return
+        row = listing.currentRow()
+        if row < 0 or row >= len(self._reminder_inbox):
+            self.status_label.setText("Select a reminder to acknowledge.")
+            return
+        reminder_id = str(self._reminder_inbox[row].get("reminder_id", ""))
+        try:
+            self._backend_acknowledge_reminder(reminder_id)
+        except (WakiliOSError, WakiliOSClientError, WakiliOSConnectionError) as exc:
+            self.status_label.setText(f"Could not acknowledge: {exc}")
+            return
+        self.status_label.setText("Reminder acknowledged.")
+        self._on_refresh_reminders()
 
     def _start_connection_health_timer(self) -> None:
         """Poll the firm backend so an outage is visible, not inferred.
@@ -1322,6 +1442,10 @@ class MainWindow(QMainWindow):
                 "review_queue": rows("documentReviewQueue"),
                 "audit_events": len(rows("auditLogList")),
                 "matter_summary": summary.toPlainText() if summary is not None else "",
+                "reminders_inbox": [_reminder_inbox_row(i) for i in self._reminder_inbox],
+                "reminders_unread": sum(
+                    1 for i in self._reminder_inbox if i.get("state") == "unread"
+                ),
                 "daily_reminder": {
                     "enabled": self._reminder_settings.enabled,
                     "hour": self._reminder_settings.hour,
@@ -1569,6 +1693,9 @@ class MainWindow(QMainWindow):
         for button_name, reminder_handler in (
             ("saveReminderSettingsButton", self._on_save_reminder_settings),
             ("testDailyReminderButton", self._on_show_reminder_now),
+            ("refreshRemindersButton", self._on_refresh_reminders),
+            ("sendReminderButton", self._on_send_reminder),
+            ("acknowledgeReminderButton", self._on_acknowledge_reminder),
         ):
             reminder_button = self.findChild(QPushButton, button_name)
             if reminder_button is not None:
@@ -1788,6 +1915,43 @@ class MainWindow(QMainWindow):
         if self._backend_client is not None:
             return self._backend_client.upcoming(start, end, matter_id=matter_id, limit=limit)
         return []
+
+    def _backend_firm_users(self) -> list[dict]:
+        if self._backend_local is not None:
+            return self._backend_local.list_firm_users(self._solo_token())
+        if self._backend_client is not None:
+            return self._backend_client.list_firm_users()
+        return []
+
+    def _backend_send_reminder(self, **fields: object) -> list[dict]:
+        if self._backend_local is not None:
+            return self._backend_local.send_reminder(self._solo_token(), **fields)
+        if self._backend_client is not None:
+            recipients = list(fields.pop("recipient_ids"))  # type: ignore[arg-type]
+            subject = str(fields.pop("subject"))
+            return self._backend_client.send_reminder(recipients, subject, **fields)  # type: ignore[arg-type]
+        return []
+
+    def _backend_list_reminders(self, *, state: str = "") -> list[dict]:
+        if self._backend_local is not None:
+            return self._backend_local.list_reminders(self._solo_token(), state=state)
+        if self._backend_client is not None:
+            return self._backend_client.list_reminders(state=state)
+        return []
+
+    def _backend_list_sent_reminders(self) -> list[dict]:
+        if self._backend_local is not None:
+            return self._backend_local.list_sent_reminders(self._solo_token())
+        if self._backend_client is not None:
+            return self._backend_client.list_sent_reminders()
+        return []
+
+    def _backend_acknowledge_reminder(self, reminder_id: str) -> dict:
+        if self._backend_local is not None:
+            return self._backend_local.acknowledge_reminder(self._solo_token(), reminder_id)
+        if self._backend_client is not None:
+            return self._backend_client.acknowledge_reminder(reminder_id)
+        return {}
 
     def _backend_audit_log(self) -> dict:
         if self._backend_local is not None:
@@ -2974,6 +3138,21 @@ class DailyReminderDialog(QDialog):
         self.accept()
 
 
+def _reminder_inbox_row(item: dict[str, object]) -> str:
+    """One line from a colleague, with who and when before what."""
+    sender = str(item.get("sender_name") or item.get("sender_username") or "someone")
+    state = str(item.get("state", ""))
+    marker = "!" if item.get("priority") == "urgent" else " "
+    due = str(item.get("due_date") or "")
+    reference = str(item.get("matter_reference") or "")
+    tail = "  ".join(part for part in (due and f"due {due}", reference) if part)
+    return (
+        f"{marker} {sender}: {item.get('subject', '')}"
+        + (f"  ({tail})" if tail else "")
+        + (f"  [{state}]" if state != "unread" else "")
+    )
+
+
 def _reminder_row(entry: dict[str, object]) -> str:
     """One line an advocate can act on without opening anything."""
     kind = KIND_LABELS.get(str(entry.get("kind", "")), str(entry.get("kind", "")))
@@ -3025,6 +3204,98 @@ def _reminder_settings_group() -> QWidget:
     caption.setWordWrap(True)
     layout.addRow(caption)
     return group
+
+
+def _reminders_page() -> QWidget:
+    """Reminders from colleagues, and a form for sending one.
+
+    Empty in solo mode by design -- a reminder to yourself from yourself is not
+    a feature -- and the page says so rather than showing an empty list with no
+    explanation.
+    """
+    page = QWidget()
+    page.setObjectName("remindersPage")
+    layout = QVBoxLayout(page)
+
+    heading = QLabel("Reminders")
+    heading.setObjectName("remindersHeading")
+    layout.addWidget(heading)
+
+    caption = QLabel("What colleagues have asked you to look at, and what you have asked of them.")
+    caption.setObjectName("remindersCaption")
+    caption.setWordWrap(True)
+    layout.addWidget(caption)
+
+    inbox_group = QFrame()
+    inbox_group.setObjectName("remindersInboxGroup")
+    inbox_layout = QVBoxLayout(inbox_group)
+    inbox_heading = QLabel("For you")
+    inbox_heading.setObjectName("remindersInboxHeading")
+    inbox_layout.addWidget(inbox_heading)
+    inbox = QListWidget()
+    inbox.setObjectName("remindersInboxList")
+    inbox_layout.addWidget(inbox)
+    inbox_empty = QLabel("Nothing from colleagues. Reminders sent to you appear here.")
+    inbox_empty.setObjectName("remindersInboxEmptyLabel")
+    inbox_empty.setWordWrap(True)
+    inbox_layout.addWidget(inbox_empty)
+    inbox_buttons = QHBoxLayout()
+    acknowledge = QPushButton("Acknowledge")
+    acknowledge.setObjectName("acknowledgeReminderButton")
+    refresh = QPushButton("Refresh")
+    refresh.setObjectName("refreshRemindersButton")
+    inbox_buttons.addWidget(acknowledge)
+    inbox_buttons.addWidget(refresh)
+    inbox_buttons.addStretch(1)
+    inbox_layout.addLayout(inbox_buttons)
+    layout.addWidget(inbox_group)
+
+    send_group = QFrame()
+    send_group.setObjectName("remindersSendGroup")
+    send_layout = QFormLayout(send_group)
+    send_heading = QLabel("Send a reminder")
+    send_heading.setObjectName("remindersSendHeading")
+    send_layout.addRow(send_heading)
+
+    recipient = QComboBox()
+    recipient.setObjectName("reminderRecipientInput")
+    send_layout.addRow("To", recipient)
+
+    subject = QLineEdit()
+    subject.setObjectName("reminderSubjectInput")
+    subject.setPlaceholderText("e.g. Defence due Friday")
+    send_layout.addRow("Subject", subject)
+
+    body = QLineEdit()
+    body.setObjectName("reminderBodyInput")
+    body.setPlaceholderText("optional detail")
+    send_layout.addRow("Detail", body)
+
+    due = QLineEdit()
+    due.setObjectName("reminderDueDateInput")
+    due.setPlaceholderText("YYYY-MM-DD")
+    send_layout.addRow("Due", due)
+
+    priority = QComboBox()
+    priority.setObjectName("reminderPriorityInput")
+    priority.addItems(["normal", "urgent"])
+    priority.setToolTip("An urgent reminder is raised as soon as it arrives")
+    send_layout.addRow("Priority", priority)
+
+    send = QPushButton("Send reminder")
+    send.setObjectName("sendReminderButton")
+    send_layout.addRow(send)
+
+    sent_heading = QLabel("Sent by you")
+    sent_heading.setObjectName("remindersSentHeading")
+    send_layout.addRow(sent_heading)
+    sent = QListWidget()
+    sent.setObjectName("remindersSentList")
+    send_layout.addRow(sent)
+
+    layout.addWidget(send_group)
+    layout.addStretch(1)
+    return page
 
 
 def _matter_ai_context_panel() -> QWidget:

@@ -294,6 +294,8 @@ QFrame#backupGroup,
 QFrame#adminGroup,
 QFrame#reportsGroup,
 QFrame#dailyReminderGroup,
+QFrame#remindersInboxGroup,
+QFrame#remindersSendGroup,
 QFrame#moduleCard {
     background-color: #FFFFFF;
     border: 1px solid #E2E9F2;
@@ -625,6 +627,7 @@ QWidget#filingRecordPage > QLabel,
 QWidget#reportsPage > QLabel,
 QWidget#documentsPage > QLabel,
 QWidget#searchPage > QLabel,
+QWidget#remindersPage > QLabel,
 QWidget#workspacePage > QLabel,
 QWidget#settingsPage > QLabel,
 QLabel#filingRecordGroupLabel,
@@ -657,8 +660,37 @@ QLabel#filingRecordGroupLabel {
     font-weight: 600;
 }
 
-QLabel#roleStatusLabel {
+QLabel#roleStatusLabel,
+QLabel#connectionHealthLabel {
     color: #B7C8DC;
+}
+
+QLabel#remindersHeading {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+QLabel#remindersCaption {
+    color: #B7C8DC;
+    font-size: 12px;
+    padding: 0px 0px 8px 0px;
+}
+
+/* Inside the white cards, so dark. */
+QLabel#remindersInboxHeading,
+QLabel#remindersSendHeading,
+QLabel#remindersSentHeading {
+    font-size: 15px;
+    font-weight: 600;
+    color: #0E1A2B;
+    padding: 0px 0px 6px 0px;
+}
+
+/* An empty list should say what would fill it, not sit there blank. */
+QLabel#remindersInboxEmptyLabel {
+    color: #5F7186;
+    font-size: 12px;
+    padding: 6px 2px;
 }
 
 /* ── Trusted AI layer, beside the matter (brief slide 14) ── */

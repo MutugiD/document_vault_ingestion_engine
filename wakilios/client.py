@@ -101,6 +101,44 @@ class WakiliOSClient:
         result = self._get(f"/calendar/upcoming?{query}")
         return list(result.get("entries", []))
 
+    def list_firm_users(self) -> list[dict[str, Any]]:
+        return list(self._get("/firm/users").get("users", []))
+
+    def send_reminder(
+        self,
+        recipient_ids: list[str],
+        subject: str,
+        *,
+        body: str = "",
+        matter_id: str = "",
+        due_date: str = "",
+        priority: str = "normal",
+    ) -> list[dict[str, Any]]:
+        result = self._post(
+            "/reminders",
+            {
+                "recipient_ids": recipient_ids,
+                "subject": subject,
+                "body": body,
+                "matter_id": matter_id,
+                "due_date": due_date,
+                "priority": priority,
+            },
+        )
+        return list(result.get("reminders", []))
+
+    def list_reminders(
+        self, *, state: str = "", since: str = "", limit: int = 200
+    ) -> list[dict[str, Any]]:
+        query = urlencode({"state": state, "since": since, "limit": limit})
+        return list(self._get(f"/reminders?{query}").get("reminders", []))
+
+    def list_sent_reminders(self, *, limit: int = 200) -> list[dict[str, Any]]:
+        return list(self._get(f"/reminders/sent?limit={limit}").get("reminders", []))
+
+    def acknowledge_reminder(self, reminder_id: str, *, state: str = "acknowledged") -> dict:
+        return self._post(f"/reminders/{reminder_id}/acknowledge", {"state": state})
+
     def list_matters(self) -> list[dict[str, Any]]:
         result = self._get("/matters")
         return list(result.get("matters", []))
