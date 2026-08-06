@@ -2498,7 +2498,7 @@ def _filing_record_page() -> QWidget:
     group = QFrame()
     group.setObjectName("filingRecordGroup")
     group_layout = QVBoxLayout(group)
-    heading = QLabel("Filing record")
+    heading = QLabel("Filing record for this matter")
     heading.setObjectName("filingRecordGroupLabel")
     caption = QLabel(
         "A portal submission proves a filing was made. This is the firm's "

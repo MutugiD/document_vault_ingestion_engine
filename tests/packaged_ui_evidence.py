@@ -65,9 +65,11 @@ QUESTIONS = (
 )
 
 
-def check(app: Driver, area: str, ok: bool, detail: str, shot_name: str) -> None:
+def check(
+    app: Driver, area: str, ok: bool, detail: str, shot_name: str, *, keep_dialog: bool = False
+) -> None:
     """Record a verdict and photograph the state it was taken from."""
-    shot = app.shot(shot_name)
+    shot = app.shot(shot_name, keep_dialog=keep_dialog)
     CHECKS.append((area, ok, detail, shot))
     print(f"{'PASS' if ok else 'FAIL'}  [{len(CHECKS):3d}] {area}: {detail[:70]}", flush=True)
 
@@ -237,6 +239,7 @@ def main() -> int:
                 any(v for v in values),
                 " | ".join(values)[:90],
                 f"matter-{index}-prefilled",
+                keep_dialog=True,
             )
             app.accept_dialog(dialog)
             opened = app.await_state(lambda s: bool(s.get("current_matter_id")))
@@ -315,6 +318,7 @@ def main() -> int:
                 True,
                 f"'{dialog.window_text()}' with {len(fields)} input(s)",
                 f"entry-{object_name}-form",
+                keep_dialog=True,
             )
             app.accept_dialog(dialog)
             after_state = app.await_state(

@@ -521,6 +521,15 @@ QLabel#filingRecordCaption {
     font-size: 12px;
 }
 
+/* The open matter's reference, on the dark shell beside the caption. Missed
+ * by the first contrast pass, so it rendered dark-on-dark. */
+QLabel#filingRecordMatterLabel {
+    color: #E6EDF6;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 2px 0px 6px 0px;
+}
+
 QLabel#filingRecordGroupLabel {
     font-size: 16px;
     font-weight: 600;

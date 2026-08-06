@@ -189,12 +189,16 @@ class Driver:
             if (child.window_text() or "").strip().rstrip("*") != label:
                 continue
             for candidate in children[index : index + 6]:
-                if candidate.friendly_class_name() in ("Edit", "ComboBox"):
-                    try:
-                        candidate.set_edit_text(value)
-                        return True
-                    except Exception:
-                        return False
+                if candidate.friendly_class_name() not in ("Edit", "ComboBox"):
+                    continue
+                try:
+                    candidate.set_edit_text(value)
+                    return True
+                except Exception:
+                    # This label matched something that is not the field --
+                    # a heading, or a duplicate elsewhere on the page. Keep
+                    # looking rather than reporting the field unreachable.
+                    break
         return False
 
     def type_into_panel(self, heading: str, value: str) -> bool:
@@ -257,6 +261,17 @@ class Driver:
             return "2026-09-22"
         return f"E2E {index}"
 
+    def _dialog_open(self, dialog) -> bool:
+        """Whether a dialog is still on screen.
+
+        UIAWrapper has no exists(); reading a property on a destroyed element
+        raises, which is the reliable signal.
+        """
+        try:
+            return bool(dialog.is_visible())
+        except Exception:
+            return False
+
     def accept_dialog(self, dialog, values: dict[str, str] | None = None) -> bool:
         """Fill a dialog and close it, respecting what the form validates."""
         values = values or {}
@@ -284,7 +299,7 @@ class Driver:
                 time.sleep(1.5)
             except Exception:
                 pass
-            if not dialog.exists():
+            if not self._dialog_open(dialog):
                 return True
             # Still open means validation refused the values. Report it, and
             # cancel so the modal cannot sit over the rest of the run.
@@ -323,10 +338,16 @@ class Driver:
                         break
         return closed
 
-    def shot(self, name: str) -> str:
-        # Evidence must show the application, not a modal the harness left
-        # behind. A screenshot with a stray dialog over it proves nothing.
-        self.dismiss_stray_dialogs()
+    def shot(self, name: str, *, keep_dialog: bool = False) -> str:
+        """Photograph the window.
+
+        Stray dialogs are dismissed first, because a screenshot with a modal
+        the harness forgot to close over it proves nothing. Pass
+        ``keep_dialog`` when the dialog *is* the subject -- otherwise the guard
+        cancels the very form the shot was meant to record.
+        """
+        if not keep_dialog:
+            self.dismiss_stray_dialogs()
         self._shot_index += 1
         path = self.shots / f"{self._shot_index:02d}-{name}.png"
         try:
