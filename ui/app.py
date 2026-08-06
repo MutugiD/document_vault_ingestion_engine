@@ -2974,6 +2974,16 @@ def _ai_keys_group() -> QFrame:
     ai_group = QFrame()
     ai_group.setObjectName("aiKeysGroup")
     ai_layout = QFormLayout(ai_group)
+    # Said here as well as in documentation/29-*, so the claim a firm is sold
+    # and the claim the application makes are the same claim.
+    llm_free = QLabel(
+        "JurisNuru needs no AI subscription. Matter search and summaries run on "
+        "this machine and send nothing to any provider. These keys are optional, "
+        "used only if your licence includes hosted AI and you turn it on."
+    )
+    llm_free.setObjectName("llmFreeNoticeLabel")
+    llm_free.setWordWrap(True)
+    ai_layout.addRow(llm_free)
     providers = (
         ("OpenAI", "openaiApiKeyInput"),
         ("Anthropic", "anthropicApiKeyInput"),

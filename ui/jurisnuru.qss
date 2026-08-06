@@ -690,6 +690,7 @@ QLabel#pairedDevicesHeading {
 
 /* An empty list should say what would fill it, not sit there blank. */
 QLabel#remindersInboxEmptyLabel,
+QLabel#llmFreeNoticeLabel,
 QLabel#pairedDevicesEmptyLabel,
 QLabel#pairedDevicesCaption {
     color: #5F7186;

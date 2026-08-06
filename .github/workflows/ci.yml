@@ -85,6 +85,7 @@ jobs:
             "tests/validate_lan_server.py",
             "tests/validate_reminders.py",
             "tests/validate_device_sync.py",
+            "tests/validate_no_llm_egress.py",
             "tests/validate_mixed_document_ocr.py",
             "tests/validate_long_path_bundle.py",
             "tests/validate_matter_details.py",
