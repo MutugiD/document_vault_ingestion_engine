@@ -143,6 +143,23 @@ class Driver:
                 continue
         return False
 
+    def press_modal(self, label: str) -> bool:
+        """Activate a control that opens a modal dialog.
+
+        A modal runs its own event loop, so invoking it from this thread blocks
+        until the dialog closes -- and the dialog cannot close, because the code
+        that would close it is waiting here. The press goes on its own thread so
+        the caller can then find and drive the dialog.
+        """
+        target = self.control(label)
+        if target is None:
+            return False
+        import threading
+
+        threading.Thread(target=lambda: self.press(label), daemon=True).start()
+        time.sleep(1.5)
+        return True
+
     def navigate(self, destination: str) -> bool:
         """Select a sidebar destination without toggling it off.
 
@@ -180,6 +197,27 @@ class Driver:
                         return False
         return False
 
+    def type_into_panel(self, heading: str, value: str) -> bool:
+        """Type into the first input inside the panel with a given heading.
+
+        Some inputs sit in a panel rather than a labelled form row -- the AI
+        panel's question box is one -- so there is no label to anchor on.
+        """
+        if self.window is None:
+            return False
+        children = self.window.descendants()
+        for index, child in enumerate(children):
+            if (child.window_text() or "").strip() != heading:
+                continue
+            for candidate in children[index : index + 12]:
+                if candidate.friendly_class_name() in ("Edit", "Document"):
+                    try:
+                        candidate.set_edit_text(value)
+                        return True
+                    except Exception:
+                        continue
+        return False
+
     def queue_files(self, *paths: Path) -> None:
         """Pre-answer the next file dialog, instead of opening a picker."""
         self.queue.write_text("|".join(str(p) for p in paths), encoding="utf-8")
@@ -202,7 +240,25 @@ class Driver:
                     return candidate
         return None
 
+    # Labels whose field the form validates as a number. Filling these with
+    # text makes the dialog refuse to close -- correct behaviour, but it leaves
+    # a modal over every screenshot taken afterwards.
+    NUMERIC_LABELS = ("amount", "balance", "paid", "fee payable", "fees paid")
+    DATE_LABELS = ("date",)
+
+    def _value_for(self, label: str, index: int, values: dict[str, str]) -> str:
+        explicit = next((v for k, v in values.items() if k.lower() in label.lower()), "")
+        if explicit:
+            return explicit
+        lowered = label.lower()
+        if any(marker in lowered for marker in self.NUMERIC_LABELS):
+            return "1500.00"
+        if any(marker in lowered for marker in self.DATE_LABELS):
+            return "2026-09-22"
+        return f"E2E {index}"
+
     def accept_dialog(self, dialog, values: dict[str, str] | None = None) -> bool:
+        """Fill a dialog and close it, respecting what the form validates."""
         values = values or {}
         inputs = [
             c for c in dialog.descendants() if c.friendly_class_name() in ("Edit", "ComboBox")
@@ -210,22 +266,67 @@ class Driver:
         labels = [c.window_text().strip() for c in dialog.descendants() if c.window_text()]
         for index, control in enumerate(inputs):
             label = labels[index] if index < len(labels) else ""
-            text = next((v for k, v in values.items() if k.lower() in label.lower()), "")
             try:
-                control.set_edit_text(text or f"E2E {index}")
+                control.set_edit_text(self._value_for(label, index, values))
             except Exception:
                 pass
-        for child in dialog.descendants():
-            if (child.window_text() or "").strip() in ("OK", "&OK"):
-                try:
-                    child.invoke()
-                    time.sleep(1.5)
-                    return True
-                except Exception:
-                    return False
+
+        def button(*names: str):
+            for child in dialog.descendants():
+                if (child.window_text() or "").strip().replace("&", "") in names:
+                    return child
+            return None
+
+        ok = button("OK")
+        if ok is not None:
+            try:
+                ok.invoke()
+                time.sleep(1.5)
+            except Exception:
+                pass
+            if not dialog.exists():
+                return True
+            # Still open means validation refused the values. Report it, and
+            # cancel so the modal cannot sit over the rest of the run.
+            print(f"    dialog refused the values: {dialog.window_text()}", flush=True)
+        cancel = button("Cancel")
+        if cancel is not None:
+            try:
+                cancel.invoke()
+                time.sleep(1)
+            except Exception:
+                pass
         return False
 
+    def dismiss_stray_dialogs(self) -> int:
+        """Close any dialog left open, so it cannot sit over later evidence."""
+        if self.window is None:
+            return 0
+        closed = 0
+        for _ in range(3):
+            stray = [
+                c
+                for c in self.window.descendants()
+                if c.friendly_class_name() == "Dialog" and (c.window_text() or "").strip()
+            ]
+            if not stray:
+                break
+            for dialog in stray:
+                for child in dialog.descendants():
+                    if (child.window_text() or "").strip().replace("&", "") == "Cancel":
+                        try:
+                            child.invoke()
+                            closed += 1
+                            time.sleep(0.8)
+                        except Exception:
+                            pass
+                        break
+        return closed
+
     def shot(self, name: str) -> str:
+        # Evidence must show the application, not a modal the harness left
+        # behind. A screenshot with a stray dialog over it proves nothing.
+        self.dismiss_stray_dialogs()
         self._shot_index += 1
         path = self.shots / f"{self._shot_index:02d}-{name}.png"
         try:

@@ -861,6 +861,7 @@ class MainWindow(QMainWindow):
         self._connect_workflow_controls()
         self._connect_backend_controls()
         self._report_ocr_availability()
+        self._start_state_publishing()
         self._set_license_state(False, "Not activated")
         if _dev_unlock_requested():
             self._set_license_state(True, "DEVELOPMENT BUILD - license gate bypassed")
@@ -986,6 +987,25 @@ class MainWindow(QMainWindow):
             self.status_label.setText(
                 "No OCR engine found: scanned documents will import with no text"
             )
+
+    def _start_state_publishing(self) -> None:
+        """Publish state on a timer while an automated harness is driving.
+
+        Hand-placing a publish call in every handler misses the ones nobody
+        thought about, and a harness then asserts against a stale snapshot --
+        reading "Reports refreshed" while looking at the selftest, or a review
+        queue that never appears to grow. A timer covers every handler,
+        including ones added later.
+
+        Off unless automation is enabled, so a normal session does no extra
+        work.
+        """
+        if not automation_enabled():
+            return
+        self._state_timer = QTimer(self)
+        self._state_timer.setInterval(400)
+        self._state_timer.timeout.connect(self._publish_state)
+        self._state_timer.start()
 
     def _publish_state(self) -> None:
         """Publish what the window currently holds, for an automated harness.
