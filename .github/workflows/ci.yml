@@ -81,6 +81,7 @@ jobs:
             "tests/validate_schema_migration.py",
             "tests/validate_calendar_dates.py",
             "tests/validate_daily_reminder.py",
+            "tests/validate_contrast.py",
             "tests/validate_mixed_document_ocr.py",
             "tests/validate_long_path_bundle.py",
             "tests/validate_matter_details.py",
